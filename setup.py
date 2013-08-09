@@ -13,6 +13,12 @@ setup(name="reschema",
       
       packages = find_packages(),
       scripts = [
-          'bin/reschema'
+          'bin/reschema-doc'
         ],
+      install_requires = [
+          'uritemplate>=0.5.2',
+          'PyYAML>=3.10',
+          'jsonpointer>=1.0',
+          'Markdown>=2.2.1'
+          ],
       include_package_data = True)
