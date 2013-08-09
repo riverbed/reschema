@@ -1,0 +1,76 @@
+# System imports
+import os, sys, re
+import json, yaml
+from collections import OrderedDict
+import markdown
+import xml.etree.ElementTree as ET
+
+# Local imports
+import reschema.yaml_omap
+from reschema.jsonschema import *
+from reschema.util import parse_prop
+
+__all__ = ['RestSchema']
+
+class RestSchema(object):
+
+    def __init__(self):
+        self.filename = None
+        self.dir = None
+        
+    def load(self, filename):
+        self.filename = filename
+        self.dir = os.path.dirname(os.path.abspath(filename))
+
+        # Support both JSON(.json) and YAML(.yml) file formats
+        f = open(filename, 'r')
+        if re.match(".*\.json", filename):
+            obj = json.load(f, object_pairs_hook=OrderedDict)
+        elif re.match(".*\.yml", filename):
+            obj = yaml.load(f)
+        else:
+            raise ValueError("Unrecognized file extension, use '*.json' or '*.yml': %s" % filename)
+
+        f.close()
+        self.parse(obj)
+
+    def parse(self, obj):
+        # Common properties
+
+        parse_prop(self, obj, 'restSchemaVersion', required=True)
+        parse_prop(self, obj, 'name', required=True)
+        parse_prop(self, obj, 'version', required=True)
+        parse_prop(self, obj, 'title', self.name)
+        parse_prop(self, obj, 'status', '')
+
+        # 'description' is a doc property, supporting either:
+        #    'description' : <string>
+        #    'description' : { 'file': <filename>, 'format': <format> }
+        #    'description' : { 'text': <string>, 'format': <format> }
+        # where 'format' is optional and defaults to 'md'
+
+        parse_prop(self, obj, 'description', 'REST Schema for ' + self.name)
+            
+        parse_prop(self, obj, 'documentationLink', '')
+        parse_prop(self, obj, 'servicePath', '')
+        parse_prop(self, obj, 'defaultAuthorization', None)
+
+        if 'types' in obj:
+            self.types = OrderedDict()
+            for type_ in obj['types']:
+                self.types[type_] = Schema.parse(obj['types'][type_], name=type_, api=self.servicePath)
+        
+        if 'resources' in obj:
+            self.resources = OrderedDict()
+            for resource in obj['resources']:
+                self.resources[resource] = Schema.parse(obj['resources'][resource],
+                                                        name=resource, api=self.servicePath)
+
+        parse_prop(self, obj, 'tasks', None)
+        parse_prop(self, obj, 'request_headers', None)
+        parse_prop(self, obj, 'response_headers', None)
+        parse_prop(self, obj, 'errors', None)
+
+    def resource_iter(self):
+        for r in self.resources:
+            yield self.resources[r]

@@ -1,0 +1,254 @@
+restSchemaVersion: "2.0"
+name: "Catalog"
+version: "1.0"
+title: "REST API for a book catalog"
+servicePath: "/api/catalog/1.0"
+defaultAuthorization: "required"
+types:
+   address:
+      type: object
+      id: address
+        
+      properties :
+         street : 
+            type: string
+            description: "Street Address"
+         city :
+            type: string
+            description: "City" 
+         state :
+            type: string
+            description: "State" 
+            pattern: "[A-Z][A-Z]"
+         zip : 
+            type: string
+            description: "Zip Code (5-digit)" 
+            pattern: "[0-9][0-9][0-9][0-9][0-9]"
+
+resources:
+   info:
+      type: object
+      properties: 
+         owner: { type: string }
+         email: { type: string }
+
+      links:
+         self: { path: "/info" }
+         books: { target: books }
+         authors: { target: authors }
+         get:  
+            method: GET
+            response: { $ref: info }
+         set:
+            method: POST
+            request: { $ref: info }
+            response: { $ref: info }
+
+   authors:
+      type: array
+      items: { $ref: author }
+
+      links:
+         self: { path: "/authors" }
+         get:  
+            method: GET
+            response: { $ref: authors }
+         create:
+            method: POST
+            request: { $ref: author }
+            response: { $ref: author }
+
+   author:
+      type: object
+      properties:
+         id: { type: number }
+         name: { type: string }
+
+      links: 
+         self: { path: "/authors/{id}" }
+         instances: { target: authors }
+
+         get:  
+            method: GET
+            response: { $ref: author }
+         set:
+            method: POST
+            request: { $ref: author }
+            response: { $ref: author }
+         delete:
+            method: DELETE
+         books:
+            path: "/books?author={id}"
+            target: books/links/get
+
+   publishers:
+      type: array
+      items: { $ref: publisher }
+
+      links:
+         self: { path: "/publishers" }
+         get:  
+            method: GET
+            response: { $ref: publishers }
+         create:
+            method: POST
+            request: { $ref: publisher }
+            response: { $ref: publisher }
+
+   publisher:
+      type: object
+      properties:
+         id: { type: number }
+         name: { type: string }
+         billing_address: { $ref: address }
+
+      links:
+         self: { path: "/publishers/{id}" }
+         instances: { target: publishers }
+
+         get:  
+            method: GET
+            response: { $ref: publisher }
+
+   books:
+      type: array
+      items: 
+         type: object
+         properties:
+            id: { type: number, readonly: true }
+            title: { type: string }
+
+         links:
+            book:
+               # Build a book link from the 'id' property
+               path: 
+                  template: "/books/{bookid}"
+                  vars:
+                     bookid: "0/id" # this array item, 'id' property
+
+      links:
+         self: { path: "/books" }
+         get:
+            method: GET
+            request:
+               # Allow filtering by id or title
+               type: object
+               properties:
+                  author: { type: number }
+                  title: { type: string }
+            response: { $ref : books }
+         create:
+            method: POST
+            request: { $ref: book }
+            response: { $ref: book }
+
+   book:
+      description: A book object
+      example: 
+         id: 100
+         title: My first book
+         publisher_id: 5
+         author_ids: [ 1, 2 ]
+         chapters:
+            - num: 1
+              heading: Introduction
+            - num: 2
+              heading: Conclusion
+      type: object
+      properties:
+         id: { type: number }
+         title: { type: string }
+         publisher_id: { type: number }
+         author_ids: 
+            type: array
+            items: 
+               id: author_id
+               type: number
+               links:
+                  author:
+                     target: author
+                     path: "/authors/{$}"
+
+         chapters: 
+            type: array
+            items: 
+               type: object
+               properties: 
+                  num: { type: number }
+                  heading: { type: string }
+
+               links:
+                  chapter:
+                     path: 
+                        template: "/books/{bookid}/chapter/{chapterid}"
+                        vars:
+                           bookid: "2/id" # go up two-levels, then "id"
+                           chapterid: "0/num" # this array item, then "num"
+
+      links:
+         self: { path: "/books/{id}" }
+         instances: { target: books }
+
+         get:  
+            method: GET
+            response: { $ref: book }
+         set:
+            method: POST
+            request: { $ref: book }
+            response: { $ref: book }
+         delete:
+            method: DELETE
+
+         purchase:
+            path: "/books/{id}/purchase"
+            method: POST
+            request:
+               type: object
+               properties:
+                  num_copies: { type: number }
+                  shipping_address: { $ref: address }
+
+            response:
+               type: object
+               properties:
+                  delivery_date: { type: string }
+                  final_cost: { type: number }
+
+         publisher:
+            path: "/publisher/{publisher_id}"
+
+         new_chapter:
+            path: "/books/{id}/chapter"
+            method: POST
+            request: { $ref: book_chapter }
+            response: { $ref: book_chapter }
+
+   book_chapter:
+      type: object
+      properties:
+         bookid: { type: number }
+         num: { type: number }
+         heading: { type: string }
+
+      links:
+         self: { path: "/books/{bookid}/chapters/{num}" }
+         book: { path: "/books/{bookid}" }
+
+         get:  
+            method: GET
+            response: { $ref: info }
+         set:
+            method: POST
+            request: { $ref: info }
+            response: { $ref: info }
+
+         get_text:
+            method: GET
+            path: "/books/{bookid}/chapter/{num}/text"
+            type: string
+
+         set_text:
+            method: PUT
+            path: "/books/{bookid}/chapter/{num}/text"
+            type: string
+            
