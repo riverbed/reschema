@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 # Copyright (c) 2013 Riverbed Technology, Inc.
 #
 # This software is licensed under the terms and conditions of the 
@@ -71,6 +69,7 @@ import sys, json, copy, logging, uritemplate, jsonpointer
 import xml.etree.ElementTree as ET
 from collections import OrderedDict
 from jsonpointer import resolve_pointer
+from sets import Set
 
 from reschema.util import parse_prop
 from reschema.reljsonpointer import resolve_rel_pointer
@@ -83,6 +82,7 @@ def _register_type(cls):
     type_map[cls._type] = cls
     
 class ValidationError(Exception): pass
+class MissingParameter(Exception): pass
 
 __all__ = ['Schema']
 
@@ -301,7 +301,7 @@ class Ref(Schema):
 
     def toxml(self, input, parent=None):
         return self.refschema.toxml(input, parent)
-    
+
 _register_type(Ref)
 
 class Boolean(Schema):
@@ -541,20 +541,21 @@ class Link:
         parse_prop(self, input, 'description', '')
         parse_prop(self, input, 'notes', '')
         parse_prop(self, input, 'example')
-
-        if 'path' in input:
-            pathstr = input['path']
-            self.path = Path(self, pathstr)
-        else:
-            self.path = self.schema.links['self'].path
-            
         parse_prop(self, input, 'method')
         parse_prop(self, input, 'authorization')
         
+        if 'path' in input:
+            pathstr = input['path']
+            self.path = Path(self, pathstr)
+        elif self.method is not None:
+            self.path = self.schema.links['self'].path
+        else:
+            self.path = None
+            
         self.request = None
         if 'request' in input:
             self.request = Schema.parse(input['request'], parent=self, name='request')
-
+        
         self.response = None
         if 'response' in input:
             self.response = Schema.parse(input['response'], parent=self, name='response')
@@ -639,19 +640,31 @@ class Path:
     def __str__(self):
         return self.template
     
-    def resolve(self, data, pointer):
-        """Resolve all variables in this path template from `data` relataive to `pointer`."""
+    def resolve(self, data, pointer=None):
+        """Resolve all variables in this path template from `data` relative to `pointer`."""
         values = {}
         if data:
-            values['$'] = resolve_pointer(data, pointer)
+            values['$'] = resolve_pointer(data, pointer or '')
+
             if self.vars:
                 for v in self.vars:
-                    values[v] = resolve_rel_pointer(data, pointer, self.vars[v])
+                    values[v] = resolve_rel_pointer(data, pointer or '', self.vars[v])
 
             if data:
                 for v in data.keys():
                     if v not in values:
                         values[v] = data[v]
 
-        return uritemplate.expand(self.template, values)
+        required = Set(uritemplate.variables(self.template))
+        have = Set(values.keys())
+        if not required.issubset(have):
+            raise MissingParameter("Missing parameters for link '%s' path template '%s': %s" %
+                                   (self.link.name, self.template, [x for x in required.difference(have)]))
+            
+        uri = uritemplate.expand(self.template, values)
+        if uri[0] == '$':
+            uri = self.link.api + uri[1:]
+        return uri
+    
+        
                                                 

@@ -33,7 +33,7 @@ resources:
          email: { type: string }
 
       links:
-         self: { path: "/info" }
+         self: { path: "$/info" }
          books: { target: books }
          authors: { target: authors }
          get:  
@@ -49,7 +49,7 @@ resources:
       items: { $ref: author }
 
       links:
-         self: { path: "/authors" }
+         self: { path: "$/authors" }
          get:  
             method: GET
             response: { $ref: authors }
@@ -65,7 +65,7 @@ resources:
          name: { type: string }
 
       links: 
-         self: { path: "/authors/{id}" }
+         self: { path: "$/authors/{id}" }
          instances: { target: authors }
 
          get:  
@@ -78,7 +78,7 @@ resources:
          delete:
             method: DELETE
          books:
-            path: "/books?author={id}"
+            path: "$/books?author={id}"
             target: books/links/get
 
    publishers:
@@ -86,7 +86,7 @@ resources:
       items: { $ref: publisher }
 
       links:
-         self: { path: "/publishers" }
+         self: { path: "$/publishers" }
          get:  
             method: GET
             response: { $ref: publishers }
@@ -103,7 +103,7 @@ resources:
          billing_address: { $ref: address }
 
       links:
-         self: { path: "/publishers/{id}" }
+         self: { path: "$/publishers/{id}" }
          instances: { target: publishers }
 
          get:  
@@ -127,7 +127,7 @@ resources:
                      bookid: "0/id" # this array item, 'id' property
 
       links:
-         self: { path: "/books" }
+         self: { path: "$/books" }
          get:
             method: GET
             request:
@@ -167,7 +167,7 @@ resources:
                links:
                   author:
                      target: author
-                     path: "/authors/{$}"
+                     path: "$/authors/{$}"
 
          chapters: 
             type: array
@@ -186,7 +186,7 @@ resources:
                            chapterid: "0/num" # this array item, then "num"
 
       links:
-         self: { path: "/books/{id}" }
+         self: { path: "$/books/{id}" }
          instances: { target: books }
 
          get:  
@@ -200,7 +200,7 @@ resources:
             method: DELETE
 
          purchase:
-            path: "/books/{id}/purchase"
+            path: "$/books/{id}/purchase"
             method: POST
             request:
                type: object
@@ -215,10 +215,10 @@ resources:
                   final_cost: { type: number }
 
          publisher:
-            path: "/publisher/{publisher_id}"
+            path: "$/publisher/{publisher_id}"
 
          new_chapter:
-            path: "/books/{id}/chapter"
+            path: "$/books/{id}/chapter"
             method: POST
             request: { $ref: book_chapter }
             response: { $ref: book_chapter }
@@ -231,8 +231,8 @@ resources:
          heading: { type: string }
 
       links:
-         self: { path: "/books/{bookid}/chapters/{num}" }
-         book: { path: "/books/{bookid}" }
+         self: { path: "$/books/{bookid}/chapters/{num}" }
+         book: { path: "$/books/{bookid}" }
 
          get:  
             method: GET
@@ -244,11 +244,11 @@ resources:
 
          get_text:
             method: GET
-            path: "/books/{bookid}/chapter/{num}/text"
+            path: "$/books/{bookid}/chapter/{num}/text"
             type: string
 
          set_text:
             method: PUT
-            path: "/books/{bookid}/chapter/{num}/text"
+            path: "$/books/{bookid}/chapter/{num}/text"
             type: string
             

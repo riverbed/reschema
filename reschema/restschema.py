@@ -1,9 +1,17 @@
+# Copyright (c) 2013 Riverbed Technology, Inc.
+#
+# This software is licensed under the terms and conditions of the 
+# MIT License set forth at:
+#   https://github.com/riverbed/reschema/blob/master/LICENSE ("License").  
+# This software is distributed "AS IS" as set forth in the License.
+
 # System imports
 import os, sys, re
 import json, yaml
 from collections import OrderedDict
 import markdown
 import xml.etree.ElementTree as ET
+from StringIO import StringIO
 
 # Local imports
 import reschema.yaml_omap
@@ -32,7 +40,15 @@ class RestSchema(object):
             raise ValueError("Unrecognized file extension, use '*.json' or '*.yml': %s" % filename)
 
         f.close()
-        self.parse(obj)
+        return self.parse(obj)
+
+    def parse_text(self, text, format='json'):
+        if format == 'json':
+            obj = json.loads(text, object_pairs_hook=OrderedDict)
+        elif format == 'yaml' or format == 'yml':
+            obj = yaml.load(StringIO(text))
+
+        return self.parse(obj)
 
     def parse(self, obj):
         # Common properties
@@ -74,3 +90,9 @@ class RestSchema(object):
     def resource_iter(self):
         for r in self.resources:
             yield self.resources[r]
+
+    def find_resource(self, name):
+        return self.resources[name]
+
+    def find_type(self, name):
+        return self.types[name]
