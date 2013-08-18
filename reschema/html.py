@@ -5,12 +5,15 @@
 #   https://github.com/riverbed/reschema/blob/master/LICENSE ("License").  
 # This software is distributed "AS IS" as set forth in the License.
 
-import os, re
+import os
+import re
 import xml.etree.ElementTree as ET
+
 import reschema
 ElementBase = ET.Element
 
-class Document:
+
+class Document(object):
     def __init__(self, title, printable=False):
         self.printable = printable
         self.html = HTMLElement('html')
@@ -72,12 +75,15 @@ class Document:
                         inpre = True
                 else:
                     # Insert newline breaks before certain tags (but not all)
-                    line = re.sub("><(div|p|ul|li|script|style|td|tr|th|table|col|colgroup)", ">\n<\\1", line)
-            f.write (line + "\n")
+                    line = re.sub("><(div|p|ul|li|script|style|td|tr|th|table|col|colgroup)",
+                                  ">\n<\\1",
+                                  line)
+            f.write(line + "\n")
             
         f.close()
 
-class TabBar:
+
+class TabBar(object):
     def __init__(self, div, baseid, printable=False):
         self.div = div
         self.baseid_init = baseid
@@ -102,7 +108,8 @@ class TabBar:
         if self.init or self.printable:
             self.init_tabbar()
             
-        self.ul.li(cls=('selected' if self.selected else None), id='%s-tab-%s' % (self.baseid, id),
+        self.ul.li(cls=('selected' if self.selected else None),
+                   id='%s-tab-%s' % (self.baseid, id),
                    onclick='showtab("%s", "%s")' % (self.baseid, id)).text = label
 
         if self.selected:
@@ -114,7 +121,8 @@ class TabBar:
 
     def finish(self):
         self.div.div(style="clear:both")
-        
+
+
 class HTMLElement(ElementBase):
     def __init__(self, name, *args, **kwargs):
         delargs = []
@@ -132,12 +140,12 @@ class HTMLElement(ElementBase):
             del kwargs['text']
         ElementBase.__init__(self, name, attrib=kwargs)
 
-    def settext(self, *list):
+    def settext(self, *lst):
         last = None
         newlist = []
 
         # Need to first join up any strings in a row
-        for e in list:
+        for e in lst:
             if last is not None:
                 if (((type(last) is str) or (type(last) is unicode)) and
                     ((type(e) is str) or (type(e) is unicode))):
@@ -176,7 +184,8 @@ class HTMLElement(ElementBase):
         table = HTMLTable(*args, **kwargs)
         self.append(table)
         return table
-    
+
+
 class HTMLTable(HTMLElement):
 
     def __init__(self, *args, **kwargs):
@@ -200,6 +209,7 @@ class HTMLTable(HTMLElement):
             td.text = cell
         return tds
 
+
 class Menu(HTMLElement):
 
     def __init__(self, parent, *args, **kwargs):
@@ -219,8 +229,3 @@ class Menu(HTMLElement):
         
     def add_submenu(self):
         return Menu(self)
-    
-def str_to_id(s, c='_'):
-    '''Convert the input string to a valid HTML id by replacing all invalid
-    characters with the character C.'''
-    return (re.sub('[^a-zA-Z0-9-:.]', c, s)).strip('_')

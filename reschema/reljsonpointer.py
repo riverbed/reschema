@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 # Copyright (c) 2013 Riverbed Technology, Inc.
 #
 # This software is licensed under the terms and conditions of the 
@@ -14,6 +12,7 @@ A relative JSON pointer is resolved against a data object and a base pointer.
 
 import jsonpointer
 from jsonpointer import JsonPointer, JsonPointerException
+
 
 class RelJsonPointer(JsonPointer):
     def __init__(self, basepointer, relpointer):
@@ -45,7 +44,8 @@ class RelJsonPointer(JsonPointer):
             self.parts = self.parts[0:-uplevels]
 
         self.parts.extend(relparts)
-        
+
+
 def resolve_rel_pointer(doc, pointer, relpointer, default=jsonpointer._nothing):
     """
     Resolves a relative pointer against doc and pointer
@@ -71,5 +71,3 @@ def resolve_rel_pointer(doc, pointer, relpointer, default=jsonpointer._nothing):
 
     op = RelJsonPointer(pointer, relpointer)
     return op.resolve(doc, default)
-
-    

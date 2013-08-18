@@ -65,9 +65,12 @@ it recursively validates the entire input data object as needed:
 See each individual Schema type for the complete list of validation rules.
 """
 
-import sys, json, copy, logging, uritemplate, jsonpointer
+import copy
+import logging
+import uritemplate
 import xml.etree.ElementTree as ET
 from collections import OrderedDict
+
 from jsonpointer import resolve_pointer
 from sets import Set
 
@@ -85,6 +88,7 @@ class ValidationError(Exception): pass
 class MissingParameter(Exception): pass
 
 __all__ = ['Schema']
+
 
 class Schema(object):
     """Base class for all JSON schema types."""
@@ -138,7 +142,7 @@ class Schema(object):
 
         self.links = OrderedDict()
         if 'links' in input:
-            for key,value in input['links'].iteritems():
+            for key, value in input['links'].iteritems():
                 self.links[key] = Link(value, key, self)
 
         self.schemas[self.fullid(api=True)] = self
@@ -167,7 +171,7 @@ class Schema(object):
                 name = input['id']
             else:
                 name = 'element%d' % cls.count
-                cls.count = cls.count+1
+                cls.count = cls.count + 1
             
         if '$ref' in input:
             typestr = '$ref'
@@ -209,6 +213,10 @@ class Schema(object):
 
         """
         return True
+
+    def isRef(self):
+        """Return True if this schema is a reference."""
+        return False
 
     def fullname(self):
         """Return the full printable name using dotted notation."""
@@ -267,13 +275,14 @@ class Schema(object):
             elem = ET.Element(self.id)
             elem.text = str(input)
             return elem
-        
+
+
 class Ref(Schema):
     _type = '$ref'
     def __init__(self, input, name, parent, **kwargs):
         Schema.__init__(self, Ref._type, {}, name, parent, **kwargs)
-        self.refschema_id = input['$ref']
         self._refschema = None
+        self.refschema_id = input['$ref']
         parse_prop(self, input, 'description', '')
         parse_prop(self, input, 'notes', '')
         parse_prop(self, input, 'id', '')
@@ -288,6 +297,10 @@ class Ref(Schema):
     
     def isSimple(self):
         return False
+
+    def isRef(self):
+        """Return True if this schema is a reference."""
+        return True
 
     @property
     def typestr(self):
@@ -304,6 +317,7 @@ class Ref(Schema):
 
 _register_type(Ref)
 
+
 class Boolean(Schema):
     _type = 'boolean'
     def __init__(self, input, name, parent, **kwargs):
@@ -314,6 +328,7 @@ class Boolean(Schema):
             raise ValidationError("'%s' of type %s expected to be a boolean for %s" %
                                   (input, type(input), self.fullname()))
 _register_type(Boolean)
+
 
 class String(Schema):
     _type = 'string'
@@ -348,6 +363,7 @@ class String(Schema):
         return super(String, self).schema_details(s)
 _register_type(String)
 
+
 class Number(Schema):
     _type = 'number'
     def __init__(self, input, name, parent, **kwargs):
@@ -379,11 +395,13 @@ class Number(Schema):
         return super(Number, self).schema_details(s)
 _register_type(Number)
 
+
 class Timestamp(Schema):
     _type = 'timestamp'
     def __init__(self, input, name, parent, **kwargs):
         Schema.__init__(self, Timestamp._type, input, name, parent, **kwargs)
 _register_type(Timestamp)
+
 
 class TimestampHP(Schema):
     _type = 'timestamp-hp'
@@ -393,6 +411,7 @@ class TimestampHP(Schema):
     def schema_details(self):
         return super(Number, self).schema_details('XXX Notes')
 _register_type(TimestampHP)
+
 
 class Object(Schema):
     _type = 'object'
@@ -465,7 +484,8 @@ class Object(Schema):
 
         return elem
 _register_type(Object)
-    
+
+
 class Array(Schema):
     _type = 'array'
     def __init__(self, input, name, parent, **kwargs):
@@ -512,7 +532,8 @@ class Array(Schema):
             elem.append(subelem)
         return elem
 _register_type(Array)
-        
+
+
 class Data(Schema):
     _type = 'data'
     def __init__(self, input, name, parent, **kwargs):
@@ -525,10 +546,10 @@ class Data(Schema):
 
     def isSimple(self):
         return True
-    
 _register_type(Data)
 
-class Link:
+
+class Link(object):
     # Map of all known links:
     #   schemas["<api>/schema#<fullid>/links/<name>"] -> Schema
     links = {}
@@ -600,7 +621,8 @@ class Link:
     def str_simple(self):
         return '%-30s %-20s %s\n' % (self.fullname(), '<link>', self.description)
 
-class Path:
+
+class Path(object):
     """The `Path` class manages URI templates and resolves variables for a schema.
 
     The `resolve` method supports resolving variables in the template from
@@ -650,7 +672,7 @@ class Path:
                 for v in self.vars:
                     values[v] = resolve_rel_pointer(data, pointer or '', self.vars[v])
 
-            if data:
+            if data and isinstance(data, dict):
                 for v in data.keys():
                     if v not in values:
                         values[v] = data[v]
@@ -665,6 +687,3 @@ class Path:
         if uri[0] == '$':
             uri = self.link.api + uri[1:]
         return uri
-    
-        
-                                                

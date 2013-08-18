@@ -6,19 +6,18 @@
 # This software is distributed "AS IS" as set forth in the License.
 
 # System imports
-import os, sys, re
-import json, yaml
+import os
+import json
+import yaml
 from collections import OrderedDict
-import markdown
-import xml.etree.ElementTree as ET
 from StringIO import StringIO
 
 # Local imports
-import reschema.yaml_omap
-from reschema.jsonschema import *
+from reschema.jsonschema import Schema
 from reschema.util import parse_prop
 
 __all__ = ['RestSchema']
+
 
 class RestSchema(object):
 
@@ -31,16 +30,16 @@ class RestSchema(object):
         self.dir = os.path.dirname(os.path.abspath(filename))
 
         # Support both JSON(.json) and YAML(.yml) file formats
-        f = open(filename, 'r')
-        if re.match(".*\.json", filename):
-            obj = json.load(f, object_pairs_hook=OrderedDict)
-        elif re.match(".*\.yml", filename):
-            obj = yaml.load(f)
-        else:
-            raise ValueError("Unrecognized file extension, use '*.json' or '*.yml': %s" % filename)
+        with open(filename, 'r') as f:
+            if filename.endswith('.json'):
+                obj = json.load(f, object_pairs_hook=OrderedDict)
+            elif filename.endswith('.yml'):
+                obj = yaml.load(f)
+            else:
+                raise ValueError("Unrecognized file extension, use '*.json' or '*.yml': %s"
+                                 % filename)
 
-        f.close()
-        return self.parse(obj)
+        self.parse(obj)
 
     def parse_text(self, text, format='json'):
         if format == 'json':
@@ -74,7 +73,8 @@ class RestSchema(object):
         if 'types' in obj:
             self.types = OrderedDict()
             for type_ in obj['types']:
-                self.types[type_] = Schema.parse(obj['types'][type_], name=type_, api=self.servicePath)
+                self.types[type_] = Schema.parse(obj['types'][type_],
+                                                 name=type_, api=self.servicePath)
         
         if 'resources' in obj:
             self.resources = OrderedDict()

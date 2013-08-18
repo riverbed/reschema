@@ -5,26 +5,31 @@
 #   https://github.com/riverbed/reschema/blob/master/LICENSE ("License").  
 # This software is distributed "AS IS" as set forth in the License.
 
-import os, re, sys
-import json, yaml, markdown
-from StringIO import StringIO
+import re
+import sys
+import copy
+import json
+import yaml
 from collections import OrderedDict
 import xml.dom.minidom, xml.etree.ElementTree as ET
+
 import jsonpointer
 
-from reschema.html import HTMLElement, HTMLTable, Document as HTMLDoc, TabBar, str_to_id as html_str_to_id
+from reschema.html import HTMLElement, HTMLTable, Document as HTMLDoc, TabBar
 import reschema.yaml_omap
 import reschema.jsonschema
 from reschema.jsonschema import Schema
-from reschema.util import a_or_an
+from reschema.util import a_or_an, str_to_id as html_str_to_id
 
-class Options:
+
+class Options(object):
     def __init__(self, printable=False, json=True, xml=True):
         self.printable = printable
         self.json = json
         self.xml = xml
-        
-class RestSchemaToHtml:
+
+
+class RestSchemaToHtml(object):
     def __init__(self, restschema, container, menu=None, options=None):
         self.restschema = restschema
         self.container = container
@@ -43,11 +48,12 @@ class RestSchemaToHtml:
         types_div = self.container.div(id='types')
         self.menu.add_item("Types", href=types_div)
         type_menu = self.menu.add_submenu()
-        for type in self.restschema.types.values():
-            ResourceToHtml(type, self.container, type_menu,
+        for type_ in self.restschema.types.values():
+            ResourceToHtml(type_, self.container, type_menu,
                            self.restschema.servicePath, self.options).process(is_type=True)
 
-class ResourceToHtml:
+
+class ResourceToHtml(object):
     def __init__(self, schema, container, menu=None, basepath="", options=None):
         self.schema = schema
         self.menu = menu
@@ -108,8 +114,10 @@ class ResourceToHtml:
 
     def schema_table(self, schema, container,  baseid):
         tabbar = TabBar(container, baseid+'-tabbar', printable=self.options.printable)
-        self.options.json and tabbar.add_tab("JSON", baseid+'-json', SchemaSummaryJson(schema))
-        self.options.xml and tabbar.add_tab("XML", baseid+'-xml', SchemaSummaryXML(schema))
+        if self.options.json:
+            tabbar.add_tab("JSON", baseid+'-json', SchemaSummaryJson(schema))
+        if self.options.xml:
+            tabbar.add_tab("XML", baseid+'-xml', SchemaSummaryXML(schema))
         #tabbar.add_tab("JSON Schema", "jsonschema", HTMLElement("pre", text=json.dumps(self.schema_raw, indent=2)))
         tabbar.finish()
         container.append(SchemaTable(self.schema))
@@ -193,13 +201,13 @@ class ResourceToHtml:
             if schema:
                 if type(schema) is reschema.jsonschema.Ref:
                     p = div.p()
-                    p.settext( "Returns ",
-                               a_or_an(schema.refschema.name),
-                               " ",
-                               p.a(cls="jsonschema-type",
-                                   href="#type-%s" % html_str_to_id(schema.refschema.fullid()),
-                                   text=schema.refschema.name),
-                               " data object." )
+                    p.settext("Returns ",
+                              a_or_an(schema.refschema.name),
+                              " ",
+                              p.a(cls="jsonschema-type",
+                                  href="#type-%s" % html_str_to_id(schema.refschema.fullid()),
+                                  text=schema.refschema.name),
+                              " data object.")
                 elif type(schema) is reschema.jsonschema.Data:
                     p = div.p()
                     p.settext("On success, the server returns a response body containing data with content type ",
@@ -212,8 +220,8 @@ class ResourceToHtml:
             else:
                 div.p().text = "On success, the server does not provide any body in the responses."
 
-            continue
-            if link.examples is not None:
+            # XXXCJ - this code may still be needed, but not yet functional
+            if None and link.examples is not None:
                 div.span(cls="h5").text = "Examples"
                 for ex in link.examples:
                     text = ex['text']
@@ -221,8 +229,8 @@ class ResourceToHtml:
                     md_html = ET.XML("<div>" + html + "</div>")
                     div.append(md_html)
 
-            
         return None
+
 
 class SchemaSummaryJson(HTMLElement):
     def __init__(self, schema):
@@ -270,7 +278,7 @@ class SchemaSummaryJson(HTMLElement):
             if last is not None:
                 last.text = ",\n"
             parent.span(cls="restschema-type").text = '%*.*s%s' % (indent+2, indent+2, "",
-                                                    obj.additionalProps.name)
+                                                                   obj.additionalProps.name)
             parent.pan().text = ": "
             s = parent.span()
             self.process(s, obj.additionalProps, indent+2)
@@ -292,7 +300,8 @@ class SchemaSummaryJson(HTMLElement):
         else:
             parent.span().text = "[\n%*.*s" % (indent+2, indent+2, "")
             self.process(parent.span(), item, indent+2)
-            parent.span().text = "\n%*.*s]" % (indent, indent, "") 
+            parent.span().text = "\n%*.*s]" % (indent, indent, "")
+
 
 class SchemaSummaryXML(HTMLElement):
     def __init__(self, schema):
@@ -452,7 +461,7 @@ class SchemaSummaryXML(HTMLElement):
             
         if subelems:
             parent.span().text = "%*s</" % (indent, "")
-            parent.span(cls="xmlschema-element").text =  name
+            parent.span(cls="xmlschema-element").text = name
             parent.span().text = ">\n"
     
     def process_array(self, parent, array, indent, name, key):
@@ -463,6 +472,7 @@ class SchemaSummaryXML(HTMLElement):
         parent.span().text = "%*s</" % (indent, "")
         parent.span(cls="xmlschema-element").text = name
         parent.span().text = ">\n"
+
 
 class PropTable(HTMLTable):
     def __init__(self, data):
@@ -565,6 +575,7 @@ class PropTable(HTMLTable):
 
         desctd.settext('; '.join(parts))
 
+
 class ParamTable(PropTable):
     def __init__(self, parameters):
         PropTable.__init__(self, parameters)
@@ -572,6 +583,7 @@ class ParamTable(PropTable):
     def process(self, parameters):
         for p in parameters:
             self.makerow(parameters[p], p)
+
                          
 class SchemaTable(PropTable):
     def __init__(self, schema):
@@ -604,4 +616,3 @@ if __name__ == '__main__':
     htmldoc.header.span(cls="headerleft").text = s2h.schema.name
     s2h.process()
     htmldoc.write(options.output)
-             
