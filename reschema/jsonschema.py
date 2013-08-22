@@ -569,7 +569,10 @@ class Link(object):
             pathstr = input['path']
             self.path = Path(self, pathstr)
         elif self.method is not None:
-            self.path = self.schema.links['self'].path
+            try:
+                self.path = self.schema.links['self'].path
+            except KeyError:
+                raise ValidationError('"self" link not found: %s' % self.schema.links)
         else:
             self.path = None
             

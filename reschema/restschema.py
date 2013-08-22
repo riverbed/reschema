@@ -15,6 +15,7 @@ from StringIO import StringIO
 # Local imports
 from reschema.jsonschema import Schema
 from reschema.util import parse_prop
+import reschema.yaml_omap
 
 __all__ = ['RestSchema']
 

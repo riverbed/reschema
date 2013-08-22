@@ -10,6 +10,7 @@ import sys
 import copy
 import json
 import yaml
+import markdown
 from collections import OrderedDict
 import xml.dom.minidom, xml.etree.ElementTree as ET
 
