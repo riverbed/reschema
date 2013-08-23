@@ -72,7 +72,6 @@ import xml.etree.ElementTree as ET
 from collections import OrderedDict
 
 from jsonpointer import resolve_pointer
-from sets import Set
 
 from reschema.util import parse_prop
 from reschema.reljsonpointer import resolve_rel_pointer
@@ -116,7 +115,6 @@ class Schema(object):
         If `api` is None, the parent's api is used.
 
         """
-            
         self._typestr = typestr
         self.parent = parent
         self.name = name
@@ -244,7 +242,7 @@ class Schema(object):
         s = '%-30s %-20s %s\n' % (self.fullname(), self.typestr, self.description.split('\n')[0])
         for child in self.children:
             s += child.str_simple()
-        for link,value in self.links.iteritems():
+        for link, value in self.links.iteritems():
             s += value.str_simple()
         return s
 
@@ -680,8 +678,8 @@ class Path(object):
                     if v not in values:
                         values[v] = data[v]
 
-        required = Set(uritemplate.variables(self.template))
-        have = Set(values.keys())
+        required = set(uritemplate.variables(self.template))
+        have = set(values.keys())
         if not required.issubset(have):
             raise MissingParameter("Missing parameters for link '%s' path template '%s': %s" %
                                    (self.link.name, self.template, [x for x in required.difference(have)]))
