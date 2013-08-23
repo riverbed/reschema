@@ -45,6 +45,11 @@ if not options.filename:
     parser.print_usage()
     sys.exit(1)
 
+if not options.pdf and not options.html:
+    print "Output format of --pdf and/or --html must be specified"
+    parser.print_usage()
+    sys.exit(1)
+
 rs = RestSchema()
 rs.load(options.filename)
 
