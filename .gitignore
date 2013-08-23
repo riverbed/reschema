@@ -8,6 +8,7 @@ RELEASE-VERSION
 docs/html
 *.html
 *.pdf
+*.log
 
 *~
 *.swp
