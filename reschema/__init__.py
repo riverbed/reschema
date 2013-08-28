@@ -5,5 +5,5 @@
 #   https://github.com/riverbed/reschema/blob/master/LICENSE ("License").  
 # This software is distributed "AS IS" as set forth in the License.
 
-from restschema import *
-from jsonschema import *
+from restschema import RestSchema
+from jsonschema import Schema

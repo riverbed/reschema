@@ -67,10 +67,10 @@ See each individual Schema type for the complete list of validation rules.
 
 import copy
 import logging
-import uritemplate
 import xml.etree.ElementTree as ET
 from collections import OrderedDict
 
+import uritemplate
 from jsonpointer import resolve_pointer
 
 from reschema.util import parse_prop
