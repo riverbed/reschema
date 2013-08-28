@@ -374,7 +374,7 @@ class Number(Schema):
         parse_prop(self, input, 'enum')
 
     def validate(self, input):
-        if (type(input) is not int):
+        if (type(input) not in [int, float]):
             raise ValidationError("'%s' expected to be a number for %s" % (input, self.fullname()))
         
     def schema_details(self):

@@ -10,6 +10,7 @@ import logging
 import unittest
 
 import reschema
+from reschema.jsonschema import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,7 @@ TEST_SCHEMA_DIR = os.path.join(PACKAGE_PATH, 'examples')
 TEST_SCHEMA = os.path.join(TEST_SCHEMA_DIR, 'Catalog.yml')
 
 
-class ReschemaTest(unittest.TestCase):
+class TestReschema(unittest.TestCase):
 
     def setUp(self):
         pass
@@ -59,6 +60,75 @@ class ReschemaTest(unittest.TestCase):
         self.assertFalse(a.isSimple())
         self.assertIn('id', a.props)
         self.assertIn('name', a.props)
+        self.assertEqual(a.id, 'author')
+        self.assertIsNone(a.parent)
+
+
+class TestReschemaPrimitives(unittest.TestCase):
+
+    def setUp(self):
+        self.r = reschema.RestSchema()
+        self.r.load(TEST_SCHEMA)
+
+    def tearDown(self):
+        self.r = None
+
+    def test_boolean(self):
+        # TODO add Boolean type to Catalog.yml
+        pass
+
+    def test_string(self):
+        s = self.r.resources['author'].props['name']
+        self.assertFalse(s.isRef())
+        self.assertTrue(s.isSimple())
+
+        # successful validation will return None
+        self.assertIsNone(s.validate('foo'))
+        self.assertIsNone(s.validate(u'bar'))
+
+        with self.assertRaises(ValidationError):
+            s.validate(42)
+
+    def test_number(self):
+        n = self.r.resources['author'].props['id']
+        self.assertFalse(n.isRef())
+        self.assertTrue(n.isSimple())
+
+        # successful validation will return None
+        self.assertIsNone(n.validate(443))
+        self.assertIsNone(n.validate(3.14))
+
+        with self.assertRaises(ValidationError):
+            n.validate('foo')
+        with self.assertRaises(ValidationError):
+            n.validate('43')
+
+    def test_timestamp(self):
+        pass
+
+    def test_timestamp_hp(self):
+        pass
+
+    def test_object(self):
+        # skip validation, we are checking that elsewhere
+        s = self.r.resources['author']
+        self.assertFalse(s.isRef())
+        self.assertFalse(s.isSimple())
+
+    def test_array(self):
+        s = self.r.resources['authors']
+        self.assertFalse(s.isRef())
+        self.assertFalse(s.isSimple())
+
+        # successful validation will return None
+        self.assertIsNone(s.validate([{'id':1, 'name': 'Ted Nugent'}, 
+                                      {'id': 2, 'name': 'Ralph Macchio'}]))
+
+        with self.assertRaises(ValidationError):
+            s.validate('foo')
+
+        ### XXX add some kind of test for children/indexing
+
 
 
 if __name__ == '__main__':
