@@ -16,10 +16,10 @@ import xml.dom.minidom, xml.etree.ElementTree as ET
 
 import jsonpointer
 
+import reschema
 from reschema.html import HTMLElement, HTMLTable, Document as HTMLDoc, TabBar
 from reschema.jsonschema import Schema
 from reschema.util import a_or_an, str_to_id as html_str_to_id
-import reschema.yaml_omap
 
 
 class Options(object):

@@ -122,7 +122,7 @@ class TestReschemaPrimitives(unittest.TestCase):
         self.assertFalse(s.isSimple())
 
         # successful validation will return None
-        self.assertIsNone(s.validate([{'id':1, 'name': 'Ted Nugent'}, 
+        self.assertIsNone(s.validate([{'id': 1, 'name': 'Ted Nugent'},
                                       {'id': 2, 'name': 'Ralph Macchio'}]))
 
         with self.assertRaises(ValidationError):
