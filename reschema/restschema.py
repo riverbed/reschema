@@ -31,13 +31,8 @@ class RestSchema(object):
         try:
             return yaml_loader.marked_load(f.read())
         except yaml.error.MarkedYAMLError as exc:
-            msg = ''
-            if exc.context:
-                msg += exc.context + ': '
-            msg += exc.problem
-            lineno = exc.problem_mark.line + 1
-            raise yaml.error.YAMLError(msg, filename=self.filename, lineno=lineno)
-        
+            #from IPython import embed; embed()
+            raise exc
 
     def load(self, filename):
         self.filename = filename

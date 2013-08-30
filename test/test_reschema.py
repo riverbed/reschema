@@ -9,6 +9,8 @@ import os
 import logging
 import unittest
 
+from yaml.error import MarkedYAMLError
+
 import reschema
 from reschema.jsonschema import ValidationError
 from reschema.jsonschema import Object, Number, String, Array
@@ -33,6 +35,15 @@ class TestReschema(unittest.TestCase):
         r = reschema.RestSchema()
         r.load(TEST_SCHEMA)
         self.assertEqual(r.name, 'Catalog')
+
+    def test_load_bad_schema(self):
+        with open(TEST_SCHEMA, 'r') as f:
+            schema = f.readlines()
+        schema.insert(31, '      bad_object_name: foo\n')
+        
+        r = reschema.RestSchema()
+        with self.assertRaises(MarkedYAMLError):
+            r.parse_text(''.join(schema), format='yml')
 
     def test_resource_load(self):
         r = reschema.RestSchema()
