@@ -13,6 +13,7 @@ from collections import OrderedDict
 from StringIO import StringIO
 
 # Local imports
+import reschema.yaml_omap # This must be loaded before calling yaml.load()
 from reschema.jsonschema import Schema
 from reschema.util import parse_prop
 import reschema.yaml_omap

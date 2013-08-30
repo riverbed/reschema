@@ -65,16 +65,17 @@ it recursively validates the entire input data object as needed:
 See each individual Schema type for the complete list of validation rules.
 """
 
+import re
 import copy
 import logging
 import xml.etree.ElementTree as ET
 from collections import OrderedDict
 
 import uritemplate
-from jsonpointer import resolve_pointer
+from jsonpointer import resolve_pointer, JsonPointer
 
 from reschema.util import parse_prop
-from reschema.reljsonpointer import resolve_rel_pointer
+from reschema.reljsonpointer import resolve_rel_pointer, RelJsonPointer
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +86,7 @@ def _register_type(cls):
     
 class ValidationError(Exception): pass
 class MissingParameter(Exception): pass
+class ParseError(Exception): pass
 
 __all__ = ['Schema']
 
@@ -141,6 +143,7 @@ class Schema(object):
         self.links = OrderedDict()
         if 'links' in input:
             for key, value in input['links'].iteritems():
+                #logger.debug("Schema %s: adding link '%s'" % (str(self), key))
                 self.links[key] = Link(value, key, self)
 
         self.schemas[self.fullid(api=True)] = self
@@ -264,6 +267,37 @@ class Schema(object):
 
         return s
 
+    def __getitem__(self, name):
+        if name[0] == '/':
+            # treat 'name' as a jsonpointer
+            p = JsonPointer(name)
+            o = self
+            for part in p.parts:
+                o = o[part]
+            return o
+
+        m = re.match('^([0-9]+)(/.*)$', name)
+        if m:
+            # looks like a relative jsonpointer
+            uplevels = int(m.group(1))
+            p = JsonPointer(m.group(2))
+            o = self
+            for i in range(uplevels):
+                if o.parent is None:
+                    raise KeyError(("%s cannot resolve '%s' as a relative JSON pointer, " +
+                                   "not enough uplevels") % (self.fullname(), name))
+                o = o.parent
+                    
+            if len(p.parts) == 1 and p.parts[0] == '':
+                return o
+            
+            for part in p.parts:
+                o = o[part]
+
+            return o
+
+        raise KeyError(name)
+    
     def toxml(self, input, parent=None):
         """Generate an XML Element structure representing this element."""
         if parent is not None:
@@ -432,9 +466,10 @@ class Object(Schema):
             self.additionalProps = None
 
     def __getitem__(self, name):
-        if name not in self.props:
-            raise KeyError(name)
-        return self.props[name]
+        if name in self.props:
+            return self.props[name]
+
+        return super(Object, self).__getitem__(name)
     
     def isSimple(self):
         return False
@@ -508,8 +543,12 @@ class Array(Schema):
         return 'array of <%s>' % self.children[0].typestr
 
     def __getitem__(self, name):
-        if (type(name) is not int) and (name != 'items'):
-            raise KeyError(name)
+        try:
+            num = int(name)
+        except:
+            if name != 'items':
+                return super(Array, self).__getitem__(name)
+
         return self.children[0]
     
     def validate(self, input):
@@ -567,10 +606,10 @@ class Link(object):
             pathstr = input['path']
             self.path = Path(self, pathstr)
         elif self.method is not None:
-            try:
-                self.path = self.schema.links['self'].path
-            except KeyError:
-                raise ValidationError('"self" link not found: %s' % self.schema.links)
+            if 'self' not in self.schema.links:
+                raise ParseError("Link '%s' defined with no path and schema has no 'self' link" %
+                                 str(self))
+            self.path = self.schema.links['self'].path
         else:
             self.path = None
             

@@ -11,6 +11,7 @@ import unittest
 
 import reschema
 from reschema.jsonschema import ValidationError
+from reschema.jsonschema import Object, Number, String, Array
 
 logger = logging.getLogger(__name__)
 
@@ -127,8 +128,30 @@ class TestReschemaPrimitives(unittest.TestCase):
         with self.assertRaises(ValidationError):
             s.validate('foo')
 
-        ### XXX add some kind of test for children/indexing
+    def test_indexing(self):
+        book = self.r.resources['book']
+        self.assertEqual(type(book), Object)
+        self.assertEqual(type(book['id']), Number)
+        self.assertEqual(type(book['title']), String)
 
+        a = book['author_ids']
+        self.assertEqual(type(a), Array)
+        self.assertEqual(book['/author_ids'], a)
+
+        # Test JSON pointer syntax
+        self.assertEqual(type(book['author_ids'][0]), Number)
+        self.assertEqual(book['/author_ids/0'], book['author_ids'][0])
+
+        # Test relative JSON pointer syntax
+        a0 = book['/author_ids/0']
+        self.assertEqual(a0['2/'], book)
+        self.assertEqual(a0['2/id'], book['id'])
+
+        with self.assertRaises(KeyError): book['foo']
+        with self.assertRaises(KeyError): book['1/']
+        with self.assertRaises(KeyError): a['a']
+        with self.assertRaises(KeyError): a['10a']
+        with self.assertRaises(KeyError): a0['3/']
 
 
 if __name__ == '__main__':
