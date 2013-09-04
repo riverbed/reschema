@@ -14,10 +14,9 @@ from StringIO import StringIO
 from jsonpointer import resolve_pointer, JsonPointer
 
 # Local imports
-import reschema.yaml_omap # This must be loaded before calling yaml.load()
 from reschema.jsonschema import Schema
 from reschema.util import parse_prop
-import reschema.yaml_omap
+from reschema import yaml_loader
 
 __all__ = ['RestSchema']
 
@@ -28,6 +27,14 @@ class RestSchema(object):
         self.filename = None
         self.dir = None
         
+    def _load_yaml(self, f):
+        """ Load file-like object using yaml marked loader. """
+        try:
+            return yaml_loader.marked_load(f.read())
+        except yaml.error.MarkedYAMLError as exc:
+            #from IPython import embed; embed()
+            raise exc
+
     def load(self, filename):
         self.filename = filename
         self.dir = os.path.dirname(os.path.abspath(filename))
@@ -37,7 +44,7 @@ class RestSchema(object):
             if filename.endswith('.json'):
                 obj = json.load(f, object_pairs_hook=OrderedDict)
             elif filename.endswith('.yml'):
-                obj = yaml.load(f)
+                obj = self._load_yaml(f)
             else:
                 raise ValueError("Unrecognized file extension, use '*.json' or '*.yml': %s"
                                  % filename)
@@ -48,7 +55,7 @@ class RestSchema(object):
         if format == 'json':
             obj = json.loads(text, object_pairs_hook=OrderedDict)
         elif format == 'yaml' or format == 'yml':
-            obj = yaml.load(StringIO(text))
+            obj = self._load_yaml(StringIO(text))
 
         return self.parse(obj)
 
