@@ -7,20 +7,23 @@
 
 import re
 
-
-def parse_prop(obj, srcobj, prop, defaultValue=None, map=None, required=False):
+def parse_prop(obj, srcobj, prop, defaultValue=None, required=False, checkType=None):
     if prop in srcobj:
         val = srcobj[prop]
+        del srcobj[prop]
+        if checkType:
+            if not isinstance(val, checkType):
+                raise ValueError("Value provided for %s must be %s, got %s" % (prop, str(checkType), type(val)))
+
     elif required:
         raise ValueError("Missing required property '%s'" % prop)
     else:
         val = defaultValue
         
-    if val and map:
-        val = map[val]
-        
-    setattr(obj, prop, val)
+    if obj:
+        setattr(obj, prop, val)
 
+    return val
 
 def a_or_an(s):
     if s[0] in ('a', 'e', 'i', 'o'):

@@ -13,7 +13,8 @@ from yaml.error import MarkedYAMLError
 
 import reschema
 from reschema.jsonschema import ValidationError
-from reschema.jsonschema import Object, Number, String, Array
+from reschema.jsonschema import Object, Number, String, Array, Schema
+from reschema import yaml_loader
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +77,7 @@ class TestReschema(unittest.TestCase):
         self.assertIsNone(a.parent)
 
 
-class TestReschemaPrimitives(unittest.TestCase):
+class TestCatalog(unittest.TestCase):
 
     def setUp(self):
         self.r = reschema.RestSchema()
@@ -163,6 +164,76 @@ class TestReschemaPrimitives(unittest.TestCase):
         with self.assertRaises(KeyError): a['a']
         with self.assertRaises(KeyError): a['10a']
         with self.assertRaises(KeyError): a0['3/']
+
+
+class TestJsonSchema(unittest.TestCase):
+
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    def parse(self, string):
+        d = yaml_loader.marked_load(string)
+        return Schema.parse(d, 'root', api='/api')
+
+    def check_valid(self, s, *args):
+        schema = self.parse(s)
+        for a in args:
+            if a[0] == '!':
+                with self.assertRaises(ValidationError):
+                    schema.validate(a[1:])
+            else:
+                schema.validate(a)
+
+    def check_invalid(self, s, etype):
+        try:
+            self.parse(s)
+        except etype, e:
+            logger.debug("Got validation error: %s" % str(e))
+            return
+
+        self.fail('Schema should have thrown a ValidiationError')
+
+
+    def test_string(self):
+        self.check_invalid("type: string\n"
+                           "foobar: bad property",
+                           ValidationError)
+
+        self.check_invalid("type: string\n"
+                           "minLength: 2a",
+                           ValueError)
+
+        self.check_valid("type: string\n"
+                         "minLength: 2\n"
+                         "maxLength: 10\n"
+                         "pattern: '[a-z0-9]+'\n",
+
+                         # values to validate
+                         "aa",
+                         "11",
+                         "abc",
+                         "123",
+                         "!A",
+                         "!abcABCD",
+                         "1234512345",
+                         "!12345123451",
+                         )
+
+        self.check_valid("type: string\n"
+                         "enum: [one, two, three]\n",
+
+                         # values to validate
+                         "one",
+                         "two",
+                         "three",
+                         "!four",
+                         "!one1",
+                         "!onetwo"
+                         )
+
 
 
 if __name__ == '__main__':

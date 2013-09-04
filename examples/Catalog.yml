@@ -119,7 +119,7 @@ resources:
       items: 
          type: object
          properties:
-            id: { type: number, readonly: true }
+            id: { type: number, readOnly: true }
             title: { type: string }
 
          links:
