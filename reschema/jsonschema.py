@@ -268,6 +268,13 @@ class Schema(object):
         return s
 
     def __getitem__(self, name):
+        if name == 'links':
+            return self.links
+
+        if name == '/':
+            # Special case jsonpointer
+            return self
+        
         if name[0] == '/':
             # treat 'name' as a jsonpointer
             p = JsonPointer(name)

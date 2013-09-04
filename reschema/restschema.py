@@ -11,6 +11,7 @@ import json
 import yaml
 from collections import OrderedDict
 from StringIO import StringIO
+from jsonpointer import resolve_pointer, JsonPointer
 
 # Local imports
 import reschema.yaml_omap # This must be loaded before calling yaml.load()
@@ -98,3 +99,17 @@ class RestSchema(object):
 
     def find_type(self, name):
         return self.types[name]
+
+    def find(self, name):
+        if name[0] == '/':
+            p = JsonPointer(name)
+            parts = p.parts
+            if parts[0] in self.resources:
+                o = self.resources[parts[0]]
+                return o['/' + '/'.join(parts[1:])]
+        elif name in self.resources:
+            return self.resource[name]
+        else:
+            raise KeyError("%s has no such resource: %s" % (self, name))
+        
+        

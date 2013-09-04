@@ -40,7 +40,7 @@ resources:
             method: GET
             response: { $ref: info }
          set:
-            method: POST
+            method: PUT
             request: { $ref: info }
             response: { $ref: info }
 
@@ -58,6 +58,10 @@ resources:
             request: { $ref: author }
             response: { $ref: author }
 
+         get_first:
+            method: GET
+            response: { $ref: author }
+
    author:
       type: object
       properties:
@@ -72,7 +76,7 @@ resources:
             method: GET
             response: { $ref: author }
          set:
-            method: POST
+            method: PUT
             request: { $ref: author }
             response: { $ref: author }
          delete:
@@ -127,8 +131,10 @@ resources:
                      bookid: "0/id" # this array item, 'id' property
 
       links:
+      
          self: { path: "$/books" }
-         get:
+
+         get: 
             method: GET
             request:
                # Allow filtering by id or title
@@ -137,6 +143,7 @@ resources:
                   author: { type: number }
                   title: { type: string }
             response: { $ref : books }
+
          create:
             method: POST
             request: { $ref: book }
@@ -193,7 +200,7 @@ resources:
             method: GET
             response: { $ref: book }
          set:
-            method: POST
+            method: PUT
             request: { $ref: book }
             response: { $ref: book }
          delete:
@@ -238,17 +245,18 @@ resources:
             method: GET
             response: { $ref: info }
          set:
-            method: POST
+            method: PUT
             request: { $ref: info }
             response: { $ref: info }
 
          get_text:
             method: GET
             path: "$/books/{bookid}/chapter/{num}/text"
-            type: string
+            response: { type: string }
 
          set_text:
             method: PUT
             path: "$/books/{bookid}/chapter/{num}/text"
-            type: string
+            request: { type: string }
+            response: { type: string }
             
