@@ -39,14 +39,14 @@ class RestSchema(object):
         self.filename = filename
         self.dir = os.path.dirname(os.path.abspath(filename))
 
-        # Support both JSON(.json) and YAML(.yml) file formats
+        # Support both JSON(.json) and YAML(.yml/.yaml) file formats
         with open(filename, 'r') as f:
             if filename.endswith('.json'):
                 obj = json.load(f, object_pairs_hook=OrderedDict)
-            elif filename.endswith('.yml'):
+            elif filename.endswith(('.yml', '.yaml')):
                 obj = self._load_yaml(f)
             else:
-                raise ValueError("Unrecognized file extension, use '*.json' or '*.yml': %s"
+                raise ValueError("Unrecognized file extension, use '*.json' or '*.yaml': %s"
                                  % filename)
 
         self.parse(obj)

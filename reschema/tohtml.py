@@ -67,9 +67,9 @@ class ResourceToHtml(object):
         else:
             f = open(filename, "r")
 
-        if re.match(".*\.json", filename):
+        if filename.endswith('.json'):
             input = json.load(f, object_pairs_hook=OrderedDict)
-        elif re.match(".*\.yml", filename):
+        elif filename.endswith(('.yml', '.yaml')):
             input = yaml.load(f)
         else:
             raise ValueError("Unrecognized file extension, use '*.json' or '*.yml': %s" % filename)
