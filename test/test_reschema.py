@@ -21,7 +21,9 @@ logger = logging.getLogger(__name__)
 TEST_PATH = os.path.abspath(os.path.dirname(__file__))
 PACKAGE_PATH = os.path.dirname(TEST_PATH)
 TEST_SCHEMA_DIR = os.path.join(PACKAGE_PATH, 'examples')
-TEST_SCHEMA = os.path.join(TEST_SCHEMA_DIR, 'Catalog.yml')
+
+TEST_SCHEMA_YAML = os.path.join(TEST_SCHEMA_DIR, 'Catalog.yml')
+TEST_SCHEMA_JSON = os.path.join(TEST_SCHEMA_DIR, 'Catalog.json')
 
 
 class TestReschema(unittest.TestCase):
@@ -34,21 +36,26 @@ class TestReschema(unittest.TestCase):
 
     def test_load_schema(self):
         r = reschema.RestSchema()
-        r.load(TEST_SCHEMA)
+        r.load(TEST_SCHEMA_YAML)
+        self.assertEqual(r.name, 'Catalog')
+
+    def test_load_schema_json(self):
+        r = reschema.RestSchema()
+        r.load(TEST_SCHEMA_JSON)
         self.assertEqual(r.name, 'Catalog')
 
     def test_load_bad_schema(self):
-        with open(TEST_SCHEMA, 'r') as f:
+        with open(TEST_SCHEMA_YAML, 'r') as f:
             schema = f.readlines()
         schema.insert(31, '      bad_object_name: foo\n')
-        
+
         r = reschema.RestSchema()
         with self.assertRaises(MarkedYAMLError):
             r.parse_text(''.join(schema), format='yml')
 
     def test_resource_load(self):
         r = reschema.RestSchema()
-        r.load(TEST_SCHEMA)
+        r.load(TEST_SCHEMA_YAML)
         self.assertEquals(len(r.resources), 8)
         self.assertIn('info', r.resources)
         self.assertIn('author', r.resources)
@@ -59,7 +66,7 @@ class TestReschema(unittest.TestCase):
 
     def test_type_load(self):
         r = reschema.RestSchema()
-        r.load(TEST_SCHEMA)
+        r.load(TEST_SCHEMA_YAML)
         self.assertIn('address', r.types)
         self.assertTrue(r.find_type('address'))
         with self.assertRaises(KeyError):
@@ -67,7 +74,7 @@ class TestReschema(unittest.TestCase):
 
     def test_resource_objects(self):
         r = reschema.RestSchema()
-        r.load(TEST_SCHEMA)
+        r.load(TEST_SCHEMA_YAML)
         a = r.resources['author']
         self.assertFalse(a.isRef())
         self.assertFalse(a.isSimple())
@@ -81,7 +88,7 @@ class TestCatalog(unittest.TestCase):
 
     def setUp(self):
         self.r = reschema.RestSchema()
-        self.r.load(TEST_SCHEMA)
+        self.r.load(TEST_SCHEMA_YAML)
 
     def tearDown(self):
         self.r = None
@@ -196,7 +203,6 @@ class TestJsonSchema(unittest.TestCase):
 
         self.fail('Schema should have thrown a ValidiationError')
 
-
     def test_string(self):
         self.check_invalid("type: string\n"
                            "foobar: bad property",
@@ -233,7 +239,6 @@ class TestJsonSchema(unittest.TestCase):
                          "!one1",
                          "!onetwo"
                          )
-
 
 
 if __name__ == '__main__':
