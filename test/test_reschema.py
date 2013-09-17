@@ -44,6 +44,18 @@ class TestReschema(unittest.TestCase):
         r.load(TEST_SCHEMA_JSON)
         self.assertEqual(r.name, 'Catalog')
 
+    def test_parse_schema(self):
+        r = reschema.RestSchema()
+        with open(TEST_SCHEMA_YAML, 'r') as f:
+            r.parse_text(f.read(), format='yaml')
+        self.assertEqual(r.name, 'Catalog')
+
+    def test_parse_schema_json(self):
+        r = reschema.RestSchema()
+        with open(TEST_SCHEMA_JSON, 'r') as f:
+            r.parse_text(f.read())
+        self.assertEqual(r.name, 'Catalog')
+
     def test_load_bad_schema(self):
         with open(TEST_SCHEMA_YAML, 'r') as f:
             schema = f.readlines()
