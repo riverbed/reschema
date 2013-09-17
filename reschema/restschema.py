@@ -43,10 +43,11 @@ class RestSchema(object):
         self.parse(obj)
 
     def parse_text(self, text, format='json'):
+        stream = StringIO(text)
         if format == 'json':
-            obj = json_loader.marked_load(text)
+            obj = json_loader.marked_load(stream)
         elif format == 'yaml' or format == 'yml':
-            obj = yaml_loader.marked_load(StringIO(text))
+            obj = yaml_loader.marked_load(stream)
 
         return self.parse(obj)
 
