@@ -196,7 +196,7 @@ class Schema(object):
 
         badkeys = input.keys()
         if len(badkeys) > 0:
-            raise ValidationError('%s: unrecognized properites in definition: %s' % (self.fullname(), ','.join(badkeys)))
+            raise ValidationError('%s: unrecognized properties in definition: %s' % (self.fullname(), ','.join(badkeys)))
             
         
     @classmethod
@@ -265,7 +265,7 @@ class Schema(object):
             s += 'Description: ' + self.description + '\n'
 
         if self.required is not None:
-            s += 'Requried: %s\n' % self.required
+            s += 'Required: %s\n' % self.required
         if additional_details:
             s += additional_details
 
@@ -712,7 +712,7 @@ class Link(object):
 
         badkeys = input.keys()
         if len(badkeys) > 0:
-            raise ValidationError('%s: unreconginzed properites in definition: %s' %
+            raise ValidationError('%s: unrecognized properties in definition: %s' %
                                   (self.fullname(), badkeys.join(input)))
             
     @property

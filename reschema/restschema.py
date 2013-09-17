@@ -109,5 +109,3 @@ class RestSchema(object):
             return self.resource[name]
         else:
             raise KeyError("%s has no such resource: %s" % (self, name))
-        
-        
