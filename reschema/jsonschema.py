@@ -187,6 +187,13 @@ class Schema(object):
 
     def _check_input(self, input):
         """ Verify that input is empty, all keywords should have been parsed. """
+        if input is None:
+            return
+
+        if not isinstance(input, dict):
+            raise ValidationError('%s: definition should be a dictionary, got: %s' % 
+                                  (self.fullname(), type(input)))
+
         badkeys = input.keys()
         if len(badkeys) > 0:
             raise ValidationError('%s: unrecognized properites in definition: %s' % (self.fullname(), ','.join(badkeys)))
@@ -500,7 +507,9 @@ class Object(Schema):
             self.children.append(c)
 
         ap = parse_prop(None, input, 'additionalProperties')
-        if ap is not None:
+        if type(ap) is bool:
+            self.additionalProps = ap
+        elif ap is not None:
             name = ap['id'] if ('id' in ap) else 'prop'
             c = Schema.parse(ap, '[' + name + ']', self)
             self.additionalProps = c
@@ -524,11 +533,13 @@ class Object(Schema):
             raise ValidationError("'%s' expected to be an object for %s" % (input, self.fullname()))
 
         for k in input:
-            if k not in self.props:
+            if k in self.props:
+                self.props[k].validate(input[k])
+            elif self.additionalProps in (None, False):
                 raise ValidationError("'%s' is not a valid property for %s" % (k, self.fullname()))
-                
-            self.props[k].validate(input[k])
-
+            elif isinstance (self.additionalProps, Schema):
+                self.additionalProps.validate(input[k])
+            
     def toxml(self, input, parent=None):
         if parent is not None:
             elem = ET.SubElement(parent, self.id)
@@ -692,9 +703,17 @@ class Link(object):
 
     def _check_input(self, input):
         """ Verify that input is empty, all keywords should have been parsed. """
+        if input is None:
+            return
+
+        if not isinstance(input, dict):
+            raise ValidationError('%s: definition should be a dictionary, got: %s' %
+                                  (self.fullname(), type(input)))
+
         badkeys = input.keys()
         if len(badkeys) > 0:
-            raise ValidationError('%s: unreconginzed properites in definition: %s' % (self.fullname(), badkeys.join(input)))
+            raise ValidationError('%s: unreconginzed properites in definition: %s' %
+                                  (self.fullname(), badkeys.join(input)))
             
     @property
     def target(self):

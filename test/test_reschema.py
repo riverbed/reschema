@@ -178,16 +178,19 @@ class TestJsonSchema(unittest.TestCase):
         d = yaml_loader.marked_load(string)
         return Schema.parse(d, 'root', api='/api')
 
-    def check_valid(self, s, *args):
+    def check_valid(self, s, valid=[], invalid=[]):
         schema = self.parse(s)
-        for a in args:
-            if a[0] == '!':
-                with self.assertRaises(ValidationError):
-                    schema.validate(a[1:])
-            else:
-                schema.validate(a)
+        for a in valid:
+            schema.validate(a)
 
-    def check_invalid(self, s, etype):
+        for a in invalid:
+            try:
+                schema.validate(a)
+                self.fail("ValidationError not raised for value: %s" % a)
+            except ValidationError:
+                pass
+
+    def check_bad_schema(self, s, etype):
         try:
             self.parse(s)
         except etype, e:
@@ -198,13 +201,13 @@ class TestJsonSchema(unittest.TestCase):
 
 
     def test_string(self):
-        self.check_invalid("type: string\n"
-                           "foobar: bad property",
-                           ValidationError)
+        self.check_bad_schema("type: string\n"
+                              "foobar: bad property",
+                              ValidationError)
 
-        self.check_invalid("type: string\n"
-                           "minLength: 2a",
-                           ValueError)
+        self.check_bad_schema("type: string\n"
+                              "minLength: 2a",
+                              ValueError)
 
         self.check_valid("type: string\n"
                          "minLength: 2\n"
@@ -212,29 +215,67 @@ class TestJsonSchema(unittest.TestCase):
                          "pattern: '[a-z0-9]+'\n",
 
                          # values to validate
-                         "aa",
-                         "11",
-                         "abc",
-                         "123",
-                         "!A",
-                         "!abcABCD",
-                         "1234512345",
-                         "!12345123451",
+                         valid = [ "aa",
+                                   "11",
+                                   "abc",
+                                   "123",
+                                   "1234512345" ],
+
+                         invalid = [ "A",
+                                     "abcABCD",
+                                     "12345123451" ]
                          )
 
         self.check_valid("type: string\n"
                          "enum: [one, two, three]\n",
 
                          # values to validate
-                         "one",
-                         "two",
-                         "three",
-                         "!four",
-                         "!one1",
-                         "!onetwo"
+                         valid = [ "one",
+                                   "two",
+                                   "three" ],
+
+                         invalid = [ "four",
+                                     "one1",
+                                     "onetwo" ]
+                         )
+
+    def test_object(self):
+        self.check_valid("type: object\n"
+                         "properties:\n"
+                         "   foo: { type: number }\n"
+                         "   bar: { type: string }\n",
+
+                         # values to validate
+                         valid = [ { "foo" : 1, "bar" : "one" } ],
+                         
+                         invalid = [ { "foo" : 1, "baz" : "one" } ])
+
+        self.check_valid("type: object\n"
+                         "properties:\n"
+                         "   foo: { type: number }\n"
+                         "   bar: { type: string }\n"
+                         "additionalProperties: true", 
+
+                         # values to validate
+                         valid = [ { "foo" : 1, "bar" : "one", "baz": 2} ],
+                         
+                         invalid = [ { "foo" : "one", "baz" : "one" } ])
+
+        self.check_valid("type: object\n"
+                         "properties:\n"
+                         "   foo: { type: number }\n"
+                         "   bar: { type: string }\n"
+                         "additionalProperties: { type: number }\n", 
+
+                         # values to validate
+                         valid = [ { "foo" : 1, "bar" : "one", "baz": 2} ],
+
+                         invalid = [ { "foo" : 1, "bar" : "one", "baz": "two"} ]
                          )
 
 
+        
+       
 
 if __name__ == '__main__':
     logging.basicConfig(filename='test.log', level=logging.DEBUG)
