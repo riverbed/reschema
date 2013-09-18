@@ -76,6 +76,7 @@ from jsonpointer import resolve_pointer, JsonPointer
 
 from reschema.util import parse_prop
 from reschema.reljsonpointer import resolve_rel_pointer, RelJsonPointer
+from reschema.exceptions import ValidationError, MissingParameter, ParseError
 
 logger = logging.getLogger(__name__)
 
@@ -84,9 +85,6 @@ type_map = {}
 def _register_type(cls):
     type_map[cls._type] = cls
     
-class ValidationError(Exception): pass
-class MissingParameter(Exception): pass
-class ParseError(Exception): pass
 
 __all__ = ['Schema']
 
@@ -95,7 +93,7 @@ class Schema(object):
     """Base class for all JSON schema types."""
 
     # Counter used for assigning names/ids for anonymous types
-    count=1
+    count = 1
 
     # Map of all known schemas:
     #   schemas["<api>/schema#<fullid>"] -> Schema
@@ -124,7 +122,7 @@ class Schema(object):
         
         if api is None:
             if parent is None:
-                raise ValueError("Must specify 'api' if parent is None")
+                raise ParseError("Must specify 'api' if parent is None")
             api = parent.api
 
         self.api = api
@@ -182,8 +180,9 @@ class Schema(object):
             cls = type_map[typestr]
             return cls(input, name, parent, api=api)
         else:
-            raise ValueError('Unknown type: %s while parsing %s%s' %
-                             (typestr, (parent.fullname() + '.') if parent else '', name))
+            msg = ('Unknown type: %s while parsing %s%s' %
+                   (typestr, (parent.fullname() + '.') if parent else '', name))
+            raise ParseError(msg, input)
 
     def _check_input(self, input):
         """ Verify that input is empty, all keywords should have been parsed. """
@@ -191,14 +190,14 @@ class Schema(object):
             return
 
         if not isinstance(input, dict):
-            raise ValidationError('%s: definition should be a dictionary, got: %s' % 
-                                  (self.fullname(), type(input)))
+            raise ParseError('%s: definition should be a dictionary, got: %s' %
+                             (self.fullname(), type(input)), input)
 
         badkeys = input.keys()
         if len(badkeys) > 0:
-            raise ValidationError('%s: unrecognized properties in definition: %s' % (self.fullname(), ','.join(badkeys)))
-            
-        
+            raise ParseError('%s: unrecognized properties in definition: %s' %
+                             (self.fullname(), ','.join(badkeys)), input)
+
     @classmethod
     def find_by_id(cls, api, id):
         """Find a schema by fullid."""
@@ -378,7 +377,7 @@ class Boolean(Schema):
     def validate(self, input):
         if (type(input) is not bool):
             raise ValidationError("'%s' of type %s expected to be a boolean for %s" %
-                                  (input, type(input), self.fullname()))
+                                  (input, type(input), self.fullname()), self)
 _register_type(Boolean)
 
 
@@ -402,25 +401,23 @@ class String(Schema):
 
         if (type(input) not in [str, unicode]):
             raise ValidationError("%s: input must be a string, got %s: %s" %
-                                  (self.fullname(), type(input), trunc))
+                                  (self.fullname(), type(input), trunc), self)
 
         if (self.minLength is not None) and len(input) < self.minLength:
             raise ValidationError("%s: input must be at least %d chars, got %d: %s" %
-                                  (self.fullname(), self.minLength, len(input), trunc))
+                                  (self.fullname(), self.minLength, len(input), trunc), self)
 
         if (self.maxLength is not None) and len(input) > self.maxLength:
             raise ValidationError("%s: input must be no more than %d chars, got %d: %s" %
-                                  (self.fullname(), self.maxLength, len(input), trunc))
-
+                                  (self.fullname(), self.maxLength, len(input), trunc), self)
 
         if (self.pattern is not None) and (not re.match('^' + self.pattern + '$', input)):
             raise ValidationError("%s: input failed pattern match %s: %s" %
-                                  (self.fullname(), self.pattern, trunc))
+                                  (self.fullname(), self.pattern, trunc), self)
 
         if (self.enum is not None) and (input not in self.enum):
             raise ValidationError("%s: input not a valid enumeration value: %s" %
-                                  (self.fullname(), trunc))
-            
+                                  (self.fullname(), trunc), self)
             
     def schema_details(self):
         s = ''
@@ -456,7 +453,7 @@ class Number(Schema):
 
     def validate(self, input):
         if (type(input) not in [int, float]):
-            raise ValidationError("'%s' expected to be a number for %s" % (input, self.fullname()))
+            raise ValidationError("'%s' expected to be a number for %s" % (input, self.fullname()), self)
         
     def schema_details(self):
         s = ''
@@ -530,13 +527,13 @@ class Object(Schema):
     
     def validate(self, input):
         if not isinstance(input, dict):
-            raise ValidationError("'%s' expected to be an object for %s" % (input, self.fullname()))
+            raise ValidationError("'%s' expected to be an object for %s" % (input, self.fullname()), self)
 
         for k in input:
             if k in self.props:
                 self.props[k].validate(input[k])
             elif self.additionalProps in (None, False):
-                raise ValidationError("'%s' is not a valid property for %s" % (k, self.fullname()))
+                raise ValidationError("'%s' is not a valid property for %s" % (k, self.fullname()), self)
             elif isinstance (self.additionalProps, Schema):
                 self.additionalProps.validate(input[k])
             
@@ -612,7 +609,7 @@ class Array(Schema):
     
     def validate(self, input):
         if (type(input) is not list):
-            raise ValidationError("'%s' expected to be an array for %s" % (input, self.fullname()))
+            raise ValidationError("'%s' expected to be an array for %s" % (input, self.fullname()), self)
 
         for o in input:
             self.children[0].validate(o)
@@ -708,12 +705,12 @@ class Link(object):
 
         if not isinstance(input, dict):
             raise ValidationError('%s: definition should be a dictionary, got: %s' %
-                                  (self.fullname(), type(input)))
+                                  (self.fullname(), type(input)), self)
 
         badkeys = input.keys()
         if len(badkeys) > 0:
             raise ValidationError('%s: unrecognized properties in definition: %s' %
-                                  (self.fullname(), badkeys.join(input)))
+                                  (self.fullname(), badkeys.join(input)), self)
             
     @property
     def target(self):

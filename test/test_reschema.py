@@ -12,7 +12,7 @@ import unittest
 from yaml.error import MarkedYAMLError
 
 import reschema
-from reschema.jsonschema import ValidationError
+from reschema.jsonschema import ValidationError, ParseError
 from reschema.jsonschema import Object, Number, String, Array, Schema
 from reschema import yaml_loader
 
@@ -216,16 +216,16 @@ class TestJsonSchema(unittest.TestCase):
             logger.debug("Got validation error: %s" % str(e))
             return
 
-        self.fail('Schema should have thrown a ValidiationError')
+        self.fail('Schema should have thrown a ValidationError')
 
     def test_string(self):
         self.check_bad_schema("type: string\n"
                               "foobar: bad property",
-                              ValidationError)
+                              ParseError)
 
         self.check_bad_schema("type: string\n"
                               "minLength: 2a",
-                              ValueError)
+                              ParseError)
 
         self.check_valid("type: string\n"
                          "minLength: 2\n"
