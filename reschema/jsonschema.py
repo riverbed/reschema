@@ -122,7 +122,7 @@ class Schema(object):
         
         if api is None:
             if parent is None:
-                raise ParseError("Must specify 'api' if parent is None")
+                raise ParseError("Must specify 'api' if parent is None", input)
             api = parent.api
 
         self.api = api
@@ -538,6 +538,9 @@ class Object(Schema):
                 self.additionalProps.validate(input[k])
             
     def toxml(self, input, parent=None):
+        """Return ElementTree object with `input` data.
+        Additional Properties that are not explicitly defined are not supported.
+        """
         if parent is not None:
             elem = ET.SubElement(parent, self.id)
         else:
@@ -547,7 +550,7 @@ class Object(Schema):
         inline_props = OrderedDict()
         for k in input:
             if k not in self.props:
-                if self.additionalProps is None:
+                if self.additionalProps in (None, True, False):
                     raise ValueError('Invalid property: %s' % k)
 
                 subobj = copy.copy(self.additionalProps)

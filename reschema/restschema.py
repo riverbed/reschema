@@ -107,6 +107,6 @@ class RestSchema(object):
                 o = self.resources[parts[0]]
                 return o['/' + '/'.join(parts[1:])]
         elif name in self.resources:
-            return self.resource[name]
+            return self.resources[name]
         else:
             raise KeyError("%s has no such resource: %s" % (self, name))

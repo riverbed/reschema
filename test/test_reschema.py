@@ -44,6 +44,21 @@ class TestReschema(unittest.TestCase):
         r.load(TEST_SCHEMA_JSON)
         self.assertEqual(r.name, 'Catalog')
 
+    def test_unknown_schema(self):
+        import tempfile
+        fd, name = tempfile.mkstemp(suffix='.txt', text=True)
+
+        try:
+            f = os.fdopen(fd, 'w')
+            f.write('testingdata')
+            f.close()
+
+            r = reschema.RestSchema()
+            with self.assertRaises(ValueError):
+                r.load(name)
+        finally:
+            os.unlink(name)
+
     def test_parse_schema(self):
         r = reschema.RestSchema()
         with open(TEST_SCHEMA_YAML, 'r') as f:
@@ -94,7 +109,35 @@ class TestReschema(unittest.TestCase):
         self.assertIn('name', a.props)
         self.assertEqual(a.id, 'author')
         self.assertIsNone(a.parent)
+        resources = [x for x in r.resource_iter()]
+        self.assertEqual(len(resources), 8)
 
+
+    def test_find_name_basic(self):
+        r = reschema.RestSchema()
+        r.load(TEST_SCHEMA_YAML)
+        a = r.find('author')
+        self.assertEqual(a.id, 'author')
+        with self.assertRaises(KeyError):
+            r.find('no_type')
+
+    def test_find_name_complex(self):
+        r = reschema.RestSchema()
+        r.load(TEST_SCHEMA_YAML)
+        c = r.find('/book/chapters')
+        self.assertEqual(c.id, 'chapters')
+        self.assertEqual(c._type, 'array')
+        self.assertEqual(c.typestr, 'array of <object>')
+        c = r.find('/book/chapters/1')
+        self.assertEqual(c.fullid(), '/book/chapters/items')
+        self.assertEqual(c._type, 'object')
+        c = r.find('/book/author_ids')
+        self.assertEqual(c._type, 'array')
+        c = r.find('/book/author_ids/1')
+        self.assertEqual(c._type, 'number')
+
+        with self.assertRaises(KeyError):
+            r.find('no_type')
 
 class TestCatalog(unittest.TestCase):
 
@@ -104,10 +147,6 @@ class TestCatalog(unittest.TestCase):
 
     def tearDown(self):
         self.r = None
-
-    def test_boolean(self):
-        # TODO add Boolean type to Catalog.yml
-        pass
 
     def test_string(self):
         s = self.r.resources['author'].props['name']
@@ -146,6 +185,21 @@ class TestCatalog(unittest.TestCase):
         s = self.r.resources['author']
         self.assertFalse(s.isRef())
         self.assertFalse(s.isSimple())
+        self.assertIsInstance(repr(s), str)
+
+    def test_object_xml(self):
+        book = self.r.find('book')
+        p = {'id': 1,
+             'title': '50 Shades of JSON',
+             'publisher_id': 2,
+             'author_ids': [50, 51],
+             'chapters': [{'num': 1, 'heading': 'Chapter 1'},
+                          {'num': 2, 'heading': 'Chapter 2'},
+                          {'num': 3, 'heading': 'Chapter 3'},
+                          ]}
+        self.assertIsNone(book.validate(p))
+        xml = book.toxml(p)
+        self.assertEqual(xml.attrib['id'], '1')
 
     def test_array(self):
         s = self.r.resources['authors']
@@ -164,6 +218,9 @@ class TestCatalog(unittest.TestCase):
         self.assertEqual(type(book), Object)
         self.assertEqual(type(book['id']), Number)
         self.assertEqual(type(book['title']), String)
+        self.assertEqual(len(book.str_simple().split()), 47)
+        self.assertEqual(len(book.str_detailed().split()), 18)
+        self.assertEqual(book['links'], book.links)
 
         a = book['author_ids']
         self.assertEqual(type(a), Array)
@@ -175,6 +232,7 @@ class TestCatalog(unittest.TestCase):
 
         # Test relative JSON pointer syntax
         a0 = book['/author_ids/0']
+        self.assertEqual(a0['/'], a0)
         self.assertEqual(a0['2/'], book)
         self.assertEqual(a0['2/id'], book['id'])
 
@@ -197,26 +255,59 @@ class TestJsonSchema(unittest.TestCase):
         d = yaml_loader.marked_load(string)
         return Schema.parse(d, 'root', api='/api')
 
-    def check_valid(self, s, valid=[], invalid=[]):
+    def check_valid(self, s, valid=None, invalid=None, toxml=False):
         schema = self.parse(s)
         for a in valid:
             schema.validate(a)
+            if toxml:
+                schema.toxml(a)
 
         for a in invalid:
-            try:
+            with self.assertRaises(ValidationError):
                 schema.validate(a)
-                self.fail("ValidationError not raised for value: %s" % a)
-            except ValidationError:
-                pass
 
     def check_bad_schema(self, s, etype):
-        try:
+        with self.assertRaises(etype):
             self.parse(s)
-        except etype, e:
-            logger.debug("Got validation error: %s" % str(e))
-            return
 
-        self.fail('Schema should have thrown a ValidationError')
+    def test_missing_api(self):
+        s = "type: boolean\n"
+        d = yaml_loader.marked_load(s)
+        with self.assertRaises(ParseError):
+            Schema.parse(d)
+
+    def test_unnamed(self):
+        s = "type: boolean\n"
+        d = yaml_loader.marked_load(s)
+        j = Schema.parse(d, api='/')
+        self.assertTrue(j.name.startswith('element'))
+
+    def test_unknown_type(self):
+        s = "type: foobrobicator\n"
+        d = yaml_loader.marked_load(s)
+        with self.assertRaises(ParseError):
+            Schema.parse(d, api='/')
+
+    def test_boolean(self):
+        self.check_valid("type: boolean\n",
+
+                         # values to validate
+                         valid=[True,
+                                False],
+
+                         invalid=["TRUE",
+                                  "FALSE",
+                                  "1",
+                                  1]
+                         )
+
+    def test_ref(self):
+        # missing ref
+        # XXX needs work
+        self.check_bad_schema("publishers:\n"
+                              "     type: array\n"
+                              "     items: { $ref: publisher }\n",
+                              ParseError)
 
     def test_string(self):
         self.check_bad_schema("type: string\n"
@@ -233,62 +324,79 @@ class TestJsonSchema(unittest.TestCase):
                          "pattern: '[a-z0-9]+'\n",
 
                          # values to validate
-                         valid = [ "aa",
-                                   "11",
-                                   "abc",
-                                   "123",
-                                   "1234512345" ],
+                         valid=["aa",
+                                "11",
+                                "abc",
+                                "123",
+                                "1234512345"],
 
-                         invalid = [ "A",
-                                     "abcABCD",
-                                     "12345123451" ]
+                         invalid=["A",
+                                  "abcABCD",
+                                  "12345123451"]
                          )
 
         self.check_valid("type: string\n"
                          "enum: [one, two, three]\n",
 
                          # values to validate
-                         valid = [ "one",
-                                   "two",
-                                   "three" ],
+                         valid=["one",
+                                "two",
+                                "three"],
 
-                         invalid = [ "four",
-                                     "one1",
-                                     "onetwo" ]
+                         invalid=["four",
+                                  "one1",
+                                  "onetwo"]
                          )
 
-    def test_object(self):
+    def test_object_simple(self):
         self.check_valid("type: object\n"
                          "properties:\n"
                          "   foo: { type: number }\n"
                          "   bar: { type: string }\n",
 
                          # values to validate
-                         valid = [ { "foo" : 1, "bar" : "one" } ],
+                         valid=[{"foo": 1,
+                                 "bar": "one"}],
                          
-                         invalid = [ { "foo" : 1, "baz" : "one" } ])
+                         invalid=[{"foo": 1,
+                                   "baz": "one"},
+                                  'not a dict'],
+                         toxml=True
+                         )
 
+    def test_object_add_props_simple(self):
         self.check_valid("type: object\n"
                          "properties:\n"
                          "   foo: { type: number }\n"
                          "   bar: { type: string }\n"
-                         "additionalProperties: true", 
+                         "additionalProperties: true",
 
                          # values to validate
-                         valid = [ { "foo" : 1, "bar" : "one", "baz": 2} ],
+                         valid=[{"foo": 1,
+                                 "bar": "one",
+                                 "baz": 2}],
                          
-                         invalid = [ { "foo" : "one", "baz" : "one" } ])
+                         invalid=[{"foo": "one",
+                                   "baz": "one"}]
+                         )
 
+    def test_object_add_props_complex(self):
         self.check_valid("type: object\n"
                          "properties:\n"
                          "   foo: { type: number }\n"
                          "   bar: { type: string }\n"
-                         "additionalProperties: { type: number }\n", 
+                         "additionalProperties: { type: number }\n",
 
                          # values to validate
-                         valid = [ { "foo" : 1, "bar" : "one", "baz": 2} ],
+                         valid=[{"foo": 1,
+                                 "bar": "one",
+                                 "baz": 2}],
 
-                         invalid = [ { "foo" : 1, "bar" : "one", "baz": "two"} ])
+                         invalid=[{"foo": 1,
+                                   "bar": "one",
+                                   "baz": "two"}],
+                         toxml=True
+                         )
 
 
 if __name__ == '__main__':
