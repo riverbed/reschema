@@ -341,7 +341,8 @@ class Ref(Schema):
         if self._refschema is None:
             self._refschema = Schema.find_by_id(self.api, self.refschema_id)
             if self._refschema is None:
-                raise KeyError("No such schema '%s' for '$ref': %s" % (self.refschema_id, self.fullname()))
+                msg = "No such schema '%s' for '$ref': %s" % (self.refschema_id, self.fullname())
+                raise ParseError(msg, self)
         return self._refschema
     
     def isSimple(self):
@@ -355,9 +356,6 @@ class Ref(Schema):
     def typestr(self):
         return self.refschema.id
     
-    def prettyPrint(self, recurse=False):
-        Schema.prettyPrint(self, recurse=False)
-
     def validate(self, input):
         self.refschema.validate(input)
 
@@ -419,7 +417,7 @@ class String(Schema):
             raise ValidationError("%s: input not a valid enumeration value: %s" %
                                   (self.fullname(), trunc), self)
             
-    def schema_details(self):
+    def str_detailed(self):
         s = ''
         if self.minLength or self.maxLength:
             s += 'Length:'
@@ -434,7 +432,7 @@ class String(Schema):
             s += 'Valid values: %s\n' % self.enum
         if self.default:
             s += 'Default value: %s\n' % self.default
-        return super(String, self).schema_details(s)
+        return super(String, self).str_detailed(additional_details=s)
 _register_type(String)
 
 
@@ -454,8 +452,28 @@ class Number(Schema):
     def validate(self, input):
         if (type(input) not in [int, float]):
             raise ValidationError("'%s' expected to be a number for %s" % (input, self.fullname()), self)
-        
-    def schema_details(self):
+
+        if (self.minimum is not None) and input < self.minimum:
+            raise ValidationError("%s: input must be at minimum %d, got %d" %
+                                  (self.fullname(), self.minimum, input), self)
+
+        if (self.exclusiveMinimum is not None) and input <= self.exclusiveMinimum:
+            raise ValidationError("%s: input must be at exclusive minimum %d, got %d" %
+                                  (self.fullname(), self.exclusiveMinimum, input), self)
+
+        if (self.maximum is not None) and input > self.maximum:
+            raise ValidationError("%s: input must be at maximum %d, got %d" %
+                                  (self.fullname(), self.maximum, input), self)
+
+        if (self.exclusiveMaximum is not None) and input >= self.exclusiveMaximum:
+            raise ValidationError("%s: input must be at exclusive maximum %d, got %d" %
+                                  (self.fullname(), self.exclusiveMaximum, input), self)
+
+        if (self.enum is not None) and (input not in self.enum):
+            raise ValidationError("%s: input not a valid enumeration value: %s" %
+                                  (self.fullname(), input), self)
+
+    def str_detailed(self):
         s = ''
         if self.minimum or self.maximum:
             s += 'Range: '
@@ -468,7 +486,7 @@ class Number(Schema):
             s += 'Valid values: %s\n' % self.enum
         if self.default:
             s += 'Default value: %s\n' % self.default
-        return super(Number, self).schema_details(s)
+        return super(Number, self).str_detailed(additional_details=s)
 _register_type(Number)
 
 
@@ -487,8 +505,8 @@ class TimestampHP(Schema):
         Schema.__init__(self, TimestampHP._type, input, name, parent, **kwargs)
         self._check_input(input)
 
-    def schema_details(self):
-        return super(Number, self).schema_details('XXX Notes')
+    def str_detailed(self):
+        return super(TimestampHP, self).str_detailed()
 _register_type(TimestampHP)
 
 
@@ -639,6 +657,12 @@ class Data(Schema):
         parse_prop(self, input, 'description')
 
         self._check_input(input)
+
+    def validate(self, input):
+        # any value will pass, regardless of content_type set
+        # validation of that type of data seems beyond the scope of reschema
+        if input is None:
+            raise ValidationError("Expected valid data and not None for %s" % (self.fullname()), self)
 
     def isSimple(self):
         return True

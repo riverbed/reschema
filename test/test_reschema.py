@@ -112,7 +112,6 @@ class TestReschema(unittest.TestCase):
         resources = [x for x in r.resource_iter()]
         self.assertEqual(len(resources), 8)
 
-
     def test_find_name_basic(self):
         r = reschema.RestSchema()
         r.load(TEST_SCHEMA_YAML)
@@ -138,6 +137,7 @@ class TestReschema(unittest.TestCase):
 
         with self.assertRaises(KeyError):
             r.find('no_type')
+
 
 class TestCatalog(unittest.TestCase):
 
@@ -180,6 +180,12 @@ class TestCatalog(unittest.TestCase):
     def test_timestamp_hp(self):
         pass
 
+    def test_reference(self):
+        ref = self.r.find('publisher').props['billing_address']
+        self.assertFalse(ref.isSimple())
+        self.assertTrue(ref.isRef())
+        self.assertEqual(ref.typestr, 'address')
+
     def test_object(self):
         # skip validation, we are checking that elsewhere
         s = self.r.resources['author']
@@ -199,7 +205,7 @@ class TestCatalog(unittest.TestCase):
                           ]}
         self.assertIsNone(book.validate(p))
         xml = book.toxml(p)
-        self.assertEqual(xml.attrib['id'], '1')
+        self.assertEqual(sorted(xml.keys()), [u'id', u'publisher_id', u'title'])
 
     def test_array(self):
         s = self.r.resources['authors']
@@ -207,8 +213,11 @@ class TestCatalog(unittest.TestCase):
         self.assertFalse(s.isSimple())
 
         # successful validation will return None
-        self.assertIsNone(s.validate([{'id': 1, 'name': 'Ted Nugent'},
-                                      {'id': 2, 'name': 'Ralph Macchio'}]))
+        p = [{'id': 1, 'name': 'Ted Nugent'},
+             {'id': 2, 'name': 'Ralph Macchio'}]
+        self.assertIsNone(s.validate(p))
+        xml = s.toxml(p)
+        self.assertEqual(len(xml.getchildren()), 2)
 
         with self.assertRaises(ValidationError):
             s.validate('foo')
@@ -303,11 +312,43 @@ class TestJsonSchema(unittest.TestCase):
 
     def test_ref(self):
         # missing ref
-        # XXX needs work
         self.check_bad_schema("publishers:\n"
                               "     type: array\n"
                               "     items: { $ref: publisher }\n",
                               ParseError)
+        schema = self.parse("type: object\n"
+                            "properties:\n"
+                            "    id: { type: number }\n"
+                            "    name: { type: string }\n"
+                            "    billing_address: { $ref: address }\n")
+        with self.assertRaises(ParseError):
+            schema.validate({'id': 2,
+                             'name': 'Frozzle',
+                             'billing_address': "doesn't exist"})
+
+    def test_data(self):
+        # missing 'content_type'
+        self.check_bad_schema("content:\n"
+                              "     type: data\n",
+                              ParseError)
+
+        self.check_valid("type: data\n"
+                         "content_type: text\n"
+                         "description: simple data\n",
+
+                         # values to validate
+                         valid=["aa",
+                                "11",
+                                "abc",
+                                "123",
+                                "1234512345"],
+
+                         invalid=[None]
+                         )
+        schema = self.parse("type: data\n"
+                            "content_type: text\n"
+                            "description: simple data\n")
+        self.assertTrue(schema.isSimple())
 
     def test_string(self):
         self.check_bad_schema("type: string\n"
@@ -336,6 +377,16 @@ class TestJsonSchema(unittest.TestCase):
                          )
 
         self.check_valid("type: string\n"
+                         "minLength: 2\n",
+
+                         # values to validate
+                         valid=["aa",
+                                "1234512345" * 10],
+
+                         invalid=["A"]
+                         )
+
+        self.check_valid("type: string\n"
                          "enum: [one, two, three]\n",
 
                          # values to validate
@@ -348,6 +399,45 @@ class TestJsonSchema(unittest.TestCase):
                                   "onetwo"]
                          )
 
+        schema = self.parse("type: string\n"
+                            "minLength: 2\n"
+                            "maxLength: 10\n"
+                            "enum: [one, two, three]\n"
+                            "pattern: '[a-z0-9]+'\n"
+                            "default: 'one'\n")
+        self.assertIsInstance(schema.str_detailed(), basestring)
+
+    def test_number(self):
+        self.check_valid("type: number\n"
+                         "minimum: 2\n"
+                         "maximum: 100\n",
+
+                         valid=[2, 99, 100],
+                         invalid=[1, 101, 0]
+                         )
+
+        self.check_valid("type: number\n"
+                         "exclusiveMinimum: 2\n"
+                         "exclusiveMaximum: 100\n",
+
+                         valid=[3, 99],
+                         invalid=[2, 100, 1]
+                         )
+
+        self.check_valid("type: number\n"
+                         "enum: [1, 2, 3]\n",
+
+                         valid=[1, 2, 3],
+                         invalid=[0, 100, 4, 'one']
+                         )
+
+        schema = self.parse("type: number\n"
+                            "minimum: 2\n"
+                            "maximum: 100\n"
+                            "enum: [2, 3, 4]\n"
+                            "default: '3'\n")
+        self.assertIsInstance(schema.str_detailed(), basestring)
+
     def test_object_simple(self):
         self.check_valid("type: object\n"
                          "properties:\n"
@@ -357,7 +447,7 @@ class TestJsonSchema(unittest.TestCase):
                          # values to validate
                          valid=[{"foo": 1,
                                  "bar": "one"}],
-                         
+
                          invalid=[{"foo": 1,
                                    "baz": "one"},
                                   'not a dict'],
@@ -375,7 +465,7 @@ class TestJsonSchema(unittest.TestCase):
                          valid=[{"foo": 1,
                                  "bar": "one",
                                  "baz": 2}],
-                         
+
                          invalid=[{"foo": "one",
                                    "baz": "one"}]
                          )

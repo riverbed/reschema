@@ -32,6 +32,8 @@ class RestSchema(object):
         self.dir = os.path.dirname(os.path.abspath(filename))
 
         # Support both JSON(.json) and YAML(.yml/.yaml) file formats
+        # TODO: Add option for un-marked loads if performance becomes an issue
+
         with open(filename, 'r') as f:
             if filename.endswith('.json'):
                 obj = json_loader.marked_load(f)
