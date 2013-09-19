@@ -12,7 +12,7 @@ import unittest
 from yaml.error import MarkedYAMLError
 
 import reschema
-from reschema.jsonschema import ValidationError, ParseError
+from reschema.exceptions import ValidationError, ParseError, MissingParameter
 from reschema.jsonschema import Object, Number, String, Array, Schema
 from reschema import yaml_loader
 
@@ -174,17 +174,35 @@ class TestCatalog(unittest.TestCase):
         with self.assertRaises(ValidationError):
             n.validate('43')
 
-    def test_timestamp(self):
-        pass
-
-    def test_timestamp_hp(self):
-        pass
-
     def test_reference(self):
         ref = self.r.find('publisher').props['billing_address']
         self.assertFalse(ref.isSimple())
         self.assertTrue(ref.isRef())
         self.assertEqual(ref.typestr, 'address')
+
+    def test_link_target(self):
+        s = self.r.resources['author']
+        link = s.links['instances']
+        self.assertEqual(link.target, self.r.resources['authors'])
+
+    def test_link_path(self):
+        pub = self.r.find('publisher')
+        link = pub.links['self']
+        path = link.path
+        self.assertEqual(str(path), '$/publishers/{id}')
+        self.assertEqual(path.resolve({'id': 12}), '/api/catalog/1.0/publishers/12')
+
+    def test_link_template_path(self):
+        book = self.r.find('book')
+        chapters = book.props['chapters']
+        items = chapters['items']
+        link = items.links['chapter']
+        path = link.path
+        self.assertEqual(str(path), '/books/{bookid}/chapter/{chapterid}')
+        data = {'book': book.example}
+        self.assertEqual(path.resolve(data, '/book/chapters/1'), '/books/100/chapter/2')
+        with self.assertRaises(MissingParameter):
+            path.resolve(None)
 
     def test_object(self):
         # skip validation, we are checking that elsewhere
@@ -206,6 +224,8 @@ class TestCatalog(unittest.TestCase):
         self.assertIsNone(book.validate(p))
         xml = book.toxml(p)
         self.assertEqual(sorted(xml.keys()), [u'id', u'publisher_id', u'title'])
+        xml_child = book.toxml(p, parent=xml)
+        self.assertNotEqual(xml, xml_child)
 
     def test_array(self):
         s = self.r.resources['authors']
@@ -279,6 +299,15 @@ class TestJsonSchema(unittest.TestCase):
         with self.assertRaises(etype):
             self.parse(s)
 
+    def test_exceptions(self):
+        # cover exception string output
+        s = "type: boolean\n"
+        d = yaml_loader.marked_load(s)
+        try:
+            Schema.parse(d)
+        except ParseError, e:
+            self.assertIsNotNone(str(e))
+
     def test_missing_api(self):
         s = "type: boolean\n"
         d = yaml_loader.marked_load(s)
@@ -292,7 +321,7 @@ class TestJsonSchema(unittest.TestCase):
         self.assertTrue(j.name.startswith('element'))
 
     def test_unknown_type(self):
-        s = "type: foobrobicator\n"
+        s = "type: frobnosticator\n"
         d = yaml_loader.marked_load(s)
         with self.assertRaises(ParseError):
             Schema.parse(d, api='/')
@@ -438,6 +467,23 @@ class TestJsonSchema(unittest.TestCase):
                             "default: '3'\n")
         self.assertIsInstance(schema.str_detailed(), basestring)
 
+    def test_timestamp(self):
+        self.check_valid("type: timestamp\n",
+
+                         valid=[1234567890,
+                                1234567890.123],
+                         invalid=['foo',
+                                  {'timestamp': 1234567890}]
+                         )
+
+        self.check_valid("type: timestamp-hp\n",
+
+                         valid=[1234567890,
+                                1234567890.123000],
+                         invalid=['foo',
+                                  {'timestamp': 1234567890}]
+                         )
+
     def test_object_simple(self):
         self.check_valid("type: object\n"
                          "properties:\n"
@@ -487,6 +533,48 @@ class TestJsonSchema(unittest.TestCase):
                                    "baz": "two"}],
                          toxml=True
                          )
+
+    def test_link(self):
+        # missing self link with no path
+        self.check_bad_schema("type: object\n"
+                              "properties:\n"
+                              "   foo: { type: number }\n"
+                              "links:\n"
+                              "   alink:\n"
+                              "      method: GET\n",
+                              ParseError)
+
+        # extra link properties
+        self.check_bad_schema("type: object\n"
+                              "properties:\n"
+                              "   foo: { type: number }\n"
+                              "links:\n"
+                              '   self: { path: "$/authors" }\n'
+                              "   alink:\n"
+                              "      invalid: GET\n",
+                              ParseError)
+
+        # invalid link properties
+        self.check_bad_schema("type: object\n"
+                              "properties:\n"
+                              "   foo: { type: number }\n"
+                              "links:\n"
+                              '   self: { path: "$/authors" }\n'
+                              "   alink:\n"
+                              "      invalid\n",
+                              ParseError)
+
+        schema = self.parse("type: object\n"
+                            "properties:\n"
+                            "   foo: { type: number }\n"
+                            "links:\n"
+                            '   self: { path: "$/authors" }\n')
+        link = schema.links['self']
+        self.assertIsInstance(repr(link), str)
+
+        # XXX investigate this API
+        self.assertIsNone(link.find_by_id('/api', link.fullid()))
+        self.assertIsNotNone(link.find_by_id('/api', 'root/links/self'))
 
 
 if __name__ == '__main__':

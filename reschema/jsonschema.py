@@ -496,6 +496,10 @@ class Timestamp(Schema):
         Schema.__init__(self, Timestamp._type, input, name, parent, **kwargs)
         self._check_input(input)
 
+    def validate(self, input):
+        if (type(input) not in [int, float]):
+            raise ValidationError("'%s' expected to be a number for %s" % (input, self.fullname()), self)
+
 _register_type(Timestamp)
 
 
@@ -505,8 +509,10 @@ class TimestampHP(Schema):
         Schema.__init__(self, TimestampHP._type, input, name, parent, **kwargs)
         self._check_input(input)
 
-    def str_detailed(self):
-        return super(TimestampHP, self).str_detailed()
+    def validate(self, input):
+        if (type(input) not in [int, float]):
+            raise ValidationError("'%s' expected to be a number for %s" % (input, self.fullname()), self)
+
 _register_type(TimestampHP)
 
 
@@ -691,7 +697,7 @@ class Link(object):
         elif self.method is not None:
             if 'self' not in self.schema.links:
                 raise ParseError("Link '%s' defined with no path and schema has no 'self' link" %
-                                 str(self))
+                                 str(self), input)
             self.path = self.schema.links['self'].path
         else:
             self.path = None
@@ -731,13 +737,13 @@ class Link(object):
             return
 
         if not isinstance(input, dict):
-            raise ValidationError('%s: definition should be a dictionary, got: %s' %
-                                  (self.fullname(), type(input)), self)
+            raise ParseError('%s: definition should be a dictionary, got: %s' %
+                             (self.fullname(), type(input)), input)
 
         badkeys = input.keys()
         if len(badkeys) > 0:
-            raise ValidationError('%s: unrecognized properties in definition: %s' %
-                                  (self.fullname(), badkeys.join(input)), self)
+            raise ParseError('%s: unrecognized properties in definition: %s' %
+                             (self.fullname(), ','.join(badkeys)), input)
             
     @property
     def target(self):
@@ -818,7 +824,8 @@ class Path(object):
         have = set(values.keys())
         if not required.issubset(have):
             raise MissingParameter("Missing parameters for link '%s' path template '%s': %s" %
-                                   (self.link.name, self.template, [x for x in required.difference(have)]))
+                                   (self.link.name, self.template, [x for x in required.difference(have)]),
+                                   self)
             
         uri = uritemplate.expand(self.template, values)
         if uri[0] == '$':
