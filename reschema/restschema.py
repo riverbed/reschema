@@ -8,15 +8,15 @@
 # System imports
 import os
 import json
-import yaml
+from cStringIO import StringIO
 from collections import OrderedDict
-from StringIO import StringIO
+
 from jsonpointer import resolve_pointer, JsonPointer
 
 # Local imports
 from reschema.jsonschema import Schema
 from reschema.util import parse_prop
-from reschema import yaml_loader
+from reschema import yaml_loader, json_loader
 
 __all__ = ['RestSchema']
 
@@ -26,36 +26,30 @@ class RestSchema(object):
     def __init__(self):
         self.filename = None
         self.dir = None
-        
-    def _load_yaml(self, f):
-        """ Load file-like object using yaml marked loader. """
-        try:
-            return yaml_loader.marked_load(f.read())
-        except yaml.error.MarkedYAMLError as exc:
-            #from IPython import embed; embed()
-            raise exc
 
     def load(self, filename):
         self.filename = filename
         self.dir = os.path.dirname(os.path.abspath(filename))
 
         # Support both JSON(.json) and YAML(.yml/.yaml) file formats
+        # TODO: Add option for un-marked loads if performance becomes an issue
+
         with open(filename, 'r') as f:
             if filename.endswith('.json'):
-                obj = json.load(f, object_pairs_hook=OrderedDict)
+                obj = json_loader.marked_load(f)
             elif filename.endswith(('.yml', '.yaml')):
-                obj = self._load_yaml(f)
+                obj = yaml_loader.marked_load(f)
             else:
                 raise ValueError("Unrecognized file extension, use '*.json' or '*.yaml': %s"
                                  % filename)
-
         self.parse(obj)
 
     def parse_text(self, text, format='json'):
+        stream = StringIO(text)
         if format == 'json':
-            obj = json.loads(text, object_pairs_hook=OrderedDict)
+            obj = json_loader.marked_load(stream)
         elif format == 'yaml' or format == 'yml':
-            obj = self._load_yaml(StringIO(text))
+            obj = yaml_loader.marked_load(stream)
 
         return self.parse(obj)
 
@@ -115,8 +109,6 @@ class RestSchema(object):
                 o = self.resources[parts[0]]
                 return o['/' + '/'.join(parts[1:])]
         elif name in self.resources:
-            return self.resource[name]
+            return self.resources[name]
         else:
             raise KeyError("%s has no such resource: %s" % (self, name))
-        
-        

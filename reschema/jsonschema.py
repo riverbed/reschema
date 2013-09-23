@@ -76,6 +76,7 @@ from jsonpointer import resolve_pointer, JsonPointer
 
 from reschema.util import parse_prop
 from reschema.reljsonpointer import resolve_rel_pointer, RelJsonPointer
+from reschema.exceptions import ValidationError, MissingParameter, ParseError
 
 logger = logging.getLogger(__name__)
 
@@ -84,9 +85,6 @@ type_map = {}
 def _register_type(cls):
     type_map[cls._type] = cls
     
-class ValidationError(Exception): pass
-class MissingParameter(Exception): pass
-class ParseError(Exception): pass
 
 __all__ = ['Schema']
 
@@ -96,19 +94,20 @@ def _check_input(name, input):
         return
     
     if not isinstance(input, dict):
-        raise ValidationError('%s: definition should be a dictionary, got: %s' % 
-                              (name, type(input)))
+        raise ParseError('%s: definition should be a dictionary, got: %s' % 
+                         (name, type(input)), input)
 
     badkeys = input.keys()
     if len(badkeys) > 0:
-        raise ValidationError('%s: unrecognized properites in definition: %s' % (name, ','.join(badkeys)))
+        raise ParseError('%s: unrecognized properites in definition: %s' %
+                         (name, ','.join(badkeys)), input)
 
 
 class Schema(object):
     """Base class for all JSON schema types."""
 
     # Counter used for assigning names/ids for anonymous types
-    count=1
+    count = 1
 
     # Map of all known schemas:
     #   schemas["<api>/schema#<fullid>"] -> Schema
@@ -137,7 +136,7 @@ class Schema(object):
         
         if api is None:
             if parent is None:
-                raise ValueError("Must specify 'api' if parent is None")
+                raise ValidationError("Must specify 'api' if parent is None", input)
             api = parent.api
 
         self.api = api
@@ -200,10 +199,10 @@ class Schema(object):
             cls = type_map[typestr]
             return cls(input, name, parent, api=api)
         else:
-            raise ValueError('Unknown type: %s while parsing %s%s' %
-                             (typestr, (parent.fullname() + '.') if parent else '', name))
+            msg = ('Unknown type: %s while parsing %s%s' %
+                   (typestr, (parent.fullname() + '.') if parent else '', name))
+            raise ParseError(msg, input)
 
-        
     @classmethod
     def find_by_id(cls, api, id):
         """Find a schema by fullid."""
@@ -271,7 +270,7 @@ class Schema(object):
             s += 'Description: ' + self.description + '\n'
 
         if self.required is not None:
-            s += 'Requried: %s\n' % self.required
+            s += 'Required: %s\n' % self.required
         if additional_details:
             s += additional_details
 
@@ -351,7 +350,8 @@ class Ref(Schema):
         if self._refschema is None:
             self._refschema = Schema.find_by_id(self.api, self.refschema_id)
             if self._refschema is None:
-                raise KeyError("No such schema '%s' for '$ref': %s" % (self.refschema_id, self.fullname()))
+                msg = "No such schema '%s' for '$ref': %s" % (self.refschema_id, self.fullname())
+                raise ParseError(msg, self)
         return self._refschema
     
     def isSimple(self):
@@ -365,9 +365,6 @@ class Ref(Schema):
     def typestr(self):
         return self.refschema.id
     
-    def prettyPrint(self, recurse=False):
-        Schema.prettyPrint(self, recurse=False)
-
     def validate(self, input):
         self.refschema.validate(input)
 
@@ -387,7 +384,7 @@ class Boolean(Schema):
     def validate(self, input):
         if (type(input) is not bool):
             raise ValidationError("%s should be a boolean, got '%s'" %
-                                  (self.fullname(), type(input)))
+                                  (self.fullname(), type(input)), self)
 _register_type(Boolean)
 
 
@@ -411,27 +408,25 @@ class String(Schema):
 
         if (type(input) not in [str, unicode]):
             raise ValidationError("%s: input must be a string, got %s: %s" %
-                                  (self.fullname(), type(input), trunc))
+                                  (self.fullname(), type(input), trunc), self)
 
         if (self.minLength is not None) and len(input) < self.minLength:
             raise ValidationError("%s: input must be at least %d chars, got %d: %s" %
-                                  (self.fullname(), self.minLength, len(input), trunc))
+                                  (self.fullname(), self.minLength, len(input), trunc), self)
 
         if (self.maxLength is not None) and len(input) > self.maxLength:
             raise ValidationError("%s: input must be no more than %d chars, got %d: %s" %
-                                  (self.fullname(), self.maxLength, len(input), trunc))
-
+                                  (self.fullname(), self.maxLength, len(input), trunc), self)
 
         if (self.pattern is not None) and (not re.match('^' + self.pattern + '$', input)):
             raise ValidationError("%s: input failed pattern match %s: %s" %
-                                  (self.fullname(), self.pattern, trunc))
+                                  (self.fullname(), self.pattern, trunc), self)
 
         if (self.enum is not None) and (input not in self.enum):
             raise ValidationError("%s: input not a valid enumeration value: %s" %
-                                  (self.fullname(), trunc))
+                                  (self.fullname(), trunc), self)
             
-            
-    def schema_details(self):
+    def str_detailed(self):
         s = ''
         if self.minLength or self.maxLength:
             s += 'Length:'
@@ -446,7 +441,7 @@ class String(Schema):
             s += 'Valid values: %s\n' % self.enum
         if self.default:
             s += 'Default value: %s\n' % self.default
-        return super(String, self).schema_details(s)
+        return super(String, self).str_detailed(additional_details=s)
 _register_type(String)
 
 
@@ -466,9 +461,29 @@ class Number(Schema):
     def validate(self, input):
         if (type(input) not in [int, float]):
             raise ValidationError("%s should be a number, got '%s'" %
-                                  (self.fullname(), type(input)))
+                                  (self.fullname(), type(input)), self)
         
-    def schema_details(self):
+        if (self.minimum is not None) and input < self.minimum:
+            raise ValidationError("%s: input must be at minimum %d, got %d" %
+                                  (self.fullname(), self.minimum, input), self)
+
+        if (self.exclusiveMinimum is not None) and input <= self.exclusiveMinimum:
+            raise ValidationError("%s: input must be at exclusive minimum %d, got %d" %
+                                  (self.fullname(), self.exclusiveMinimum, input), self)
+
+        if (self.maximum is not None) and input > self.maximum:
+            raise ValidationError("%s: input must be at maximum %d, got %d" %
+                                  (self.fullname(), self.maximum, input), self)
+
+        if (self.exclusiveMaximum is not None) and input >= self.exclusiveMaximum:
+            raise ValidationError("%s: input must be at exclusive maximum %d, got %d" %
+                                  (self.fullname(), self.exclusiveMaximum, input), self)
+
+        if (self.enum is not None) and (input not in self.enum):
+            raise ValidationError("%s: input not a valid enumeration value: %s" %
+                                  (self.fullname(), input), self)
+
+    def str_detailed(self):
         s = ''
         if self.minimum or self.maximum:
             s += 'Range: '
@@ -481,7 +496,8 @@ class Number(Schema):
             s += 'Valid values: %s\n' % self.enum
         if self.default:
             s += 'Default value: %s\n' % self.default
-        return super(Number, self).schema_details(s)
+        return super(Number, self).str_detailed(additional_details=s)
+
 _register_type(Number)
 
 
@@ -490,6 +506,10 @@ class Timestamp(Schema):
     def __init__(self, input, name, parent, **kwargs):
         Schema.__init__(self, Timestamp._type, input, name, parent, **kwargs)
         _check_input(self.fullname(), input)
+
+    def validate(self, input):
+        if (type(input) not in [int, float]):
+            raise ValidationError("'%s' expected to be a number for %s" % (input, self.fullname()), self)
 
 _register_type(Timestamp)
 
@@ -500,8 +520,10 @@ class TimestampHP(Schema):
         Schema.__init__(self, TimestampHP._type, input, name, parent, **kwargs)
         _check_input(self.fullname(), input)
 
-    def schema_details(self):
-        return super(Number, self).schema_details('XXX Notes')
+    def validate(self, input):
+        if (type(input) not in [int, float]):
+            raise ValidationError("'%s' expected to be a number for %s" % (input, self.fullname()), self)
+
 _register_type(TimestampHP)
 
 
@@ -541,17 +563,20 @@ class Object(Schema):
     def validate(self, input):
         if not isinstance(input, dict):
             raise ValidationError("%s should be an object, got '%s'" %
-                                  (self.fullname(), type(input)))
+                                  (self.fullname(), type(input)), self)
 
         for k in input:
             if k in self.props:
                 self.props[k].validate(input[k])
             elif self.additionalProps in (None, False):
-                raise ValidationError("'%s' is not a valid property for %s" % (k, self.fullname()))
+                raise ValidationError("'%s' is not a valid property for %s" % (k, self.fullname()), self)
             elif isinstance (self.additionalProps, Schema):
                 self.additionalProps.validate(input[k])
             
     def toxml(self, input, parent=None):
+        """Return ElementTree object with `input` data.
+        Additional Properties that are not explicitly defined are not supported.
+        """
         if parent is not None:
             elem = ET.SubElement(parent, self.id)
         else:
@@ -561,7 +586,7 @@ class Object(Schema):
         inline_props = OrderedDict()
         for k in input:
             if k not in self.props:
-                if self.additionalProps is None:
+                if self.additionalProps in (None, True, False):
                     raise ValueError('Invalid property: %s' % k)
 
                 subobj = copy.copy(self.additionalProps)
@@ -624,7 +649,7 @@ class Array(Schema):
     def validate(self, input):
         if (type(input) is not list):
             raise ValidationError("%s should be an array, got '%s'" %
-                                  (self.fullname(), type(input)))
+                                  (self.fullname(), type(input)), self)
 
         for o in input:
             self.children[0].validate(o)
@@ -651,6 +676,11 @@ class Data(Schema):
         parse_prop(self, input, 'description')
 
         _check_input(self.fullname(), input)
+
+    def validate(self, input):
+        # any value will pass, regardless of content_type set
+        # validation of that type of data seems beyond the scope of reschema
+        return True
 
     def isSimple(self):
         return True
@@ -710,7 +740,7 @@ class Relation(object):
         return self.schema.fullid(api) + '/relations/' + self.name
     
     def str_simple(self):
-        return '%-30s %-20s %s\n' % (self.fullname(), '<relation>', self.description)
+        return '%-30s %-20s\n' % (self.fullname(), '<relation>')
 
     def resolve(self, data, fragment=None, params=None):
         target_self = self.resource.links['self']
@@ -757,7 +787,7 @@ class Link(object):
         elif self.method is not None:
             if 'self' not in self.schema.links:
                 raise ParseError("Link '%s' defined with no path and schema has no 'self' link" %
-                                 str(self))
+                                 str(self), input)
             self.path = self.schema.links['self'].path
         else:
             self.path = None
@@ -879,7 +909,8 @@ class Path(object):
         have = set(values.keys())
         if not required.issubset(have):
             raise MissingParameter("Missing parameters for link '%s' path template '%s': %s" %
-                                   (self.link.name, self.template, [x for x in required.difference(have)]))
+                                   (self.link.name, self.template, [x for x in required.difference(have)]),
+                                   self)
             
         uri = uritemplate.expand(self.template, values)
         if uri[0] == '$':

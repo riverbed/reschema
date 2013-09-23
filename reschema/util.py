@@ -7,23 +7,28 @@
 
 import re
 
+from reschema.exceptions import ParseError
+
+
 def parse_prop(obj, srcobj, prop, defaultValue=None, required=False, checkType=None):
     if prop in srcobj:
         val = srcobj[prop]
         del srcobj[prop]
         if checkType:
             if not isinstance(val, checkType):
-                raise ValueError("Value provided for %s must be %s, got %s" % (prop, str(checkType), type(val)))
+                msg = "Value provided for %s must be %s, got %s" % (prop, str(checkType), type(val))
+                raise ParseError(msg, srcobj)
 
     elif required:
-        raise ValueError("Missing required property '%s'" % prop)
+        raise ParseError("Missing required property '%s'" % prop, srcobj)
     else:
         val = defaultValue
-        
+
     if obj:
         setattr(obj, prop, val)
 
     return val
+
 
 def a_or_an(s):
     if s[0] in ('a', 'e', 'i', 'o'):
