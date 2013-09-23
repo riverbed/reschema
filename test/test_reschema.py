@@ -166,6 +166,36 @@ class TestCatalog(unittest.TestCase):
         with self.assertRaises(KeyError): a0['3/']
 
 
+class TestCatalogLinks(unittest.TestCase):
+
+    def setUp(self):
+        self.r = reschema.RestSchema()
+        self.r.load(TEST_SCHEMA)
+
+    def tearDown(self):
+        self.r = None
+
+    def test_links(self):
+        book = self.r.resources['book']
+        book_data = {'id': 1, 'title': 'My first book', 'publisher_id': 5, 'author_ids' : [1, 5]}
+        book.validate(book_data)
+
+        author_id = book['author_ids'][0]
+        logger.debug('author_id: %s' % author_id)
+
+        (uri, params) = author_id.relations['author'].resolve(book_data, '/author_ids/0')
+        self.assertEqual(uri, '/api/catalog/1.0/authors/1')
+
+        (uri, params) = author_id.relations['author'].resolve(book_data, '/author_ids/1')
+        self.assertEqual(uri, '/api/catalog/1.0/authors/5')
+        
+        author = self.r.resources['author']
+        author_data = {'id': 1, 'name': 'John Q'}
+        author.validate(author_data)
+
+        (uri, params) = author.relations['books'].resolve(author_data)
+        logger.debug('author.relations.books uri: %s %s' % (uri, params))
+
 class TestJsonSchema(unittest.TestCase):
 
     def setUp(self):
@@ -273,9 +303,6 @@ class TestJsonSchema(unittest.TestCase):
                          invalid = [ { "foo" : 1, "bar" : "one", "baz": "two"} ]
                          )
 
-
-        
-       
 
 if __name__ == '__main__':
     logging.basicConfig(filename='test.log', level=logging.DEBUG)

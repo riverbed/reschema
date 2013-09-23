@@ -90,6 +90,19 @@ class ParseError(Exception): pass
 
 __all__ = ['Schema']
 
+def _check_input(name, input):
+    """ Verify that input is empty, all keywords should have been parsed. """
+    if input is None:
+        return
+    
+    if not isinstance(input, dict):
+        raise ValidationError('%s: definition should be a dictionary, got: %s' % 
+                              (name, type(input)))
+
+    badkeys = input.keys()
+    if len(badkeys) > 0:
+        raise ValidationError('%s: unrecognized properites in definition: %s' % (name, ','.join(badkeys)))
+
 
 class Schema(object):
     """Base class for all JSON schema types."""
@@ -141,6 +154,11 @@ class Schema(object):
         parse_prop(self, input, 'xmlExample')
         parse_prop(self, input, 'xmlKeyName')
 
+        self.relations = OrderedDict()
+        for key, value in parse_prop(None, input, 'relations', {}, checkType=dict).iteritems():
+            #logger.debug("Schema %s: adding relation '%s'" % (str(self), key))
+            self.relations[key] = Relation(value, key, self)
+            
         self.links = OrderedDict()
         for key, value in parse_prop(None, input, 'links', {}, checkType=dict).iteritems():
             #logger.debug("Schema %s: adding link '%s'" % (str(self), key))
@@ -185,19 +203,6 @@ class Schema(object):
             raise ValueError('Unknown type: %s while parsing %s%s' %
                              (typestr, (parent.fullname() + '.') if parent else '', name))
 
-    def _check_input(self, input):
-        """ Verify that input is empty, all keywords should have been parsed. """
-        if input is None:
-            return
-
-        if not isinstance(input, dict):
-            raise ValidationError('%s: definition should be a dictionary, got: %s' % 
-                                  (self.fullname(), type(input)))
-
-        badkeys = input.keys()
-        if len(badkeys) > 0:
-            raise ValidationError('%s: unrecognized properites in definition: %s' % (self.fullname(), ','.join(badkeys)))
-            
         
     @classmethod
     def find_by_id(cls, api, id):
@@ -228,6 +233,7 @@ class Schema(object):
         """Return True if this schema is a reference."""
         return False
 
+    
     def fullname(self):
         """Return the full printable name using dotted notation."""
         if self.parent:
@@ -254,7 +260,7 @@ class Schema(object):
         s = '%-30s %-20s %s\n' % (self.fullname(), self.typestr, self.description.split('\n')[0])
         for child in self.children:
             s += child.str_simple()
-        for link, value in self.links.iteritems():
+        for relation, value in self.relations.iteritems():
             s += value.str_simple()
         return s
 
@@ -277,6 +283,9 @@ class Schema(object):
         return s
 
     def __getitem__(self, name):
+        if name == 'relations':
+            return self.relations
+
         if name == 'links':
             return self.links
 
@@ -335,7 +344,7 @@ class Ref(Schema):
         parse_prop(self, input, 'notes', '')
         parse_prop(self, input, 'id', '')
 
-        self._check_input(input)
+        _check_input(self.fullname(), input)
 
     @property
     def refschema(self):
@@ -373,12 +382,12 @@ class Boolean(Schema):
     def __init__(self, input, name, parent, **kwargs):
         Schema.__init__(self, Boolean._type, input, name, parent, **kwargs)
 
-        self._check_input(input)
+        _check_input(self.fullname(), input)
 
     def validate(self, input):
         if (type(input) is not bool):
-            raise ValidationError("'%s' of type %s expected to be a boolean for %s" %
-                                  (input, type(input), self.fullname()))
+            raise ValidationError("%s should be a boolean, got '%s'" %
+                                  (self.fullname(), type(input)))
 _register_type(Boolean)
 
 
@@ -392,7 +401,7 @@ class String(Schema):
         parse_prop(self, input, 'enum')
         parse_prop(self, input, 'default')
 
-        self._check_input(input)
+        _check_input(self.fullname(), input)
 
     def validate(self, input):
         if len(str(input)) > 40:
@@ -452,11 +461,12 @@ class Number(Schema):
         parse_prop(self, input, 'default')
         parse_prop(self, input, 'enum')
 
-        self._check_input(input)
+        _check_input(self.fullname(), input)
 
     def validate(self, input):
         if (type(input) not in [int, float]):
-            raise ValidationError("'%s' expected to be a number for %s" % (input, self.fullname()))
+            raise ValidationError("%s should be a number, got '%s'" %
+                                  (self.fullname(), type(input)))
         
     def schema_details(self):
         s = ''
@@ -479,7 +489,7 @@ class Timestamp(Schema):
     _type = 'timestamp'
     def __init__(self, input, name, parent, **kwargs):
         Schema.__init__(self, Timestamp._type, input, name, parent, **kwargs)
-        self._check_input(input)
+        _check_input(self.fullname(), input)
 
 _register_type(Timestamp)
 
@@ -488,7 +498,7 @@ class TimestampHP(Schema):
     _type = 'timestamp-hp'
     def __init__(self, input, name, parent, **kwargs):
         Schema.__init__(self, TimestampHP._type, input, name, parent, **kwargs)
-        self._check_input(input)
+        _check_input(self.fullname(), input)
 
     def schema_details(self):
         return super(Number, self).schema_details('XXX Notes')
@@ -517,7 +527,7 @@ class Object(Schema):
         else:
             self.additionalProps = None
 
-        self._check_input(input)
+        _check_input(self.fullname(), input)
 
     def __getitem__(self, name):
         if name in self.props:
@@ -530,7 +540,8 @@ class Object(Schema):
     
     def validate(self, input):
         if not isinstance(input, dict):
-            raise ValidationError("'%s' expected to be an object for %s" % (input, self.fullname()))
+            raise ValidationError("%s should be an object, got '%s'" %
+                                  (self.fullname(), type(input)))
 
         for k in input:
             if k in self.props:
@@ -592,7 +603,7 @@ class Array(Schema):
         parse_prop(self, input, 'minItems')
         parse_prop(self, input, 'maxItems')
 
-        self._check_input(input)
+        _check_input(self.fullname(), input)
 
     def isSimple(self):
         return False
@@ -612,7 +623,8 @@ class Array(Schema):
     
     def validate(self, input):
         if (type(input) is not list):
-            raise ValidationError("'%s' expected to be an array for %s" % (input, self.fullname()))
+            raise ValidationError("%s should be an array, got '%s'" %
+                                  (self.fullname(), type(input)))
 
         for o in input:
             self.children[0].validate(o)
@@ -638,13 +650,91 @@ class Data(Schema):
         parse_prop(self, input, 'content_type', required=True)
         parse_prop(self, input, 'description')
 
-        self._check_input(input)
+        _check_input(self.fullname(), input)
 
     def isSimple(self):
         return True
 _register_type(Data)
 
 
+class Relation(object):
+    # Map of all known relations:
+    #   schemas["<api>/schema#<fullid>/relations/<name>"] -> Schema
+    relations = {}
+    
+    def __init__(self, input, name, schema):
+        self.name = name
+        self.schema = schema
+        self.api = schema.api
+
+        self.vars = None
+
+        self._resource = None
+        self._resource_name = parse_prop(None, input, 'resource', required=True)
+        self.vars = parse_prop(self, input, 'vars')
+
+        self.relations[self.fullid(api=True)] = self
+
+        _check_input(self.fullname(), input)
+        
+    def __str__(self):
+        return self.resource.name
+        
+    def __repr__(self):
+        return "<jsonschema.%s '%s'>" % (self.__class__.__name__, self.fullid())
+
+    @property
+    def resource(self):
+        if self._resource is None:
+            self._resource = Schema.find_by_id(self.api, self._resource_name)
+            if self._resource is None:
+                raise KeyError("Invalid resource '%s' for relation: %s" % (self._resource_name, self.fullname()))
+            
+        return self._resource
+    
+    @classmethod
+    def find_by_id(cls, api, id):
+        """Find a relation by fullid."""
+
+        for pre in ['', '/relations/']:
+            fullid = '%s/schema#/%s%s' % (api, pre, id)
+            if fullid in cls.relations:
+                return cls.relations[fullid]
+
+        return None
+
+    def fullname(self):
+        return self.schema.fullname() + '.relations.' + self.name
+    
+    def fullid(self, api=False):
+        return self.schema.fullid(api) + '/relations/' + self.name
+    
+    def str_simple(self):
+        return '%-30s %-20s %s\n' % (self.fullname(), '<relation>', self.description)
+
+    def resolve(self, data, fragment=None, params=None):
+        target_self = self.resource.links['self']
+        target_request = target_self.request
+
+        if params:
+            vals = params
+        else:
+            vals = {}
+
+        for var,relp in self.vars.iteritems():
+            vals[var] = resolve_rel_pointer(data, fragment or '', relp)
+
+        uri = target_self.path.resolve(vals)
+
+        params = {}
+        if target_request:
+            for var,schema in target_request.props.iteritems():
+                if var in vals:
+                    schema.validate(vals[var])
+                    params[var] = vals[var]
+        
+        return (uri, params)
+       
 class Link(object):
     # Map of all known links:
     #   schemas["<api>/schema#<fullid>/links/<name>"] -> Schema
@@ -661,9 +751,9 @@ class Link(object):
         parse_prop(self, input, 'method')
         parse_prop(self, input, 'authorization')
 
-        pathstr = parse_prop(None, input, 'path')
-        if pathstr is not None:
-            self.path = Path(self, pathstr)
+        pathdef = parse_prop(None, input, 'path')
+        if pathdef is not None:
+            self.path = Path(self, pathdef)
         elif self.method is not None:
             if 'self' not in self.schema.links:
                 raise ParseError("Link '%s' defined with no path and schema has no 'self' link" %
@@ -672,20 +762,20 @@ class Link(object):
         else:
             self.path = None
             
-        self.request = None
+        self._request = None
         if 'request' in input:
-            self.request = Schema.parse(parse_prop(None, input, 'request'), parent=self, name='request')
+            self._request = Schema.parse(parse_prop(None, input, 'request'),
+                                         parent=self, name='request')
         
-        self.response = None
+        self._response = None
         if 'response' in input:
-            self.response = Schema.parse(parse_prop(None, input, 'response'), parent=self, name='response')
+            self._response = Schema.parse(parse_prop(None, input, 'response'),
+                                          parent=self, name='_response')
 
-        self.target_id = parse_prop(None, input, 'target')
-        self._target = None
 
         self.links[self.fullid(api=True)] = self
     
-        self._check_input(input)
+        _check_input(self.fullname(), input)
 
     def __repr__(self):
         return "<jsonschema.%s '%s'>" % (self.__class__.__name__, self.fullid())
@@ -701,30 +791,6 @@ class Link(object):
 
         return None
 
-    def _check_input(self, input):
-        """ Verify that input is empty, all keywords should have been parsed. """
-        if input is None:
-            return
-
-        if not isinstance(input, dict):
-            raise ValidationError('%s: definition should be a dictionary, got: %s' %
-                                  (self.fullname(), type(input)))
-
-        badkeys = input.keys()
-        if len(badkeys) > 0:
-            raise ValidationError('%s: unreconginzed properites in definition: %s' %
-                                  (self.fullname(), badkeys.join(input)))
-            
-    @property
-    def target(self):
-        if self._target is None and self.target_id is not None:
-            self._target = (Schema.find_by_id(self.api, self.target_id) or
-                            Link.find_by_id(self.api, self.target_id))
-            if self._target is None:
-                raise KeyError("Invalid target '%s' for link: %s" % (self.target_id, self.fullname()))
-
-        return self._target
-
     def fullname(self):
         return self.schema.fullname() + '.links.' + self.name
     
@@ -734,6 +800,20 @@ class Link(object):
     def str_simple(self):
         return '%-30s %-20s %s\n' % (self.fullname(), '<link>', self.description)
 
+    @property
+    def request(self):
+        r =  self._request
+        if type(r) is Ref:
+            r = r.refschema
+        return r
+    
+    @property
+    def response(self):
+        r =  self._response
+        if type(r) is Ref:
+            r = r.refschema
+        return r
+    
 
 class Path(object):
     """The `Path` class manages URI templates and resolves variables for a schema.
@@ -765,6 +845,9 @@ class Path(object):
            
         self.link = link
 
+        self.pathdef = pathdef
+        self.vars = None
+        
         if isinstance(pathdef, dict):
             self.template = pathdef['template']
             self.vars = pathdef['vars']
@@ -774,7 +857,7 @@ class Path(object):
 
     def __str__(self):
         return self.template
-    
+
     def resolve(self, data, pointer=None):
         """Resolve all variables in this path template from `data` relative to `pointer`."""
         values = {}
@@ -790,6 +873,8 @@ class Path(object):
                     if v not in values:
                         values[v] = data[v]
 
+        tmpl = self.template
+        logger.debug("%s template: %s" % (self.link.fullname(), tmpl))
         required = set(uritemplate.variables(self.template))
         have = set(values.keys())
         if not required.issubset(have):

@@ -34,8 +34,6 @@ resources:
 
       links:
          self: { path: "$/info" }
-         books: { target: books }
-         authors: { target: authors }
          get:  
             method: GET
             response: { $ref: info }
@@ -43,6 +41,10 @@ resources:
             method: PUT
             request: { $ref: info }
             response: { $ref: info }
+         
+      relations:
+         books: { resource: books }
+         authors: { resource: authors }
 
    authors:
       type: array
@@ -58,9 +60,6 @@ resources:
             request: { $ref: author }
             response: { $ref: author }
 
-         get_first:
-            method: GET
-            response: { $ref: author }
 
    author:
       type: object
@@ -70,8 +69,6 @@ resources:
 
       links: 
          self: { path: "$/authors/{id}" }
-         instances: { target: authors }
-
          get:  
             method: GET
             response: { $ref: author }
@@ -81,9 +78,13 @@ resources:
             response: { $ref: author }
          delete:
             method: DELETE
+
+      relations:
          books:
-            path: "$/books?author={id}"
-            target: books/links/get
+            resource: books
+            vars: { author: "0/id" }
+
+         instances: { resource: authors }
 
    publishers:
       type: array
@@ -108,11 +109,13 @@ resources:
 
       links:
          self: { path: "$/publishers/{id}" }
-         instances: { target: publishers }
 
          get:  
             method: GET
             response: { $ref: publisher }
+            
+      relations:
+         instances: { resource: publishers }
 
    books:
       type: array
@@ -122,26 +125,26 @@ resources:
             id: { type: number, readOnly: true }
             title: { type: string }
 
-         links:
+         relations:
             book:
                # Build a book link from the 'id' property
-               path: 
-                  template: "/books/{bookid}"
-                  vars:
-                     bookid: "0/id" # this array item, 'id' property
+               resource: book
+               vars:
+                  id: "0/id" # this array item, 'id' property
 
       links:
       
-         self: { path: "$/books" }
-
-         get: 
-            method: GET
+         self: 
+            path: "$/books"
             request:
                # Allow filtering by id or title
                type: object
                properties:
                   author: { type: number }
                   title: { type: string }
+
+         get: 
+            method: GET
             response: { $ref : books }
 
          create:
@@ -171,10 +174,10 @@ resources:
             items: 
                id: author_id
                type: number
-               links:
+               relations:
                   author:
-                     target: author
-                     path: "$/authors/{$}"
+                     resource: author
+                     vars: { id: "0" }
 
          chapters: 
             type: array
@@ -194,7 +197,6 @@ resources:
 
       links:
          self: { path: "$/books/{id}" }
-         instances: { target: books }
 
          get:  
             method: GET
@@ -229,6 +231,9 @@ resources:
             method: POST
             request: { $ref: book_chapter }
             response: { $ref: book_chapter }
+
+      relations:
+         instances: { resource: books }
 
    book_chapter:
       type: object
