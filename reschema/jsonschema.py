@@ -122,7 +122,7 @@ class Schema(object):
         
         if api is None:
             if parent is None:
-                raise ParseError("Must specify 'api' if parent is None", input)
+                raise ValidationError("Must specify 'api' if parent is None", input)
             api = parent.api
 
         self.api = api
@@ -667,8 +667,7 @@ class Data(Schema):
     def validate(self, input):
         # any value will pass, regardless of content_type set
         # validation of that type of data seems beyond the scope of reschema
-        if input is None:
-            raise ValidationError("Expected valid data and not None for %s" % (self.fullname()), self)
+        return True
 
     def isSimple(self):
         return True

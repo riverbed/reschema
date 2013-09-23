@@ -292,12 +292,19 @@ class TestJsonSchema(unittest.TestCase):
                 schema.toxml(a)
 
         for a in invalid:
-            with self.assertRaises(ValidationError):
+            try:
                 schema.validate(a)
+                self.fail("ValidationError not raised for value: %s" % a)
+            except ValidationError:
+                pass
 
     def check_bad_schema(self, s, etype):
-        with self.assertRaises(etype):
+        try:
             self.parse(s)
+        except etype, e:
+            logger.debug('Got validation error: %s' % str(e))
+            return
+        self.fail('Schema should have thrown error, %s' % etype)
 
     def test_exceptions(self):
         # cover exception string output
@@ -305,13 +312,13 @@ class TestJsonSchema(unittest.TestCase):
         d = yaml_loader.marked_load(s)
         try:
             Schema.parse(d)
-        except ParseError, e:
+        except ValidationError, e:
             self.assertIsNotNone(str(e))
 
     def test_missing_api(self):
         s = "type: boolean\n"
         d = yaml_loader.marked_load(s)
-        with self.assertRaises(ParseError):
+        with self.assertRaises(ValidationError):
             Schema.parse(d)
 
     def test_unnamed(self):
@@ -372,7 +379,7 @@ class TestJsonSchema(unittest.TestCase):
                                 "123",
                                 "1234512345"],
 
-                         invalid=[None]
+                         invalid=[]
                          )
         schema = self.parse("type: data\n"
                             "content_type: text\n"
