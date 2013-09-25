@@ -25,7 +25,7 @@ rs.load(TEST_SCHEMA)
 
 title = "%s v%s %s" % (rs.title, rs.version, rs.status)
 
-outdir = 'test_reschema_doc_coverage'
+outdir = 'reschema_doc_coverage_output'
 
 if not os.path.exists(outdir):
     os.makedirs(outdir)
