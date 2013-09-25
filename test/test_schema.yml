@@ -1,0 +1,294 @@
+restSchemaVersion: "1.0"
+name: "Test"
+version: "1.0"
+title: "Test REST API"
+servicePath: "/api/test/1.0"
+defaultAuthorization: "required"
+
+types:
+   type_number:
+      type: number
+      description: "Type number"
+      
+   type_string:
+      type: string
+      description: "Type string"
+
+resources:
+   test_number:
+      type: number
+      links: { self: { path: "$/test_number" }  }
+      
+   test_string:
+      type: string
+      links: { self: { path: "$/test_string" }  }
+      
+   test_array:
+      type: array
+      items: { type: number }
+      links: { self: { path: "$/test_array" }  }
+      
+   test_array_ref:
+      type: array
+      items: { $ref: type_number }
+      links: { self: { path: "$/test_array_ref" }  }
+      
+   test_object:
+      type: object
+      properties:
+         prop_number: { type: number }
+         prop_string: { type: string }
+         prop_array: 
+            type: array
+            items: { type: number }
+         prop_object: 
+            type: object
+            properties: 
+               prop: { type: number }
+               
+      links: { self: { path: "$/test_object" } }
+
+   test_object_ref:
+      type: object
+      properties:
+         prop_number_ref: { $ref: type_number }
+         prop_string_ref: { $ref: type_string }
+      links: { self: { path: "$/test_object_ref" } }
+
+   test_descr:
+      type: object
+      description: "Test 1 with descriptions"
+      properties:
+         prop_number: { type: number, description: "prop_number" }
+         prop_string: { type: string, description: "prop_string" }
+         prop_array: 
+            description: "prop_array"
+            type: array
+            items: { type: number }
+         prop_object: 
+            description: "prop_object"
+            type: object
+            properties: 
+               prop: { type: number }
+               
+      links:
+         self:
+            path: "$/test_descr"
+            description: "self link"
+
+   test_example:
+      type: object
+      example: 
+         prop_number: 1
+         prop_string: "string"
+         prop_array: [ 2, 3 ]
+         prop_object: { prop: 4 }
+
+      description: "Test 1 with descriptions"
+      properties:
+         prop_number: { type: number, description: "prop_number" }
+         prop_string: { type: string, description: "prop_string" }
+         prop_array: 
+            description: "prop_array"
+            type: array
+            items: { type: number }
+         prop_object: 
+            description: "prop_object"
+            type: object
+            properties: 
+               prop: { type: number }
+               
+      links:
+         self:
+            path: "$/test_descr"
+            description: "self link"
+      
+   test_methods:
+      type: object
+      properties:
+         id: { type: number }
+
+      links:
+         self: { path: "$/test_methods" }
+         get: 
+            method: GET
+            response: { $ref: test_methods }
+
+         get_req: 
+            method: GET
+            request: 
+               type: object
+               properties: 
+                  p1: { type: number }
+                  p2: { type: string }
+            response: { $ref: test_methods }
+
+         get_auth_req: 
+            method: GET
+            authorization: required
+            response: { $ref: test_methods }
+
+         get_auth_opt: 
+            method: GET
+            authorization: optional
+            response: { $ref: test_methods }
+
+         set: 
+            method: PUT
+            request: { $ref: test_methods }
+            response: { $ref: test_methods }
+
+         delete: 
+            method: DELETE
+
+   test_object_addprops_true:
+      type: object
+      properties:
+         p1: { type: number }
+         p2: { type: string }
+      additionalProperties: True
+
+      links:
+         self: { path: "$/test_methods" }
+
+   test_object_addprops_number:
+      type: object
+      properties:
+         p1: { type: number }
+         p2: { type: string }
+      additionalProperties: { type: number }
+
+      links:
+         self: { path: "$/test_methods" }
+
+   test_object_addprops_string:
+      type: object
+      properties:
+         p1: { type: number }
+         p2: { type: string }
+      additionalProperties: { type: string }
+
+      links:
+         self: { path: "$/test_methods" }
+      
+   test_long_table_line:
+      type: object
+      properties:
+         level1: 
+            type: object
+            properties:
+               level2: 
+                  type: object
+                  properties:
+                     level3: 
+                        type: object
+                        properties:
+                           level4: 
+                              type: number
+
+      links: { self: { path: "$/test_long_table_lines" } }
+
+
+   test_number_readonly:
+      type: number
+      readOnly: True
+
+      links: { self: { path: "$/test_number_readonly" } }
+
+   test_object_full_readonly:
+      type: object
+      readOnly: True
+      properties:
+         p1: { type: number }
+         p2: { type: string }
+         p3: 
+            type: array
+            items: 
+               { $ref: type_number }
+
+      links: { self: { path: "$/test_object_full_readonly" } }
+
+   test_object_partial_readonly:
+      type: object
+      properties:
+         p1: { type: number }
+         p2: { type: string, readOnly: True }
+         p3: 
+            type: array
+            items: 
+               { $ref: type_number }
+
+      links: { self: { path: "$/test_object_full_readonly" } }
+
+   test_number_required_true:
+      type: number
+      required: True
+
+      links: { self: { path: "$/test_number_required_true" } }
+
+   test_number_required_false:
+      type: number
+      required: False
+
+      links: { self: { path: "$/test_number_required_false" } }
+
+   test_number_min:
+      type: number
+      minimum: 10
+      links: { self: { path: "$/test_number_min" } }
+
+   test_number_max:
+      type: number
+      maximum: 10
+      links: { self: { path: "$/test_number_max" } }
+
+   test_number_excl_min:
+      type: number
+      exclusiveMinimum: 10
+      links: { self: { path: "$/test_number_excl_min" } }
+
+   test_number_excl_max:
+      type: number
+      exclusiveMaximum: 10
+      links: { self: { path: "$/test_number_excl_max" } }
+
+   test_number_range:
+      type: number
+      minimum: 10
+      maximum: 15
+      links: { self: { path: "$/test_number_range" } }
+
+   test_number_default:
+      type: number
+      default: 10
+      links: { self: { path: "$/test_number_default" } }
+
+   test_string_enum:
+      type: string
+      enum: [ 'ENUM1', 'ENUM2' ]
+      default: ENUM1
+      links: { self: { path: "$/test_string_enum" } }
+      
+   test_string_pattern:
+      type: string
+      pattern: "[A-Za-z0-9]foobar"
+      links: { self: { path: "$/test_string_pattern" } }
+      
+   test_string_notes:
+      type: string
+      notes: "This has notes"
+      links: { self: { path: "$/test_string_pattern" } }
+      
+   test_array_min:
+      type: array
+      minItems: 10
+      items: { type: number }
+      links: { self: { path: "$/test_array_min" } }
+
+   test_array_max:
+      type: array
+      maxItems: 10
+      items: { type: number }
+      links: { self: { path: "$/test_array_max" } }
+
+   
