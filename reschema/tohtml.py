@@ -15,6 +15,9 @@ from collections import OrderedDict
 import xml.dom.minidom, xml.etree.ElementTree as ET
 
 import jsonpointer
+import logging
+
+logger = logging.getLogger(__name__)
 
 import reschema
 from reschema.html import HTMLElement, HTMLTable, Document as HTMLDoc, TabBar
@@ -29,9 +32,21 @@ class Options(object):
         self.xml = xml
 
 
+def _build_schema_href(schema):
+    if schema.name == 'test_methods':
+        __import__('IPython').core.debugger.Pdb().set_trace()
+    if schema.name in RestSchemaToHtml.restschema.resources:
+        h = "#resource"
+    else:
+        h = "#type"
+
+    return h + '-' + html_str_to_id(schema.fullid())
+    
 class RestSchemaToHtml(object):
+    restschema = None
+
     def __init__(self, restschema, container, menu=None, options=None):
-        self.restschema = restschema
+        RestSchemaToHtml.restschema = restschema
         self.container = container
         self.menu = menu
         self.options = (options or Options())
@@ -91,6 +106,7 @@ class ResourceToHtml(object):
             f.close()
         
     def process(self, is_type=False):
+        logger.debug("Processing resource: %s" % self.schema.fullname())
         menu = self.menu
         schema = self.schema
         baseid = ('type-' if is_type else 'resource-') + html_str_to_id(schema.fullid())
@@ -103,7 +119,10 @@ class ResourceToHtml(object):
             div.p().text = schema.description
 
         if (not is_type):
-            div.pre().text = "https://{device}" + self.basepath + str(schema.links['self'].path)
+            uri = schema.links['self'].path.template
+            if uri[0] == '$':
+                uri = self.basepath + uri[1:]
+            div.pre().text = "https://{device}" + uri
         
         self.schema_table(schema, div, baseid)
 
@@ -120,7 +139,7 @@ class ResourceToHtml(object):
             tabbar.add_tab("XML", baseid+'-xml', SchemaSummaryXML(schema))
         #tabbar.add_tab("JSON Schema", "jsonschema", HTMLElement("pre", text=json.dumps(self.schema_raw, indent=2)))
         tabbar.finish()
-        container.append(SchemaTable(self.schema))
+        container.append(SchemaTable(schema))
         
     def process_methods(self, container, containerid, submenu):
         schema = self.schema
@@ -128,13 +147,19 @@ class ResourceToHtml(object):
             if name == 'self':
                 continue
 
+            logger.debug("Processing method: %s - %s" % (self.schema.fullname(), name))
+            
             baseid = containerid + '-method-%s' % name
             div = container.div(id=baseid, cls="method-body")
             submenu.add_item(name, href=div)
             div.h4().text = link.schema.fullname() + ": " + link.name
             div.p().text = link.description
-
-            path = ("https://{device}" + self.basepath + str(link.path))
+            
+            uri = link.path.template
+            if uri[0] == '$':
+                uri = self.basepath + uri[1:]
+                
+            path = ("https://{device}" + uri)
             
             httpmethod = link.method
             if httpmethod == "GET":
@@ -146,10 +171,7 @@ class ResourceToHtml(object):
                     if len(params) != 0:
                         path += "?" + "&".join(params)
 
-            if httpmethod is None:
-                div.pre().text = path
-            else:
-                div.pre().text = httpmethod + " " + path
+            div.pre().text = httpmethod + " " + path
 
             div.span(cls="h5").text = "Authorization"
             if link.authorization == "required":
@@ -171,14 +193,16 @@ class ResourceToHtml(object):
             if httpmethod != "GET":
                 div.span(cls="h5").text = "Request Body"
                 if link.request is not None and httpmethod != "GET":
-                    if type(link.request) is reschema.jsonschema.Ref:
+                    # Need to look at the raw link._request to see if it's a ref,
+                    # as link.request is auto-resolved thru refs
+                    if type(link._request) is reschema.jsonschema.Ref:
                         p = div.p()
                         p.settext("Provide ",
-                                  a_or_an(link.request.refschema.name),
+                                  a_or_an(link.request.name),
                                   " ",
                                   p.a(cls="jsonschema-type",
-                                      href="#type-%s" % html_str_to_id(link.request.refschema.fullid()),
-                                      text=link.request.refschema.name),
+                                      href=_build_schema_href(link.request),
+                                      text=link.request.name),
                                   " data object." )
                     elif type(link.request) is reschema.jsonschema.Data:
                         p = div.p()
@@ -199,14 +223,14 @@ class ResourceToHtml(object):
             div.span(cls="h5").text = "Response Body"
             schema = link.response
             if schema:
-                if type(schema) is reschema.jsonschema.Ref:
+                if type(link._response) is reschema.jsonschema.Ref:
                     p = div.p()
                     p.settext("Returns ",
-                              a_or_an(schema.refschema.name),
+                              a_or_an(schema.name),
                               " ",
                               p.a(cls="jsonschema-type",
-                                  href="#type-%s" % html_str_to_id(schema.refschema.fullid()),
-                                  text=schema.refschema.name),
+                                  href=_build_schema_href(schema),
+                                  text=schema.name),
                               " data object.")
                 elif type(schema) is reschema.jsonschema.Data:
                     p = div.p()
@@ -214,6 +238,8 @@ class ResourceToHtml(object):
                               p.span(cls="content-attribute", text=schema.content_type),
                               ".")
                 else:
+                    logger.debug(baseid+'-response')
+                    logger.debug("\n" + schema.str_detailed() + "\n")
                     p = div.p().text = "On success, the server returns a response body with the following structure:"
                     self.schema_table(link.response, div, baseid + '-response')
 
@@ -256,12 +282,13 @@ class SchemaSummaryJson(HTMLElement):
             if follow_refs:
                 self.process(parent, schema.refschema, indent)
             else:
-                href = "#type-%s" % html_str_to_id(schema.refschema.fullid())
+                href=_build_schema_href(schema.refschema)
                 parent.a(cls="restschema-type", href=href, text=schema.refschema.name)
         else:
             parent.span(cls="restschema-type").text = schema.typestr
             
     def process_object(self, parent, obj, indent):
+        logger.debug("process_object: obj: %s" % obj.fullname())
         parent.span().text = "{\n"
         last = None
         for k in obj.props:
@@ -277,11 +304,18 @@ class SchemaSummaryJson(HTMLElement):
         if obj.additionalProps:
             if last is not None:
                 last.text = ",\n"
-            parent.span(cls="restschema-type").text = '%*.*s%s' % (indent+2, indent+2, "",
+            if obj.additionalProps is True:
+                parent.span(cls="restschema-type").text = '%*.*s%s' % (indent+2, indent+2, "",
+                                                                       'prop')
+                parent.span().text = ": "
+                parent.span(cls="restschema-type").text = 'value'
+            else:
+                parent.span(cls="restschema-type").text = '%*.*s%s' % (indent+2, indent+2, "",
                                                                    obj.additionalProps.name)
-            parent.pan().text = ": "
-            s = parent.span()
-            self.process(s, obj.additionalProps, indent+2)
+                parent.span().text = ": "
+                s = parent.span()
+                self.process(s, obj.additionalProps, indent+2)
+                
             last = parent.span()
             last.text = '\n'
 
@@ -293,7 +327,7 @@ class SchemaSummaryJson(HTMLElement):
         if isinstance(item, reschema.jsonschema.Ref):
             s = parent.span()
             s.settext( "[ ", s.a(cls="restschema-type",
-                                 href="#type-%s" % html_str_to_id(item.refschema.fullid()),
+                                 href=_build_schema_href(item.refschema),
                                  text=item.refschema.name),
                        " ]")
 
@@ -399,7 +433,8 @@ class SchemaSummaryXML(HTMLElement):
                 else:
                     parent.span(cls="xmlschema-element").text = "%*s<%s>" % (indent, "", name)
 
-                parent.a(cls="xmlschema-type", href="#type-%s" % html_str_to_id(schema.refschema.fullid()),
+                parent.a(cls="xmlschema-type",
+                         href=_build_schema_href(schema.refschema),
                          text="%s" % dtype)
                 parent.span(cls="xmlschema-element").text = "</%s>\n" % (name)
 
@@ -444,7 +479,9 @@ class SchemaSummaryXML(HTMLElement):
             s = parent.span()
             self.process(s, prop, indent+2, name=k)
             
-        if obj.additionalProps:
+        if obj.additionalProps is True:
+            pass
+        elif obj.additionalProps:
             s = parent.span()
 
             subobj = copy.copy(obj.additionalProps)
@@ -478,6 +515,8 @@ class PropTable(HTMLTable):
     def __init__(self, data):
         HTMLTable.__init__(self, cls="paramtable")
 
+        logger.debug("PropTable")
+
         self.define_columns(["paramtable-propname",
                              "paramtable-proptype",
                              "paramtable-description",
@@ -489,12 +528,7 @@ class PropTable(HTMLTable):
     def process(self, data):
         pass
 
-    def makerow(self, schema, name):
-        tds = self.row(["", "", "", ""])
-
-        # To avoid very long nested structures from taking up too much
-        # room in the table, force line breaks after a set number of
-        # characters.
+    def setname(self, elem, name):
         limit = 40
         L = re.split("[.[]", name)
         line = 0
@@ -504,21 +538,31 @@ class PropTable(HTMLTable):
             else:
                 text = L[i]
             if line + len(text) > limit:
-                tds[0].br()
+                elem.br()
                 line = 2
-                tds[0].span(cls="restschema-indent", text="")
+                elem.span(cls="restschema-indent", text="")
             if i != len(L) - 1:
                 if L[i+1][-1] != "]":
                     text += "."
                 
-            tds[0].span(cls="restschema-%s" % "basename" if i == 0 else "property",
+            elem.span(cls="restschema-%s" % "basename" if i == 0 else "property",
                         text=text)
             line += len(text)
+        
+    def makerow(self, schema, name):
+        tds = self.row(["", "", "", ""])
+
+        logger.debug("Row: %s - %s " % (schema.fullname(), name))
+        # To avoid very long nested structures from taking up too much
+        # room in the table, force line breaks after a set number of
+        # characters.
+
+        self.setname(tds[0], name)
         
         if isinstance(schema, reschema.jsonschema.Ref):
             dtype = schema.typestr
             tds[1].a(cls="restschema-type",
-                     href="#type-%s" % html_str_to_id(schema.refschema.fullid()),
+                     href=_build_schema_href(schema.refschema),
                      text="<" + schema.refschema.name + ">")
         else:
             tds[1].span(cls="restschema-type", text="<" + schema.typestr + ">")
@@ -528,6 +572,9 @@ class PropTable(HTMLTable):
         desctd = tds[3]
         parts = []
 
+        if schema.readOnly:
+            parts.append("Read-only")
+            
         if schema.required is False:
             parts.append("Optional")
             
@@ -594,7 +641,13 @@ class SchemaTable(PropTable):
 
         for child in schema.children:
             self.process(child)
-
+        if isinstance(schema, reschema.jsonschema.Object):
+            if schema.additionalProps is True:
+                tds = self.row(["", "", "", ""])
+                self.setname(tds[0], schema.fullname() + ".<prop>")
+                tds[1].span(cls="restschema-type").text = "<value>"
+                tds[2].text = "Additional properties may have any property name and value"
+                
 if __name__ == '__main__':
     from optparse import OptionParser
 

@@ -146,7 +146,8 @@ class Schema(object):
         parse_prop(self, input, 'id', name)
         parse_prop(self, input, 'required')
         parse_prop(self, input, 'example')
-        parse_prop(self, input, 'readOnly')
+        parse_prop(self, input, 'readOnly',
+                   parent.readOnly if (parent and isinstance(parent, Schema)) else False)
         
         parse_prop(self, input, 'xmlTag')
         parse_prop(self, input, 'xmlSchema')
@@ -184,6 +185,10 @@ class Schema(object):
             
         """
     
+        if input is None:
+            raise ParseError("Empty schema definition while parsing %s%s" %
+                             ((parent.fullname() + '.') if parent else '', name), None)
+        
         if name is None:
             name = parse_prop(None, input, 'id')
             if name is None:
@@ -543,7 +548,7 @@ class Object(Schema):
             self.additionalProps = ap
         elif ap is not None:
             name = ap['id'] if ('id' in ap) else 'prop'
-            c = Schema.parse(ap, '[' + name + ']', self)
+            c = Schema.parse(ap, '<' + name + '>', self)
             self.additionalProps = c
             self.children.append(c)
         else:

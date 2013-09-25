@@ -4,11 +4,11 @@ version: "1.0"
 title: "REST API for a book catalog"
 servicePath: "/api/catalog/1.0"
 defaultAuthorization: "required"
+
 types:
    address:
       type: object
       id: address
-        
       properties :
          street : 
             type: string
@@ -64,7 +64,7 @@ resources:
    author:
       type: object
       properties:
-         id: { type: number }
+         id: { type: number, readOnly: True }
          name: { type: string }
 
       links: 
@@ -264,4 +264,3 @@ resources:
             path: "$/books/{bookid}/chapter/{num}/text"
             request: { type: string }
             response: { type: string }
-            

@@ -17,6 +17,7 @@ from jsonpointer import resolve_pointer, JsonPointer
 from reschema.jsonschema import Schema
 from reschema.util import parse_prop
 from reschema import yaml_loader, json_loader
+from .exceptions import ParseError
 
 __all__ = ['RestSchema']
 
@@ -74,18 +75,25 @@ class RestSchema(object):
         parse_prop(self, obj, 'servicePath', '')
         parse_prop(self, obj, 'defaultAuthorization', None)
 
+        self.types = OrderedDict()
         if 'types' in obj:
-            self.types = OrderedDict()
             for type_ in obj['types']:
                 self.types[type_] = Schema.parse(obj['types'][type_],
                                                  name=type_, api=self.servicePath)
         
+        self.resources = OrderedDict()
         if 'resources' in obj:
-            self.resources = OrderedDict()
             for resource in obj['resources']:
-                self.resources[resource] = Schema.parse(obj['resources'][resource],
-                                                        name=resource, api=self.servicePath)
-
+                input_ = obj['resources'][resource]
+                sch = Schema.parse(input_, name=resource, api=self.servicePath)
+                self.resources[resource] = sch
+                
+                if 'self' not in sch.links:
+                    raise ParseError("Resource '%s' missing 'self' link" % resource, input_)
+                if sch.links['self'].path is None:
+                    raise ParseError("Resource '%s' 'self' link must define 'path'" % resource, input_)
+                    
+                
         parse_prop(self, obj, 'tasks', None)
         parse_prop(self, obj, 'request_headers', None)
         parse_prop(self, obj, 'response_headers', None)
