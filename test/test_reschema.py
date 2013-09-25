@@ -200,7 +200,7 @@ class TestCatalog(unittest.TestCase):
         path = link.path
         self.assertEqual(str(path), '/books/{bookid}/chapter/{chapterid}')
         data = {'book': book.example}
-        self.assertEqual(path.resolve(data, '/book/chapters/1'), '/books/100/chapter/2')
+        self.assertEqual(path.resolve(data, '/book/chapters/1'), '/books/1/chapter/2')
         with self.assertRaises(MissingParameter):
             path.resolve(None)
 

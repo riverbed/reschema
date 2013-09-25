@@ -25,7 +25,7 @@ rs.load(TEST_SCHEMA)
 
 title = "%s v%s %s" % (rs.title, rs.version, rs.status)
 
-outdir = 'reschema-doc-coverage'
+outdir = 'test_reschema_doc_coverage'
 
 if not os.path.exists(outdir):
     os.makedirs(outdir)
@@ -43,6 +43,8 @@ r2h.process()
 htmldoc.write(html)
 
 cov.stop()
-cov.html_report(directory='reschema-doc-coverage')
+cov.html_report(directory=outdir)
 
-print "Report written: ./reschema-doc-coverage/index.html"
+print "Report written: ./%s/index.html" % outdir
+print "HTML output: ./%s/test_schema.html" % outdir
+

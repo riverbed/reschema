@@ -33,8 +33,6 @@ class Options(object):
 
 
 def _build_schema_href(schema):
-    if schema.name == 'test_methods':
-        __import__('IPython').core.debugger.Pdb().set_trace()
     if schema.name in RestSchemaToHtml.restschema.resources:
         h = "#resource"
     else:

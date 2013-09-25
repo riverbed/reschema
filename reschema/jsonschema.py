@@ -756,8 +756,9 @@ class Relation(object):
         else:
             vals = {}
 
-        for var,relp in self.vars.iteritems():
-            vals[var] = resolve_rel_pointer(data, fragment or '', relp)
+        if self.vars is not None:
+            for var,relp in self.vars.iteritems():
+                vals[var] = resolve_rel_pointer(data, fragment or '', relp)
 
         uri = target_self.path.resolve(vals)
 
