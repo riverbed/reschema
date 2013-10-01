@@ -1,4 +1,2 @@
-uritemplate>=0.6
-PyYAML>=3.10
 -e git+git@github.com:stefankoegl/python-json-pointer.git#egg=python-json-pointer
-Markdown>=2.2.1
+-e .

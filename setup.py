@@ -10,11 +10,15 @@ setup(name="reschema",
       description="reschema - Parse REST API schema into Python objects, support documentation generation",
       author="Riverbed Technology",
       author_email="cwhite@riverbed.com",
-      
-      packages = find_packages(),
-      scripts = [
+
+      packages=find_packages(),
+      scripts=[
           'bin/reschema-doc'
-        ],
-      install_requires = [
-          ],
-      include_package_data = True)
+      ],
+      install_requires=[
+          "uritemplate>=0.6",
+          "PyYAML==3.10",
+          "Markdown>=2.2.1",
+          "jsonpointer"
+      ],
+      include_package_data=True)
