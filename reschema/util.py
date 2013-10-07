@@ -15,7 +15,16 @@ def parse_prop(obj, srcobj, prop, defaultValue=None, required=False, checkType=N
         val = srcobj[prop]
         del srcobj[prop]
         if checkType:
-            if not isinstance(val, checkType):
+            if type(checkType) is not list:
+                checkType = [checkType]
+
+            check = False
+            for t in checkType:
+                if isinstance(val, t):
+                    check=True
+                    break
+
+            if not check:
                 msg = "Value provided for %s must be %s, got %s" % (prop, str(checkType), type(val))
                 raise ParseError(msg, srcobj)
 

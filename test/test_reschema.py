@@ -19,11 +19,13 @@ from reschema import yaml_loader
 logger = logging.getLogger(__name__)
 
 TEST_PATH = os.path.abspath(os.path.dirname(__file__))
-PACKAGE_PATH = os.path.dirname(TEST_PATH)
-TEST_SCHEMA_DIR = os.path.join(PACKAGE_PATH, 'examples')
+TEST_SCHEMA_YAML = os.path.join(TEST_PATH, 'test_schema.yml')
 
-TEST_SCHEMA_YAML = os.path.join(TEST_SCHEMA_DIR, 'Catalog.yml')
-TEST_SCHEMA_JSON = os.path.join(TEST_SCHEMA_DIR, 'Catalog.json')
+PACKAGE_PATH = os.path.dirname(TEST_PATH)
+
+EXAMPLES_DIR = os.path.join(PACKAGE_PATH, 'examples')
+CATALOG_YAML = os.path.join(EXAMPLES_DIR, 'Catalog.yml')
+CATALOG_JSON = os.path.join(EXAMPLES_DIR, 'Catalog.json')
 
 
 class TestReschema(unittest.TestCase):
@@ -36,12 +38,12 @@ class TestReschema(unittest.TestCase):
 
     def test_load_schema(self):
         r = reschema.RestSchema()
-        r.load(TEST_SCHEMA_YAML)
+        r.load(CATALOG_YAML)
         self.assertEqual(r.name, 'Catalog')
 
     def test_load_schema_json(self):
         r = reschema.RestSchema()
-        r.load(TEST_SCHEMA_JSON)
+        r.load(CATALOG_JSON)
         self.assertEqual(r.name, 'Catalog')
 
     def test_unknown_schema(self):
@@ -61,18 +63,18 @@ class TestReschema(unittest.TestCase):
 
     def test_parse_schema(self):
         r = reschema.RestSchema()
-        with open(TEST_SCHEMA_YAML, 'r') as f:
+        with open(CATALOG_YAML, 'r') as f:
             r.parse_text(f.read(), format='yaml')
         self.assertEqual(r.name, 'Catalog')
 
     def test_parse_schema_json(self):
         r = reschema.RestSchema()
-        with open(TEST_SCHEMA_JSON, 'r') as f:
+        with open(CATALOG_JSON, 'r') as f:
             r.parse_text(f.read())
         self.assertEqual(r.name, 'Catalog')
 
     def test_load_bad_schema(self):
-        with open(TEST_SCHEMA_YAML, 'r') as f:
+        with open(CATALOG_YAML, 'r') as f:
             schema = f.readlines()
         schema.insert(31, '      bad_object_name: foo\n')
 
@@ -82,7 +84,7 @@ class TestReschema(unittest.TestCase):
 
     def test_resource_load(self):
         r = reschema.RestSchema()
-        r.load(TEST_SCHEMA_YAML)
+        r.load(CATALOG_YAML)
         self.assertEquals(len(r.resources), 8)
         self.assertIn('info', r.resources)
         self.assertIn('author', r.resources)
@@ -93,7 +95,7 @@ class TestReschema(unittest.TestCase):
 
     def test_type_load(self):
         r = reschema.RestSchema()
-        r.load(TEST_SCHEMA_YAML)
+        r.load(CATALOG_YAML)
         self.assertIn('address', r.types)
         self.assertTrue(r.find_type('address'))
         with self.assertRaises(KeyError):
@@ -101,7 +103,7 @@ class TestReschema(unittest.TestCase):
 
     def test_resource_objects(self):
         r = reschema.RestSchema()
-        r.load(TEST_SCHEMA_YAML)
+        r.load(CATALOG_YAML)
         a = r.resources['author']
         self.assertFalse(a.isRef())
         self.assertFalse(a.isSimple())
@@ -114,7 +116,7 @@ class TestReschema(unittest.TestCase):
 
     def test_find_name_basic(self):
         r = reschema.RestSchema()
-        r.load(TEST_SCHEMA_YAML)
+        r.load(CATALOG_YAML)
         a = r.find('author')
         self.assertEqual(a.id, 'author')
         with self.assertRaises(KeyError):
@@ -122,7 +124,7 @@ class TestReschema(unittest.TestCase):
 
     def test_find_name_complex(self):
         r = reschema.RestSchema()
-        r.load(TEST_SCHEMA_YAML)
+        r.load(CATALOG_YAML)
         c = r.find('/book/chapters')
         self.assertEqual(c.id, 'chapters')
         self.assertEqual(c._type, 'array')
@@ -143,7 +145,7 @@ class TestCatalog(unittest.TestCase):
 
     def setUp(self):
         self.r = reschema.RestSchema()
-        self.r.load(TEST_SCHEMA_YAML)
+        self.r.load(CATALOG_YAML)
 
     def tearDown(self):
         self.r = None
@@ -276,7 +278,7 @@ class TestCatalogLinks(unittest.TestCase):
 
     def setUp(self):
         self.r = reschema.RestSchema()
-        self.r.load(TEST_SCHEMA_YAML)
+        self.r.load(CATALOG_YAML)
 
     def tearDown(self):
         self.r = None
@@ -302,22 +304,25 @@ class TestCatalogLinks(unittest.TestCase):
         (uri, params) = author.relations['books'].resolve(author_data)
         logger.debug('author.relations.books uri: %s %s' % (uri, params))
 
-class TestJsonSchema(unittest.TestCase):
 
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
+class TestSchemaBase(unittest.TestCase):
 
     def parse(self, string):
         d = yaml_loader.marked_load(string)
         return Schema.parse(d, 'root', api='/api')
 
     def check_valid(self, s, valid=None, invalid=None, toxml=False):
-        schema = self.parse(s)
+        if type(s) is str:
+            schema = self.parse(s)
+        else:
+            schema = s
+        
         for a in valid:
-            schema.validate(a)
+            try:
+                schema.validate(a)
+            except ValidationError, e:
+                self.fail("ValidationError: value should pass: %s, %s" % (a, e))
+            
             if toxml:
                 schema.toxml(a)
 
@@ -335,6 +340,15 @@ class TestJsonSchema(unittest.TestCase):
             logger.debug('Got validation error: %s' % str(e))
             return
         self.fail('Schema should have thrown error, %s' % etype)
+
+
+class TestJsonSchema(TestSchemaBase):
+
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
 
     def test_exceptions(self):
         # cover exception string output
@@ -612,6 +626,113 @@ class TestJsonSchema(unittest.TestCase):
         # XXX investigate this API
         self.assertIsNone(link.find_by_id('/api', link.fullid()))
         self.assertIsNotNone(link.find_by_id('/api', 'root/links/self'))
+
+class TestSchema(TestSchemaBase):
+
+    def setUp(self):
+        self.r = reschema.RestSchema()
+        self.r.load(TEST_SCHEMA_YAML)
+
+    def tearDown(self):
+        self.r = None
+
+    def test_anyof1(self):
+        r = self.r.resources['test_anyof1']
+        self.check_valid(r,
+
+                         valid = [ {'a1': 1, 'a2': 2},
+                                   {'a3': 3, 'a4': 4} ],
+
+                         invalid = [ {'a1': 3, 'a4': 4} ] )
+
+        a1 = r['a1']
+        self.assertEqual(a1.fullid(), '/test_anyof1/a1')
+
+        a2 = r['a2']
+        self.assertEqual(a2.fullid(), '/test_anyof1/a2')
+
+        a2 = self.r.find('/test_anyof1/a2')
+        self.assertEqual(a2.fullid(), '/test_anyof1/a2')
+
+    def test_anyof2(self):
+        r = self.r.resources['test_anyof2']
+        self.check_valid(r,
+
+                         valid = [ {'a1': 1, 'a2': 5},
+                                   {'a1': 1, 'a2': 9},
+                                   {'a1': 2, 'a2': 11},
+                                   {'a1': 2, 'a2': 19},
+                                   ],
+
+                         invalid = [ {'a1': 3, 'a2': 4},
+                                     {'a1': 1, 'a3': 5},
+                                     {'a1': 1, 'a2': 4},
+                                     {'a1': 1, 'a2': "foo"},
+                                     {'a1': 1, 'a2': 10},
+                                     {'a1': 2, 'a2': 4},
+                                     {'a1': 2, 'a2': 5},
+                                     {'a1': 2, 'a2': 9},
+                                     {'a1': 2, 'a2': 29},
+                                     ] )
+
+        a1 = r['a1']
+        self.assertEqual(a1.fullid(), '/test_anyof2/a1')
+
+        a2 = r['a2']
+        self.assertEqual(a2.fullid(), '/test_anyof2/a2')
+
+        a2 = self.r.find('/test_anyof2/a2')
+        self.assertEqual(a2.fullid(), '/test_anyof2/a2')
+
+    def test_allof(self):
+        r = self.r.resources['test_allof']
+        self.check_valid(r,
+
+                         valid = [ {'a1': 1,
+                                    'a2': { 'a21_number': 2,
+                                            'a21_string': 'foo' },
+                                    'a3': 'f3'},
+
+                                   {'a1': 2,
+                                    'a2': { 'a22_number': 2,
+                                            'a22_string': 'foo',
+                                            'a22_array' : [ 1, 2, 3 ]},
+                                    'a3': 'd1' },
+                                   ],
+                         
+                         invalid = [ {'a1': 2,
+                                      'a2': { 'a21_number': 2,
+                                              'a21_string': 'foo' },
+                                      'a3': 'f3'},
+
+                                     {'a1': 1,
+                                      'a2': { 'a21_numbe': 2,
+                                              'a21_string': 'foo' },
+                                      'a3': 'f3'},
+
+                                     {'a1': 1,
+                                      'a2': { 'a21_number': 2,
+                                              'a21_string': 'foo',
+                                              'a21_bad': 4 },
+                                      'a3': 'f3'},
+                                     ])
+
+        self.assertEqual(r['/a2/a21_string'].fullid(), '/test_allof/a2/a21_string')
+        self.assertEqual(r['/a2/a22_number'].fullid(), '/test_allof/a2/a22_number')
+        self.assertEqual(r['/a2/a22_array/0'].fullid(), '/test_allof/a2/a22_array/items')
+
+    def test_oneof(self):
+        r = self.r.resources['test_oneof']
+        self.check_valid(r,
+
+                         valid = [ {'a1': 1, 'a2': 21 }, 
+                                   {'a1': 5, 'a2': 10 }, 
+                                   ],
+
+                         invalid = [ {'a1': 1, 'a2': 2 },
+                                     {'a1': 5, 'a2': 20 },])
+
+
 
 if __name__ == '__main__':
     logging.basicConfig(filename='test.log', level=logging.DEBUG)

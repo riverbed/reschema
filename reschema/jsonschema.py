@@ -185,9 +185,9 @@ class Schema(object):
             
         """
     
-        if input is None:
-            raise ParseError("Empty schema definition while parsing %s%s" %
-                             ((parent.fullname() + '.') if parent else '', name), None)
+        if not isinstance(input, dict):
+            raise ParseError("Schema definition must be an object: %s%s" %
+                             ((parent.fullname() + '.') if parent else '', name), input)
         
         if name is None:
             name = parse_prop(None, input, 'id')
@@ -197,6 +197,11 @@ class Schema(object):
             
         if '$ref' in input:
             typestr = '$ref'
+        elif ('anyOf' in input) or ('allOf' in input) or ('oneOf' in input):
+            if 'type' in input:
+                raise ParseError("%s: cannot specify 'type' with 'anyOf', 'allOf' or 'oneOf'" %
+                                 (name), input)
+            typestr = 'multi'
         else:
             typestr = parse_prop(None, input, 'type', required=True)
 
@@ -236,8 +241,12 @@ class Schema(object):
     def isRef(self):
         """Return True if this schema is a reference."""
         return False
-
     
+    def isMulti(self):
+        """Return True if this schema is a multi instance."""
+        return False
+
+
     def fullname(self):
         """Return the full printable name using dotted notation."""
         if self.parent:
@@ -256,7 +265,10 @@ class Schema(object):
         """
         # xxxcj - used to be (self.id or self.name), not sure if that's needed
         if self.parent:
-            return self.parent.fullid(api) + '/' + self.id
+            if self.parent.isRef() or self.parent.isMulti():
+                return self.parent.fullid(api)
+            else:
+                return self.parent.fullid(api) + '/' + self.id
         return ((self.api + '/schema#/') if api else '/') + self.id
 
     def str_simple(self):
@@ -338,25 +350,97 @@ class Schema(object):
             return elem
 
 
+class Multi(Schema):
+    _type = 'multi'
+    def __init__(self, input, name, parent, **kwargs):
+        Schema.__init__(self, Ref._type, input, name, parent, **kwargs)
+        self._anyof = []
+        for subinput in parse_prop(None, input, 'anyOf', [], checkType=list):
+            s = Schema.parse(subinput, parent=self)
+            self._anyof.append(s)
+
+        self._allof = []
+        for subinput in parse_prop(None, input, 'allOf', [], checkType=list):
+            s = Schema.parse(subinput, parent=self)
+            self._allof.append(s)
+
+        self._oneof = []
+        for subinput in parse_prop(None, input, 'oneOf', [], checkType=list):
+            s = Schema.parse(subinput, parent=self)
+            self._oneof.append(s)
+
+    def validate(self, input):
+        # Must validate each
+        for s in self._allof:
+            s.validate(input)
+
+        if len(self._oneof) > 0:
+            found = 0
+            for s in self._oneof:
+                try:
+                    s.validate(input)
+                    found = found + 1
+                except ValidationError:
+                    continue
+
+            if found == 0:
+                raise ValidationError("%s: input does not match any oneOf schema" %
+                                      self.fullname(), self)
+            elif found > 1:
+                raise ValidationError("%s: input matches more than one oneOf schemas",
+                                      self.fullname(), self)
+
+        if len(self._anyof) > 0:
+            for s in self._anyof:
+                try:
+                    s.validate(input)
+                except ValidationError:
+                    continue
+                return
+        
+            raise ValidationError("%s: input does not match any anyOf schema" %
+                                  self.fullname(), self)
+
+    
+    def __getitem__(self, name):
+        schemas = []
+        schemas.extend(self._anyof)
+        schemas.extend(self._allof)
+        schemas.extend(self._oneof)
+        for s in self._anyof:
+            try:
+                item = s[name]
+            except KeyError:
+                continue
+            return item
+        raise KeyError("%s cannot resolve '%s' as a key" % (self.fullname(), name))
+
+    def isMulti(self):
+        return True
+    
+_register_type(Multi)
+
+            
 class Ref(Schema):
     _type = '$ref'
     def __init__(self, input, name, parent, **kwargs):
-        Schema.__init__(self, Ref._type, {}, name, parent, **kwargs)
+        Schema.__init__(self, Ref._type, input, name, parent, **kwargs)
         self._refschema = None
         self.refschema_id = parse_prop(None, input, '$ref', required=True)
-        parse_prop(self, input, 'description', '')
-        parse_prop(self, input, 'notes', '')
-        parse_prop(self, input, 'id', '')
 
         _check_input(self.fullname(), input)
 
     @property
     def refschema(self):
         if self._refschema is None:
-            self._refschema = Schema.find_by_id(self.api, self.refschema_id)
-            if self._refschema is None:
+            sch = Schema.find_by_id(self.api, self.refschema_id)
+            if sch is None:
                 msg = "No such schema '%s' for '$ref': %s" % (self.refschema_id, self.fullname())
                 raise ParseError(msg, self)
+            sch = copy.deepcopy(sch)
+            sch.parent = self
+            sch.parent.api = self.api
+            self._refschema = sch
         return self._refschema
     
     def isSimple(self):
@@ -365,6 +449,10 @@ class Ref(Schema):
     def isRef(self):
         """Return True if this schema is a reference."""
         return True
+
+    def isMulti(self):
+        """Return True if this schema is a mutli-instance."""
+        return False
 
     @property
     def typestr(self):
@@ -376,6 +464,9 @@ class Ref(Schema):
     def toxml(self, input, parent=None):
         return self.refschema.toxml(input, parent)
 
+    def __getitem__(self, name):
+        return self.refschema.__getitem__(name)
+    
 _register_type(Ref)
 
 
@@ -454,12 +545,12 @@ class Number(Schema):
     _type = 'number'
     def __init__(self, input, name, parent, **kwargs):
         Schema.__init__(self, Number._type, input, name, parent, **kwargs)
-        parse_prop(self, input, 'minimum')
+        parse_prop(self, input, 'minimum', checkType=(int, float))
         parse_prop(self, input, 'maximum')
         parse_prop(self, input, 'exclusiveMinimum')
         parse_prop(self, input, 'exclusiveMaximum')
         parse_prop(self, input, 'default')
-        parse_prop(self, input, 'enum')
+        parse_prop(self, input, 'enum', checkType=list)
 
         _check_input(self.fullname(), input)
 
@@ -577,6 +668,11 @@ class Object(Schema):
                 raise ValidationError("'%s' is not a valid property for %s" % (k, self.fullname()), self)
             elif isinstance (self.additionalProps, Schema):
                 self.additionalProps.validate(input[k])
+
+        for k,v in self.props.iteritems():
+            if v.required and k not in input:
+                raise ValidationError("Missing required property '%' for '%s'" %
+                                      (k, self.fullname()), self)
             
     def toxml(self, input, parent=None):
         """Return ElementTree object with `input` data.
@@ -718,6 +814,12 @@ class Relation(object):
     def __repr__(self):
         return "<jsonschema.%s '%s'>" % (self.__class__.__name__, self.fullid())
 
+    def isRef(self):
+        return False
+    
+    def isMulti(self):
+        return False
+
     @property
     def resource(self):
         if self._resource is None:
@@ -816,6 +918,12 @@ class Link(object):
     def __repr__(self):
         return "<jsonschema.%s '%s'>" % (self.__class__.__name__, self.fullid())
     
+    def isRef(self):
+        return False
+    
+    def isMulti(self):
+        return False
+
     @classmethod
     def find_by_id(cls, api, id):
         """Find a link by fullid."""
