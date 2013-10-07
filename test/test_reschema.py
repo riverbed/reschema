@@ -391,11 +391,6 @@ class TestJsonSchema(TestSchemaBase):
                          )
 
     def test_ref(self):
-        # missing ref
-        self.check_bad_schema("publishers:\n"
-                              "     type: array\n"
-                              "     items: { $ref: publisher }\n",
-                              ParseError)
         schema = self.parse("type: object\n"
                             "properties:\n"
                             "    id: { type: number }\n"
@@ -408,8 +403,7 @@ class TestJsonSchema(TestSchemaBase):
 
     def test_data(self):
         # missing 'content_type'
-        self.check_bad_schema("content:\n"
-                              "     type: data\n",
+        self.check_bad_schema("type: data\n",
                               ParseError)
 
         self.check_valid("type: data\n"
@@ -683,6 +677,36 @@ class TestSchema(TestSchemaBase):
 
         a2 = self.r.find('/test_anyof2/a2')
         self.assertEqual(a2.fullid(), '/test_anyof2/a2')
+
+    def test_anyof3(self):
+        r = self.r.resources['test_anyof3']
+        self.check_valid(r,
+
+                         valid = [ {'a1': 1, 'a2': 5},
+                                   {'a1': 1, 'a2': 9},
+                                   {'a1': 2, 'a2': 11},
+                                   {'a1': 2, 'a2': 19},
+                                   ],
+
+                         invalid = [ {'a1': 3, 'a2': 4},
+                                     {'a1': 1, 'a3': 5},
+                                     {'a1': 1, 'a2': 4},
+                                     {'a1': 1, 'a2': "foo"},
+                                     {'a1': 1, 'a2': 10},
+                                     {'a1': 2, 'a2': 4},
+                                     {'a1': 2, 'a2': 5},
+                                     {'a1': 2, 'a2': 9},
+                                     {'a1': 2, 'a2': 29},
+                                     ] )
+
+        a1 = r['a1']
+        self.assertEqual(a1.fullid(), '/test_anyof3/a1')
+
+        a2 = r['a2']
+        self.assertEqual(a2.fullid(), '/test_anyof3/a2')
+
+        a2 = self.r.find('/test_anyof3/a2')
+        self.assertEqual(a2.fullid(), '/test_anyof3/a2')
 
     def test_allof(self):
         r = self.r.resources['test_allof']

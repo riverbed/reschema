@@ -323,6 +323,22 @@ resources:
                a2: { type: number, minimum: 10, maximum: 20 }
       links: { self: { path: "$/test_anyof2" } }
 
+   test_anyof3:
+      type: object
+      properties: 
+         a1: { type: number, minimum: 1, maximum: 2 }
+         a2: { type: number }
+      anyOf:
+         -  type: object
+            properties: 
+               a1: { type: number, minimum: 1, maximum: 1 }
+               a2: { type: number, minimum: 5, maximum: 9 }
+         -  type: object
+            properties: 
+               a1: { type: number, minimum: 2, maximum: 2 }
+               a2: { type: number, minimum: 10, maximum: 20 }
+      links: { self: { path: "$/test_anyof2" } }
+
    test_allof:
       allOf:
          -  type: object

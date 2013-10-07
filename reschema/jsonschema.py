@@ -164,6 +164,21 @@ class Schema(object):
             #logger.debug("Schema %s: adding link '%s'" % (str(self), key))
             self.links[key] = Link(value, key, self)
             
+        self._anyof = []
+        for subinput in parse_prop(None, input, 'anyOf', [], checkType=list):
+            s = Schema.parse(subinput, parent=self)
+            self._anyof.append(s)
+
+        self._allof = []
+        for subinput in parse_prop(None, input, 'allOf', [], checkType=list):
+            s = Schema.parse(subinput, parent=self)
+            self._allof.append(s)
+
+        self._oneof = []
+        for subinput in parse_prop(None, input, 'oneOf', [], checkType=list):
+            s = Schema.parse(subinput, parent=self)
+            self._oneof.append(s)
+
         self.schemas[self.fullid(api=True)] = self
 
     def __repr__(self):
@@ -197,10 +212,7 @@ class Schema(object):
             
         if '$ref' in input:
             typestr = '$ref'
-        elif ('anyOf' in input) or ('allOf' in input) or ('oneOf' in input):
-            if 'type' in input:
-                raise ParseError("%s: cannot specify 'type' with 'anyOf', 'allOf' or 'oneOf'" %
-                                 (name), input)
+        elif 'type' not in input:
             typestr = 'multi'
         else:
             typestr = parse_prop(None, input, 'type', required=True)
@@ -245,7 +257,6 @@ class Schema(object):
     def isMulti(self):
         """Return True if this schema is a multi instance."""
         return False
-
 
     def fullname(self):
         """Return the full printable name using dotted notation."""
@@ -297,6 +308,38 @@ class Schema(object):
             s += child.str_detailed()
 
         return s
+
+    def validate(self, input):
+        # Must validate each
+        for s in self._allof:
+            s.validate(input)
+
+        if len(self._oneof) > 0:
+            found = 0
+            for s in self._oneof:
+                try:
+                    s.validate(input)
+                    found = found + 1
+                except ValidationError:
+                    continue
+
+            if found == 0:
+                raise ValidationError("%s: input does not match any oneOf schema" %
+                                      self.fullname(), self)
+            elif found > 1:
+                raise ValidationError("%s: input matches more than one oneOf schemas",
+                                      self.fullname(), self)
+
+        if len(self._anyof) > 0:
+            for s in self._anyof:
+                try:
+                    s.validate(input)
+                except ValidationError:
+                    continue
+                return
+        
+            raise ValidationError("%s: input does not match any anyOf schema" %
+                                  self.fullname(), self)
 
     def __getitem__(self, name):
         if name == 'relations':
@@ -354,53 +397,8 @@ class Multi(Schema):
     _type = 'multi'
     def __init__(self, input, name, parent, **kwargs):
         Schema.__init__(self, Ref._type, input, name, parent, **kwargs)
-        self._anyof = []
-        for subinput in parse_prop(None, input, 'anyOf', [], checkType=list):
-            s = Schema.parse(subinput, parent=self)
-            self._anyof.append(s)
 
-        self._allof = []
-        for subinput in parse_prop(None, input, 'allOf', [], checkType=list):
-            s = Schema.parse(subinput, parent=self)
-            self._allof.append(s)
-
-        self._oneof = []
-        for subinput in parse_prop(None, input, 'oneOf', [], checkType=list):
-            s = Schema.parse(subinput, parent=self)
-            self._oneof.append(s)
-
-    def validate(self, input):
-        # Must validate each
-        for s in self._allof:
-            s.validate(input)
-
-        if len(self._oneof) > 0:
-            found = 0
-            for s in self._oneof:
-                try:
-                    s.validate(input)
-                    found = found + 1
-                except ValidationError:
-                    continue
-
-            if found == 0:
-                raise ValidationError("%s: input does not match any oneOf schema" %
-                                      self.fullname(), self)
-            elif found > 1:
-                raise ValidationError("%s: input matches more than one oneOf schemas",
-                                      self.fullname(), self)
-
-        if len(self._anyof) > 0:
-            for s in self._anyof:
-                try:
-                    s.validate(input)
-                except ValidationError:
-                    continue
-                return
-        
-            raise ValidationError("%s: input does not match any anyOf schema" %
-                                  self.fullname(), self)
-
+        _check_input(self.fullname(), input)
     
     def __getitem__(self, name):
         schemas = []
@@ -481,6 +479,8 @@ class Boolean(Schema):
         if (type(input) is not bool):
             raise ValidationError("%s should be a boolean, got '%s'" %
                                   (self.fullname(), type(input)), self)
+        super(Boolean, self).validate(input)
+
 _register_type(Boolean)
 
 
@@ -521,6 +521,7 @@ class String(Schema):
         if (self.enum is not None) and (input not in self.enum):
             raise ValidationError("%s: input not a valid enumeration value: %s" %
                                   (self.fullname(), trunc), self)
+        super(String, self).validate(input)
             
     def str_detailed(self):
         s = ''
@@ -578,6 +579,7 @@ class Number(Schema):
         if (self.enum is not None) and (input not in self.enum):
             raise ValidationError("%s: input not a valid enumeration value: %s" %
                                   (self.fullname(), input), self)
+        super(Number, self).validate(input)
 
     def str_detailed(self):
         s = ''
@@ -606,6 +608,7 @@ class Timestamp(Schema):
     def validate(self, input):
         if (type(input) not in [int, float]):
             raise ValidationError("'%s' expected to be a number for %s" % (input, self.fullname()), self)
+        super(Timestamp, self).validate(input)
 
 _register_type(Timestamp)
 
@@ -619,6 +622,7 @@ class TimestampHP(Schema):
     def validate(self, input):
         if (type(input) not in [int, float]):
             raise ValidationError("'%s' expected to be a number for %s" % (input, self.fullname()), self)
+        super(TimestampHP, self).validate(input)
 
 _register_type(TimestampHP)
 
@@ -673,6 +677,7 @@ class Object(Schema):
             if v.required and k not in input:
                 raise ValidationError("Missing required property '%' for '%s'" %
                                       (k, self.fullname()), self)
+        super(Object, self).validate(input)
             
     def toxml(self, input, parent=None):
         """Return ElementTree object with `input` data.
@@ -755,6 +760,8 @@ class Array(Schema):
         for o in input:
             self.children[0].validate(o)
 
+        super(Array, self).validate(input)
+
     def toxml(self, input, parent=None):
         if parent is not None:
             elem = ET.SubElement(parent, '%s' % self.id)
@@ -781,7 +788,7 @@ class Data(Schema):
     def validate(self, input):
         # any value will pass, regardless of content_type set
         # validation of that type of data seems beyond the scope of reschema
-        return True
+        pass
 
     def isSimple(self):
         return True
