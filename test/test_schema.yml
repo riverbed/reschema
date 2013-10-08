@@ -55,6 +55,21 @@ resources:
                
       links: { self: { path: "$/test_object" } }
 
+   test_object_required:
+      type: object
+      properties:
+         prop_number: { type: number }
+         prop_string: { type: string }
+         prop_array: 
+            type: array
+            items: { type: number }
+         prop_object: 
+            type: object
+            properties: 
+               prop: { type: number }
+      required: [ prop_number, prop_array ]
+      links: { self: { path: "$/test_object_required" } }
+
    test_object_ref:
       type: object
       properties:
@@ -228,18 +243,6 @@ resources:
 
       links: { self: { path: "$/test_object_full_readonly" } }
 
-   test_number_required_true:
-      type: number
-      required: True
-
-      links: { self: { path: "$/test_number_required_true" } }
-
-   test_number_required_false:
-      type: number
-      required: False
-
-      links: { self: { path: "$/test_number_required_false" } }
-
    test_number_min:
       type: number
       minimum: 10
@@ -345,7 +348,8 @@ resources:
             properties: 
                a1: { type: number, enum: [1, 2] }
                a2: { type: object, additionalProperties: True }
-               a3: { type: string, required: False }
+               a3: { type: string }
+            required: [ a1, a2 ]
          -  type: object
             properties: 
                a3: { type: string, pattern: "[a-z][1-3]" }

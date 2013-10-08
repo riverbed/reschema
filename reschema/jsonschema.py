@@ -144,7 +144,6 @@ class Schema(object):
         parse_prop(self, input, 'description', '')
         parse_prop(self, input, 'notes', '')
         parse_prop(self, input, 'id', name)
-        parse_prop(self, input, 'required')
         parse_prop(self, input, 'example')
         parse_prop(self, input, 'readOnly',
                    parent.readOnly if (parent and isinstance(parent, Schema)) else False)
@@ -309,8 +308,6 @@ class Schema(object):
         if self.description:
             s += 'Description: ' + self.description + '\n'
 
-        if self.required is not None:
-            s += 'Required: %s\n' % self.required
         if additional_details:
             s += additional_details
 
@@ -665,6 +662,7 @@ class Object(Schema):
             self.children.append(c)
 
         ap = parse_prop(None, input, 'additionalProperties')
+        parse_prop(self, input, 'required')
         if type(ap) is bool:
             self.additionalProps = ap
         elif ap is not None:
@@ -699,10 +697,11 @@ class Object(Schema):
             elif isinstance (self.additionalProps, Schema):
                 self.additionalProps.validate(input[k])
 
-        for k,v in self.props.iteritems():
-            if v.required and k not in input:
-                raise ValidationError("Missing required property '%' for '%s'" %
-                                      (k, self.fullname()), self)
+        if self.required is not None:
+            for k in self.required:
+                if k not in input:
+                    raise ValidationError("Missing required property '%s' for '%s'" %
+                                          (k, self.fullname()), self)
         super(Object, self).validate(input)
             
     def toxml(self, input, parent=None):

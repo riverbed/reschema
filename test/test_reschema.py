@@ -630,6 +630,23 @@ class TestSchema(TestSchemaBase):
     def tearDown(self):
         self.r = None
 
+    def test_object_required(self):
+        r = self.r.resources['test_object_required']
+
+        self.check_valid(r,
+
+                         valid = [ {'prop_number': 1,
+                                    'prop_array': [ 99, 98 ] },
+                                   {'prop_number': 1,
+                                    'prop_string': 'foo',
+                                    'prop_array': [ 99, 98 ] },
+                                   ],
+
+                         invalid = [ 
+                                     { 'prop_array': [ 99, 98 ] },
+                                     { 'prop_array': [ 99, 98 ],
+                                       'prop_string': 'foo' } ])
+        
     def test_anyof1(self):
         r = self.r.resources['test_anyof1']
         self.check_valid(r,
