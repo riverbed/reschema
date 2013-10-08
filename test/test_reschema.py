@@ -699,12 +699,6 @@ class TestSchema(TestSchemaBase):
                                      {'a1': 2, 'a2': 29},
                                      ] )
 
-        a1 = r['a1']
-        self.assertEqual(a1.fullid(), '/test_anyof3/a1')
-
-        a2 = r['a2']
-        self.assertEqual(a2.fullid(), '/test_anyof3/a2')
-
         a2 = self.r.find('/test_anyof3/a2')
         self.assertEqual(a2.fullid(), '/test_anyof3/a2')
 
@@ -756,7 +750,11 @@ class TestSchema(TestSchemaBase):
                          invalid = [ {'a1': 1, 'a2': 2 },
                                      {'a1': 5, 'a2': 20 },])
 
-
+    def test_not(self):
+        r = self.r.resources['test_not']
+        self.check_valid(r,
+                         valid = [1, 2, 3, 4, 6, 9, 10],
+                         invalid = [0, 5, 7, 8, 11, 12, 13, 200] )
 
 if __name__ == '__main__':
     logging.basicConfig(filename='test.log', level=logging.DEBUG)

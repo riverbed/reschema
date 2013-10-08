@@ -179,6 +179,12 @@ class Schema(object):
             s = Schema.parse(subinput, parent=self)
             self._oneof.append(s)
 
+        n = parse_prop(None, input, 'not', None)
+        if n is not None:
+            self._not = Schema.parse(n, parent=self)
+        else:
+            self._not = None
+
         self.schemas[self.fullid(api=True)] = self
 
     def __repr__(self):
@@ -258,6 +264,12 @@ class Schema(object):
         """Return True if this schema is a multi instance."""
         return False
 
+    def matches(self, other):
+        """ Return True if this schema refers to the same schema as other based on 'self'. """
+        return ( ('self' in self.links) and
+                 ('self' in other.links) and
+                 (self.links['self'].path.template == other.links['self'].path.template) )
+        
     def fullname(self):
         """Return the full printable name using dotted notation."""
         if self.parent:
@@ -310,10 +322,11 @@ class Schema(object):
         return s
 
     def validate(self, input):
-        # Must validate each
+        # Must validate every schema in the _allOf array
         for s in self._allof:
             s.validate(input)
 
+        # Must validate only one schema in the _oneOf array
         if len(self._oneof) > 0:
             found = 0
             for s in self._oneof:
@@ -324,12 +337,13 @@ class Schema(object):
                     continue
 
             if found == 0:
-                raise ValidationError("%s: input does not match any oneOf schema" %
+                raise ValidationError("%s: input does not match any 'oneOf' schema" %
                                       self.fullname(), self)
             elif found > 1:
-                raise ValidationError("%s: input matches more than one oneOf schemas",
+                raise ValidationError("%s: input matches more than one 'oneOf' schemas",
                                       self.fullname(), self)
 
+        # Must validate at least one schema in the _anyOf array
         if len(self._anyof) > 0:
             for s in self._anyof:
                 try:
@@ -338,8 +352,20 @@ class Schema(object):
                     continue
                 return
         
-            raise ValidationError("%s: input does not match any anyOf schema" %
+            raise ValidationError("%s: input does not match any 'anyOf' schema" %
                                   self.fullname(), self)
+
+        # Must *not* validate the _not schema
+        if self._not is not None:
+            try:
+                self._not.validate(input)
+                valid = True
+            except ValidationError:
+                valid = False
+
+            if valid:
+                raise ValidationError("%s: input should not match 'not' schema" %
+                                      self.fullname(), self)
 
     def __getitem__(self, name):
         if name == 'relations':
