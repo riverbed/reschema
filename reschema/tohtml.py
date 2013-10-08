@@ -573,7 +573,10 @@ class PropTable(HTMLTable):
         if schema.readOnly:
             parts.append("Read-only")
             
-        if schema.required is False:
+        if ( (schema.parent is not None) and
+             (isinstance(schema.parent, reschema.jsonschema.Object)) and
+             (schema.parent.required is not None) and
+             (name not in schema.parent.required) ):
             parts.append("Optional")
             
         if isinstance(schema, reschema.jsonschema.Number):
