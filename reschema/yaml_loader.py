@@ -49,7 +49,7 @@ def create_node_class(cls):
             cls.__init__(self, x)
             add_marks_to_node(self, start_mark, end_mark)
 
-        def __new__(self, x, start_mark=None, end_mark=None):
+        def __new__(self, x=None, start_mark=None, end_mark=None):
             return cls.__new__(self, x)
     node_class.__name__ = '%s_node' % cls.__name__
     return node_class
