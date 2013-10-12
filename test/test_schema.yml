@@ -255,12 +255,14 @@ resources:
 
    test_number_excl_min:
       type: number
-      exclusiveMinimum: 10
+      minimum: 10
+      exclusiveMinimum: true
       links: { self: { path: "$/test_number_excl_min" } }
 
    test_number_excl_max:
       type: number
-      exclusiveMaximum: 10
+      maximum: 10
+      exclusiveMaximum: true
       links: { self: { path: "$/test_number_excl_max" } }
 
    test_number_range:

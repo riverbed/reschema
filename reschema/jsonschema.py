@@ -570,10 +570,10 @@ class Number(Schema):
     def __init__(self, input, name, parent, **kwargs):
         Schema.__init__(self, Number._type, input, name, parent, **kwargs)
         parse_prop(self, input, 'minimum', checkType=(int, float))
-        parse_prop(self, input, 'maximum')
-        parse_prop(self, input, 'exclusiveMinimum')
-        parse_prop(self, input, 'exclusiveMaximum')
-        parse_prop(self, input, 'default')
+        parse_prop(self, input, 'maximum', checkType=(int, float))
+        parse_prop(self, input, 'exclusiveMinimum', checkType=bool, defaultValue=False)
+        parse_prop(self, input, 'exclusiveMaximum', checkType=bool, defaultValue=False)
+        parse_prop(self, input, 'default', checkType=(int,float))
         parse_prop(self, input, 'enum', checkType=list)
 
         _check_input(self.fullname(), input)
@@ -583,21 +583,26 @@ class Number(Schema):
             raise ValidationError("%s should be a number, got '%s'" %
                                   (self.fullname(), type(input)), self)
         
-        if (self.minimum is not None) and input < self.minimum:
-            raise ValidationError("%s: input must be at minimum %d, got %d" %
-                                  (self.fullname(), self.minimum, input), self)
-
-        if (self.exclusiveMinimum is not None) and input <= self.exclusiveMinimum:
-            raise ValidationError("%s: input must be at exclusive minimum %d, got %d" %
-                                  (self.fullname(), self.exclusiveMinimum, input), self)
-
-        if (self.maximum is not None) and input > self.maximum:
-            raise ValidationError("%s: input must be at maximum %d, got %d" %
-                                  (self.fullname(), self.maximum, input), self)
-
-        if (self.exclusiveMaximum is not None) and input >= self.exclusiveMaximum:
-            raise ValidationError("%s: input must be at exclusive maximum %d, got %d" %
-                                  (self.fullname(), self.exclusiveMaximum, input), self)
+        if self.minimum is not None:
+            if self.exclusiveMinimum:
+                if not (input > self.minimum):
+                    raise ValidationError("%s: input must be > minimum %d, got %d" %
+                                          (self.fullname(), self.minimum, input), self)
+            else:
+                if not (input >= self.minimum):
+                    raise ValidationError("%s: input must be >= minimum %d, got %d" %
+                                          (self.fullname(), self.minimum, input), self)
+            
+        if self.maximum is not None:
+            if self.exclusiveMaximum:
+                if not (input < self.maximum):
+                    raise ValidationError("%s: input must be < maximum %d, got %d" %
+                                          (self.fullname(), self.maximum, input), self)
+            else:
+                if not (input <= self.maximum):
+                    raise ValidationError("%s: input must be <= maximum %d, got %d" %
+                                          (self.fullname(), self.maximum, input), self)
+            
 
         if (self.enum is not None) and (input not in self.enum):
             raise ValidationError("%s: input not a valid enumeration value: %s" %

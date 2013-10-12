@@ -491,8 +491,10 @@ class TestJsonSchema(TestSchemaBase):
                          )
 
         self.check_valid("type: number\n"
-                         "exclusiveMinimum: 2\n"
-                         "exclusiveMaximum: 100\n",
+                         "minimum: 2\n"
+                         "maximum: 100\n"
+                         "exclusiveMinimum: true\n"
+                         "exclusiveMaximum: true\n",
 
                          valid=[3, 99],
                          invalid=[2, 100, 1]
@@ -509,7 +511,7 @@ class TestJsonSchema(TestSchemaBase):
                             "minimum: 2\n"
                             "maximum: 100\n"
                             "enum: [2, 3, 4]\n"
-                            "default: '3'\n")
+                            "default: 3\n")
         self.assertIsInstance(schema.str_detailed(), basestring)
 
     def test_timestamp(self):
