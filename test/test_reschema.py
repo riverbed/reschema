@@ -535,7 +535,8 @@ class TestJsonSchema(TestSchemaBase):
         self.check_valid("type: object\n"
                          "properties:\n"
                          "   foo: { type: number }\n"
-                         "   bar: { type: string }\n",
+                         "   bar: { type: string }\n"
+                         "additionalProperties: false\n",
 
                          # values to validate
                          valid=[{"foo": 1,

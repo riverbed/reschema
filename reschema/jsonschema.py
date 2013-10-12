@@ -666,8 +666,9 @@ class Object(Schema):
             self.props[prop] = c
             self.children.append(c)
 
-        ap = parse_prop(None, input, 'additionalProperties')
         parse_prop(self, input, 'required')
+
+        ap = parse_prop(None, input, 'additionalProperties')
         if type(ap) is bool:
             self.additionalProps = ap
         elif ap is not None:
@@ -676,7 +677,7 @@ class Object(Schema):
             self.additionalProps = c
             self.children.append(c)
         else:
-            self.additionalProps = None
+            self.additionalProps = True
 
         _check_input(self.fullname(), input)
 

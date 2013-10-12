@@ -17,6 +17,7 @@ types:
    type_object:
       type: object
       description: "Type object"
+      additionalProperties: False
       properties:
          p1: { type: number }
          p2: { type: string }
@@ -166,45 +167,49 @@ resources:
 
    test_object_addprops_true:
       type: object
+      additionalProperties: True
       properties:
          p1: { type: number }
          p2: { type: string }
-      additionalProperties: True
 
       links:
          self: { path: "$/test_methods" }
 
    test_object_addprops_number:
       type: object
+      additionalProperties: { type: number }
       properties:
          p1: { type: number }
          p2: { type: string }
-      additionalProperties: { type: number }
 
       links:
          self: { path: "$/test_methods" }
 
    test_object_addprops_string:
       type: object
+      additionalProperties: { type: string }
       properties:
          p1: { type: number }
          p2: { type: string }
-      additionalProperties: { type: string }
 
       links:
          self: { path: "$/test_methods" }
       
    test_long_table_line:
       type: object
+      additionalProperties: False
       properties:
          level1: 
             type: object
+            additionalProperties: False
             properties:
                level2: 
                   type: object
+                  additionalProperties: False
                   properties:
                      level3: 
                         type: object
+                        additionalProperties: False
                         properties:
                            level4: 
                               type: number
@@ -221,6 +226,7 @@ resources:
    test_object_full_readonly:
       type: object
       readOnly: True
+      additionalProperties: False
       properties:
          p1: { type: number }
          p2: { type: string }
@@ -307,10 +313,12 @@ resources:
    test_anyof1:
       anyOf:
          -  type: object
+            additionalProperties: False
             properties: 
                a1: { type: number }
                a2: { type: number }
          -  type: object
+            additionalProperties: False
             properties: 
                a3: { type: number }
                a4: { type: number }
@@ -319,10 +327,12 @@ resources:
    test_anyof2:
       anyOf:
          -  type: object
+            additionalProperties: False
             properties: 
                a1: { type: number, minimum: 1, maximum: 1 }
                a2: { type: number, minimum: 5, maximum: 9 }
          -  type: object
+            additionalProperties: False
             properties: 
                a1: { type: number, minimum: 2, maximum: 2 }
                a2: { type: number, minimum: 10, maximum: 20 }
@@ -330,15 +340,18 @@ resources:
 
    test_anyof3:
       type: object
+      additionalProperties: False
       properties: 
          a1: { type: number, minimum: 1, maximum: 2 }
          a2: { type: number }
       anyOf:
          -  type: object
+            additionalProperties: False
             properties: 
                a1: { type: number, minimum: 1, maximum: 1 }
                a2: { type: number, minimum: 5, maximum: 9 }
          -  type: object
+            additionalProperties: False
             properties: 
                a1: { type: number, minimum: 2, maximum: 2 }
                a2: { type: number, minimum: 10, maximum: 20 }
@@ -347,31 +360,36 @@ resources:
    test_allof:
       allOf:
          -  type: object
+            additionalProperties: False
             properties: 
                a1: { type: number, enum: [1, 2] }
                a2: { type: object, additionalProperties: True }
                a3: { type: string }
             required: [ a1, a2 ]
          -  type: object
+            additionalProperties: True
             properties: 
                a3: { type: string, pattern: "[a-z][1-3]" }
-            additionalProperties: True
                
       anyOf:
          -  type: object
+            additionalProperties: False
             properties: 
                a1: { type: number, enum: [1] }
                a2: 
                   type: object
+                  additionalProperties: False
                   properties:
                      a21_number: { type: number }
                      a21_string: { type: string }
                a3: { type: string }
          -  type: object
+            additionalProperties: False
             properties: 
                a1: { type: number, enum: [2] }
                a2: 
                   type: object
+                  additionalProperties: False
                   properties:
                      a22_number: { type: number }
                      a22_string: { type: string }
@@ -385,10 +403,12 @@ resources:
             properties: 
                a1: { type: number, minimum: 1, maximum: 10 }
                a2: { type: number, minimum: 20 }
+            additionalProperties: False
          -  type: object
             properties: 
                a1: { type: number, minimum: 5, maximum: 20 }
                a2: { type: number }
+            additionalProperties: False
       links: { self: { path: "$/test_oneof" } }
 
    test_not:
