@@ -537,7 +537,7 @@ class String(Schema):
             raise ValidationError("%s: input must be no more than %d chars, got %d: %s" %
                                   (self.fullname(), self.maxLength, len(input), trunc), self)
 
-        if (self.pattern is not None) and (not re.match('^' + self.pattern + '$', input)):
+        if (self.pattern is not None) and (not re.match(self.pattern, input)):
             raise ValidationError("%s: input failed pattern match %s: %s" %
                                   (self.fullname(), self.pattern, trunc), self)
 

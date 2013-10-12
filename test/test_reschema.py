@@ -436,7 +436,7 @@ class TestJsonSchema(TestSchemaBase):
         self.check_valid("type: string\n"
                          "minLength: 2\n"
                          "maxLength: 10\n"
-                         "pattern: '[a-z0-9]+'\n",
+                         "pattern: '^[a-z0-9]+$'\n",
 
                          # values to validate
                          valid=["aa",
