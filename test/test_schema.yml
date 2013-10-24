@@ -421,4 +421,12 @@ resources:
             -  { type: number, minimum: 7, maximum: 8 }
       links: { self: { path: "$/test_not" } }
       
-      
+   test_self_params:
+      type: number
+      links: 
+         self: 
+            path: "$/test_not"
+            params:
+               x: { type: number }
+               y: { type: number }
+               z: { type: string }

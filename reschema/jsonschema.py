@@ -889,7 +889,7 @@ class Relation(object):
 
     def resolve(self, data, fragment=None, params=None):
         target_self = self.resource.links['self']
-        target_request = target_self.request
+        target_params = target_self._params
 
         if params:
             vals = params
@@ -903,8 +903,8 @@ class Relation(object):
         uri = target_self.path.resolve(vals)
 
         params = {}
-        if target_request:
-            for var,schema in target_request.props.iteritems():
+        if target_params:
+            for var,schema in target_params.iteritems():
                 if var in vals:
                     schema.validate(vals[var])
                     params[var] = vals[var]
@@ -946,9 +946,14 @@ class Link(object):
         self._response = None
         if 'response' in input:
             self._response = Schema.parse(parse_prop(None, input, 'response'),
-                                          parent=self, name='_response')
+                                          parent=self, name='response')
 
-
+        if name == 'self':
+            self._params = {}
+            if 'params' in input:
+                for key,value in parse_prop(None, input, 'params', {}, checkType=dict).iteritems():
+                    self._params[key] = Schema.parse(value, parent=self, name=key)
+            
         self.links[self.fullid(api=True)] = self
     
         _check_input(self.fullname(), input)

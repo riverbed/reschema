@@ -1,26 +1,26 @@
 restSchemaVersion: "2.0"
-name: "Catalog"
+name: "catalog"
 version: "1.0"
 title: "REST API for a book catalog"
 servicePath: "/api/catalog/1.0"
 defaultAuthorization: "required"
-
 types:
    address:
       type: object
       id: address
-      properties :
-         street : 
+        
+      properties:
+         street: 
             type: string
             description: "Street Address"
-         city :
+         city:
             type: string
             description: "City" 
-         state :
+         state:
             type: string
             description: "State" 
             pattern: "[A-Z][A-Z]"
-         zip : 
+         zip: 
             type: string
             description: "Zip Code (5-digit)" 
             pattern: "[0-9][0-9][0-9][0-9][0-9]"
@@ -64,7 +64,7 @@ resources:
    author:
       type: object
       properties:
-         id: { type: number, readOnly: True }
+         id: { type: number }
          name: { type: string }
 
       links: 
@@ -106,7 +106,7 @@ resources:
          id: { type: number }
          name: { type: string }
          billing_address: { $ref: address }
-
+         
       links:
          self: { path: "$/publishers/{id}" }
 
@@ -123,29 +123,34 @@ resources:
          type: object
          properties:
             id: { type: number, readOnly: true }
+            publisher_id: { type: number }
             title: { type: string }
 
          relations:
-            book:
+            full:
                # Build a book link from the 'id' property
                resource: book
                vars:
                   id: "0/id" # this array item, 'id' property
 
+            publisher:
+               # Build a book link from the 'id' property
+               resource: publisher
+               vars:
+                  id: "0/publisher_id" # this array item, 'id' property
+
       links:
       
          self: 
             path: "$/books"
-            request:
+            params: 
                # Allow filtering by id or title
-               type: object
-               properties:
-                  author: { type: number }
-                  title: { type: string }
+               author: { type: number }
+               title: { type: string }
 
          get: 
             method: GET
-            response: { $ref : books }
+            response: { $ref: books }
 
          create:
             method: POST
@@ -155,7 +160,7 @@ resources:
    book:
       description: A book object
       example: 
-         id: 1
+         id: 100
          title: My first book
          publisher_id: 5
          author_ids: [ 1, 2 ]
@@ -175,7 +180,7 @@ resources:
                id: author_id
                type: number
                relations:
-                  author:
+                  full:
                      resource: author
                      vars: { id: "0" }
 
@@ -186,14 +191,13 @@ resources:
                properties: 
                   num: { type: number }
                   heading: { type: string }
-
-               links:
-                  chapter:
-                     path: 
-                        template: "/books/{bookid}/chapter/{chapterid}"
-                        vars:
-                           bookid: "2/id" # go up two-levels, then "id"
-                           chapterid: "0/num" # this array item, then "num"
+                  
+               relations:
+                  full:
+                     resource: chapter
+                     vars:
+                        bookid: "2/id" # go up two-levels, then "id"
+                        num: "0/num" # this array item, then "num"
 
       links:
          self: { path: "$/books/{id}" }
@@ -233,8 +237,7 @@ resources:
          instances: { resource: books }
          publisher: 
             resource: publisher
-            vars:
-               id: '0/publisher_id'
+            vars: { id: "0/publisher_id" }
 
    book_chapter:
       type: object
@@ -245,7 +248,6 @@ resources:
 
       links:
          self: { path: "$/books/{bookid}/chapters/{num}" }
-         book: { path: "$/books/{bookid}" }
 
          get:  
             method: GET
@@ -265,3 +267,9 @@ resources:
             path: "$/books/{bookid}/chapter/{num}/text"
             request: { type: string }
             response: { type: string }
+
+      relations:
+         book: 
+            resource: book
+            vars: { id: "0/bookid" }
+

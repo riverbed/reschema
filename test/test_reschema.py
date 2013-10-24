@@ -776,6 +776,12 @@ class TestSchema(TestSchemaBase):
                          valid = [1, 2, 3, 4, 6, 9, 10],
                          invalid = [0, 5, 7, 8, 11, 12, 13, 200] )
 
+    def test_self_params(self):
+        r = self.r.resources['test_self_params']
+        self.check_valid(r,
+                         valid = [ 1, 2 ],
+                         invalid = ['one', '2'])
+        
 if __name__ == '__main__':
     logging.basicConfig(filename='test.log', level=logging.DEBUG)
     unittest.main()
