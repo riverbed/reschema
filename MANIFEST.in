@@ -1,3 +1,6 @@
 include examples
 include RELEASE-VERSION
 exclude .gitignore 
+include reschema/restschema.css
+include reschema/restschema.js
+
