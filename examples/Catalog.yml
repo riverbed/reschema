@@ -194,7 +194,7 @@ resources:
                   
                relations:
                   full:
-                     resource: chapter
+                     resource: book_chapter
                      vars:
                         bookid: "2/id" # go up two-levels, then "id"
                         num: "0/num" # this array item, then "num"

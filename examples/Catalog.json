@@ -1,6 +1,6 @@
 {
   "restSchemaVersion": "2.0", 
-  "name": "Catalog", 
+  "name": "catalog", 
   "version": "1.0", 
   "title": "REST API for a book catalog", 
   "servicePath": "/api/catalog/1.0", 
@@ -207,15 +207,24 @@
             "type": "number", 
             "readOnly": true
           }, 
+          "publisher_id": {
+            "type": "number"
+          }, 
           "title": {
             "type": "string"
           }
         }, 
         "relations": {
-          "book": {
+          "full": {
             "resource": "book", 
             "vars": {
               "id": "0/id"
+            }
+          }, 
+          "publisher": {
+            "resource": "publisher", 
+            "vars": {
+              "id": "0/publisher_id"
             }
           }
         }
@@ -223,15 +232,12 @@
       "links": {
         "self": {
           "path": "$/books", 
-          "request": {
-            "type": "object", 
-            "properties": {
-              "author": {
-                "type": "number"
-              }, 
-              "title": {
-                "type": "string"
-              }
+          "params": {
+            "author": {
+              "type": "number"
+            }, 
+            "title": {
+              "type": "string"
             }
           }
         }, 
@@ -290,7 +296,7 @@
             "id": "author_id", 
             "type": "number", 
             "relations": {
-              "author": {
+              "full": {
                 "resource": "author", 
                 "vars": {
                   "id": "0"
@@ -311,14 +317,12 @@
                 "type": "string"
               }
             }, 
-            "links": {
-              "chapter": {
-                "path": {
-                  "template": "/books/{bookid}/chapter/{chapterid}", 
-                  "vars": {
-                    "bookid": "2/id", 
-                    "chapterid": "0/num"
-                  }
+            "relations": {
+              "full": {
+                "resource": "book_chapter", 
+                "vars": {
+                  "bookid": "2/id", 
+                  "num": "0/num"
                 }
               }
             }
@@ -373,9 +377,6 @@
             }
           }
         }, 
-        "publisher": {
-          "path": "$/publisher/{publisher_id}"
-        }, 
         "new_chapter": {
           "path": "$/books/{id}/chapter", 
           "method": "POST", 
@@ -390,6 +391,12 @@
       "relations": {
         "instances": {
           "resource": "books"
+        }, 
+        "publisher": {
+          "resource": "publisher", 
+          "vars": {
+            "id": "0/publisher_id"
+          }
         }
       }
     }, 
@@ -409,9 +416,6 @@
       "links": {
         "self": {
           "path": "$/books/{bookid}/chapters/{num}"
-        }, 
-        "book": {
-          "path": "$/books/{bookid}"
         }, 
         "get": {
           "method": "GET", 
@@ -443,6 +447,14 @@
           }, 
           "response": {
             "type": "string"
+          }
+        }
+      }, 
+      "relations": {
+        "book": {
+          "resource": "book", 
+          "vars": {
+            "id": "0/bookid"
           }
         }
       }
