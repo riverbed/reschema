@@ -13,7 +13,7 @@ from yaml.error import MarkedYAMLError
 
 import reschema
 from reschema.exceptions import ValidationError, ParseError, MissingParameter
-from reschema.jsonschema import Object, Number, String, Array, Schema
+from reschema.jsonschema import Object, Integer, Number, String, Array, Schema
 from reschema import yaml_loader
 
 logger = logging.getLogger(__name__)
@@ -135,7 +135,7 @@ class TestReschema(unittest.TestCase):
         c = r.find('/book/author_ids')
         self.assertEqual(c._type, 'array')
         c = r.find('/book/author_ids/1')
-        self.assertEqual(c._type, 'number')
+        self.assertEqual(c._type, 'integer')
 
         with self.assertRaises(KeyError):
             r.find('no_type')
@@ -162,19 +162,20 @@ class TestCatalog(unittest.TestCase):
         with self.assertRaises(ValidationError):
             s.validate(42)
 
-    def test_number(self):
+    def test_integer(self):
         n = self.r.resources['author'].props['id']
         self.assertFalse(n.isRef())
         self.assertTrue(n.isSimple())
 
         # successful validation will return None
         self.assertIsNone(n.validate(443))
-        self.assertIsNone(n.validate(3.14))
 
         with self.assertRaises(ValidationError):
             n.validate('foo')
         with self.assertRaises(ValidationError):
             n.validate('43')
+        with self.assertRaises(ValidationError):
+            n.validate(3.14)
 
     def test_reference(self):
         ref = self.r.find('publisher').props['billing_address']
@@ -246,7 +247,7 @@ class TestCatalog(unittest.TestCase):
     def test_indexing(self):
         book = self.r.resources['book']
         self.assertEqual(type(book), Object)
-        self.assertEqual(type(book['id']), Number)
+        self.assertEqual(type(book['id']), Integer)
         self.assertEqual(type(book['title']), String)
         self.assertGreater(len(book.str_simple()), 0)
         self.assertGreater(len(book.str_detailed()), 0)
@@ -257,7 +258,7 @@ class TestCatalog(unittest.TestCase):
         self.assertEqual(book['/author_ids'], a)
 
         # Test JSON pointer syntax
-        self.assertEqual(type(book['author_ids'][0]), Number)
+        self.assertEqual(type(book['author_ids'][0]), Integer)
         self.assertEqual(book['/author_ids/0'], book['author_ids'][0])
 
         # Test relative JSON pointer syntax
@@ -485,7 +486,7 @@ class TestJsonSchema(TestSchemaBase):
                          "minimum: 2\n"
                          "maximum: 100\n",
 
-                         valid=[2, 99, 100],
+                         valid=[2, 2.0, 2.5, 99, 100],
                          invalid=[1, 101, 0]
                          )
 
@@ -495,7 +496,7 @@ class TestJsonSchema(TestSchemaBase):
                          "exclusiveMinimum: true\n"
                          "exclusiveMaximum: true\n",
 
-                         valid=[3, 99],
+                         valid=[2.01, 3, 99, 99.999],
                          invalid=[2, 100, 1]
                          )
 
@@ -507,6 +508,39 @@ class TestJsonSchema(TestSchemaBase):
                          )
 
         schema = self.parse("type: number\n"
+                            "minimum: 2\n"
+                            "maximum: 100\n"
+                            "enum: [2, 3, 4]\n"
+                            "default: 3\n")
+        self.assertIsInstance(schema.str_detailed(), basestring)
+
+    def test_integer(self):
+        self.check_valid("type: integer\n"
+                         "minimum: 2\n"
+                         "maximum: 100\n",
+
+                         valid=[2, 99, 100],
+                         invalid=[1, 101, 2.5, 99.1]
+                         )
+
+        self.check_valid("type: integer\n"
+                         "minimum: 2\n"
+                         "maximum: 100\n"
+                         "exclusiveMinimum: true\n"
+                         "exclusiveMaximum: true\n",
+
+                         valid=[3, 99],
+                         invalid=[2, 100, 1]
+                         )
+
+        self.check_valid("type: integer\n"
+                         "enum: [1, 2, 3]\n",
+
+                         valid=[1, 2, 3],
+                         invalid=[0, 100, 4, 1.0, 'one']
+                         )
+
+        schema = self.parse("type: integer\n"
                             "minimum: 2\n"
                             "maximum: 100\n"
                             "enum: [2, 3, 4]\n"

@@ -64,7 +64,7 @@ resources:
    author:
       type: object
       properties:
-         id: { type: number }
+         id: { type: integer }
          name: { type: string }
 
       links: 
@@ -103,7 +103,7 @@ resources:
    publisher:
       type: object
       properties:
-         id: { type: number }
+         id: { type: integer }
          name: { type: string }
          billing_address: { $ref: address }
          
@@ -122,8 +122,8 @@ resources:
       items: 
          type: object
          properties:
-            id: { type: number, readOnly: true }
-            publisher_id: { type: number }
+            id: { type: integer, readOnly: true }
+            publisher_id: { type: integer }
             title: { type: string }
 
          relations:
@@ -145,7 +145,7 @@ resources:
             path: "$/books"
             params: 
                # Allow filtering by id or title
-               author: { type: number }
+               author: { type: integer }
                title: { type: string }
 
          get: 
@@ -171,14 +171,14 @@ resources:
               heading: Conclusion
       type: object
       properties:
-         id: { type: number }
+         id: { type: integer }
          title: { type: string }
-         publisher_id: { type: number }
+         publisher_id: { type: integer }
          author_ids: 
             type: array
             items: 
                id: author_id
-               type: number
+               type: integer
                relations:
                   full:
                      resource: author
@@ -189,7 +189,7 @@ resources:
             items: 
                type: object
                properties: 
-                  num: { type: number }
+                  num: { type: integer }
                   heading: { type: string }
                   
                relations:
@@ -218,7 +218,7 @@ resources:
             request:
                type: object
                properties:
-                  num_copies: { type: number }
+                  num_copies: { type: integer }
                   shipping_address: { $ref: address }
 
             response:
@@ -242,8 +242,8 @@ resources:
    book_chapter:
       type: object
       properties:
-         bookid: { type: number }
-         num: { type: number }
+         bookid: { type: integer }
+         num: { type: integer }
          heading: { type: string }
 
       links:

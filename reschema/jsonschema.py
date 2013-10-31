@@ -565,21 +565,23 @@ class String(Schema):
 _register_type(String)
 
 
-class Number(Schema):
+class NumberOrInteger(Schema):
     _type = 'number'
-    def __init__(self, input, name, parent, **kwargs):
-        Schema.__init__(self, Number._type, input, name, parent, **kwargs)
-        parse_prop(self, input, 'minimum', checkType=(int, float))
-        parse_prop(self, input, 'maximum', checkType=(int, float))
+    
+    def __init__(self, type, allowed_types, input, name, parent, **kwargs):
+        Schema.__init__(self, type, input, name, parent, **kwargs)
+        self.allowed_types = allowed_types
+        parse_prop(self, input, 'minimum', checkType=allowed_types)
+        parse_prop(self, input, 'maximum', checkType=allowed_types)
         parse_prop(self, input, 'exclusiveMinimum', checkType=bool, defaultValue=False)
         parse_prop(self, input, 'exclusiveMaximum', checkType=bool, defaultValue=False)
-        parse_prop(self, input, 'default', checkType=(int,float))
+        parse_prop(self, input, 'default', checkType=allowed_types)
         parse_prop(self, input, 'enum', checkType=list)
 
         _check_input(self.fullname(), input)
 
     def validate(self, input):
-        if (type(input) not in [int, float]):
+        if (type(input) not in self.allowed_types):
             raise ValidationError("%s should be a number, got '%s'" %
                                   (self.fullname(), type(input)), self)
         
@@ -607,7 +609,7 @@ class Number(Schema):
         if (self.enum is not None) and (input not in self.enum):
             raise ValidationError("%s: input not a valid enumeration value: %s" %
                                   (self.fullname(), input), self)
-        super(Number, self).validate(input)
+        super(NumberOrInteger, self).validate(input)
 
     def str_detailed(self):
         s = ''
@@ -622,9 +624,25 @@ class Number(Schema):
             s += 'Valid values: %s\n' % self.enum
         if self.default:
             s += 'Default value: %s\n' % self.default
-        return super(Number, self).str_detailed(additional_details=s)
+        return super(NumberOrInteger, self).str_detailed(additional_details=s)
 
+
+class Number(NumberOrInteger):
+    _type = 'number'
+
+    def __init__(self, input, name, parent, **kwargs):
+        super(Number, self).__init__(self._type, [int, float], input, name, parent, **kwargs)
+        
 _register_type(Number)
+
+
+class Integer(NumberOrInteger):
+    _type = 'integer'
+
+    def __init__(self, input, name, parent, **kwargs):
+        super(Integer, self).__init__(self._type, [int], input, name, parent, **kwargs)
+        
+_register_type(Integer)
 
 
 class Timestamp(Schema):
@@ -896,9 +914,10 @@ class Relation(object):
         else:
             vals = {}
 
-        if self.vars is not None:
-            for var,relp in self.vars.iteritems():
-                vals[var] = resolve_rel_pointer(data, fragment or '', relp)
+        if data is not None:
+            if self.vars is not None:
+                for var,relp in self.vars.iteritems():
+                    vals[var] = resolve_rel_pointer(data, fragment or '', relp)
 
         uri = target_self.path.resolve(vals)
 
