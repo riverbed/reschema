@@ -491,6 +491,22 @@ class Ref(Schema):
 _register_type(Ref)
 
 
+class Null(Schema):
+    _type = 'null'
+    def __init__(self, input, name, parent, **kwargs):
+        Schema.__init__(self, Null._type, input, name, parent, **kwargs)
+
+        _check_input(self.fullname(), input)
+
+    def validate(self, input):
+        if (input is not None):
+            raise ValidationError("%s should be None, got '%s'" %
+                                  (self.fullname(), type(input)), self)
+        super(Null, self).validate(input)
+
+_register_type(Null)
+
+
 class Boolean(Schema):
     _type = 'boolean'
     def __init__(self, input, name, parent, **kwargs):

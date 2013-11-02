@@ -401,6 +401,20 @@ class TestJsonSchema(TestSchemaBase):
                              'name': 'Frozzle',
                              'billing_address': "doesn't exist"})
 
+    def test_null(self):
+        self.check_valid("type: 'null'\n",
+
+                         # values to validate
+                         valid=[None],
+
+                         invalid=["11",
+                                  11,
+                                  [ 1, 2 ],
+                                  "abc",
+                                  "123",
+                                  "1234512345"],
+                         )
+        
     def test_data(self):
         # missing 'content_type'
         self.check_bad_schema("type: data\n",
