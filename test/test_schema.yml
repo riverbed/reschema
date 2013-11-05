@@ -10,6 +10,10 @@ types:
       type: number
       description: "Type number"
       
+   type_integer:
+      type: integer
+      description: "Type integer"
+      
    type_string:
       type: string
       description: "Type string"
@@ -26,6 +30,10 @@ resources:
    test_number:
       type: number
       links: { self: { path: "$/test_number" }  }
+      
+   test_integer:
+      type: integer
+      links: { self: { path: "$/test_integer" }  }
       
    test_string:
       type: string

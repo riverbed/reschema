@@ -579,18 +579,19 @@ class PropTable(HTMLTable):
              (name not in schema.parent.required) ):
             parts.append("Optional")
             
-        if isinstance(schema, reschema.jsonschema.Number):
+        if ( isinstance(schema, reschema.jsonschema.Number) or
+             isinstance(schema, reschema.jsonschema.Integer) ):
             minimum = None
             if schema.minimum is not None:
                 minimum = str(schema.minimum)
-            elif schema.exclusiveMinimum is not None:
-                minimum = "(%s)" % str(schema.exclusiveMinimum)
+                if schema.exclusiveMinimum:
+                    minimum = "(%s)" % str(minimum)
 
             maximum = None
             if schema.maximum is not None:
                 maximum = str(schema.maximum)
-            elif schema.exclusiveMaximum is not None:
-                maximum = "(%s)" % str(schema.exclusiveMaximum)
+                if schema.exclusiveMaximum is not None:
+                    maximum = "(%s)" % str(maximum)
 
             if (minimum is not None) and (maximum is not None):
                 parts.append("Range: %s to %s" % (minimum, maximum))
