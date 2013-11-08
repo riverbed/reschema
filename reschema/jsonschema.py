@@ -222,13 +222,14 @@ class Schema(object):
         else:
             typestr = parse_prop(None, input, 'type', required=True)
 
-        if typestr in type_map:
+        try:
             cls = type_map[typestr]
-            return cls(input, name, parent, api=api)
-        else:
+        except:
             msg = ('Unknown type: %s while parsing %s%s' %
                    (typestr, (parent.fullname() + '.') if parent else '', name))
-            raise ParseError(msg, input)
+            raise ParseError(msg, typestr)
+
+        return cls(input, name, parent, api=api)
 
     @classmethod
     def find_by_id(cls, api, id):
