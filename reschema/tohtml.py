@@ -614,7 +614,7 @@ class PropTable(HTMLTable):
             parts.append("Default is %s" % schema.default)
 
         if hasattr(schema, 'enum') and schema.enum is not None:
-            parts.append("Values: " + ', '.join(schema.enum))
+            parts.append("Values: " + ', '.join([str(x) for x in schema.enum]))
 
         if hasattr(schema, 'pattern') and schema.pattern is not None:
             parts.append("Pattern: '" + schema.pattern + "'")
