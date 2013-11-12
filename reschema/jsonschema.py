@@ -542,7 +542,7 @@ class String(Schema):
         else:
             trunc = str(input)
 
-        if (type(input) not in [str, unicode]):
+        if (not isinstance(input, str) and not isinstance(input, unicode)):
             raise ValidationError("%s: input must be a string, got %s: %s" %
                                   (self.fullname(), type(input), trunc), self)
 
@@ -598,7 +598,7 @@ class NumberOrInteger(Schema):
         _check_input(self.fullname(), input)
 
     def validate(self, input):
-        if (type(input) not in self.allowed_types):
+        if not any(isinstance(input, t) for t in self.allowed_types):
             raise ValidationError("%s should be a number, got '%s'" %
                                   (self.fullname(), type(input)), self)
         
@@ -648,7 +648,7 @@ class Number(NumberOrInteger):
     _type = 'number'
 
     def __init__(self, input, name, parent, **kwargs):
-        super(Number, self).__init__(self._type, [int, float], input, name, parent, **kwargs)
+        super(Number, self).__init__(self._type, (int, float), input, name, parent, **kwargs)
         
 _register_type(Number)
 
@@ -657,7 +657,7 @@ class Integer(NumberOrInteger):
     _type = 'integer'
 
     def __init__(self, input, name, parent, **kwargs):
-        super(Integer, self).__init__(self._type, [int], input, name, parent, **kwargs)
+        super(Integer, self).__init__(self._type, (int,), input, name, parent, **kwargs)
         
 _register_type(Integer)
 
@@ -669,7 +669,7 @@ class Timestamp(Schema):
         _check_input(self.fullname(), input)
 
     def validate(self, input):
-        if (type(input) not in [int, float]):
+        if not any(isinstance(input, t) for t in (int, float)):
             raise ValidationError("'%s' expected to be a number for %s" % (input, self.fullname()), self)
         super(Timestamp, self).validate(input)
 
@@ -683,7 +683,7 @@ class TimestampHP(Schema):
         _check_input(self.fullname(), input)
 
     def validate(self, input):
-        if (type(input) not in [int, float]):
+        if not any(isinstance(input, t) for t in (int, float)):
             raise ValidationError("'%s' expected to be a number for %s" % (input, self.fullname()), self)
         super(TimestampHP, self).validate(input)
 
@@ -819,7 +819,7 @@ class Array(Schema):
         return self.children[0]
     
     def validate(self, input):
-        if (type(input) is not list):
+        if not isinstance(input, list):
             raise ValidationError("%s should be an array, got '%s'" %
                                   (self.fullname(), type(input)), self)
 
