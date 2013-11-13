@@ -4,7 +4,7 @@ import os
 
 import reschema
 from reschema.exceptions import ReschemaException
-from test_reschema import TEST_SCHEMA_JSON, TEST_SCHEMA_YAML
+from test_reschema import TEST_SCHEMA_YAML
 
 TEST_SCHEMA_YAML_BAD = os.path.join(os.path.dirname(TEST_SCHEMA_YAML),
                                     'catalog_bad_property.yml')
@@ -126,18 +126,18 @@ print '-' * 80
 try:
     r = reschema.RestSchema()
     r.load(TEST_SCHEMA_YAML)
-    a = r.resources['author'].props['name']
+    a = r.resources['test_string']
     a.validate(42)
 except ReschemaException as e:
     print e
 
-print ''
-print 'Validating good JSON with bad values ...'
-print '-' * 80
-try:
-    r = reschema.RestSchema()
-    r.load(TEST_SCHEMA_JSON)
-    a = r.resources['author'].props['name']
-    a.validate(42)
-except ReschemaException as e:
-    print e
+#print ''
+#print 'Validating good JSON with bad values ...'
+#print '-' * 80
+#try:
+#    r = reschema.RestSchema()
+#    r.load(TEST_SCHEMA_JSON)
+#    a = r.resources['test_string']
+#    a.validate(42)
+#except ReschemaException as e:
+#    print e
