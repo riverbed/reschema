@@ -251,7 +251,7 @@ class Schema(object):
         """Returns True if this object is a simple data type.
 
         Simple data types have no linked children schema.  For example, Array
-        and Object return True whereas String and Number return False.
+        and Object return False whereas String and Number return True.
 
         """
         return True
