@@ -6,6 +6,11 @@ servicePath: "/api/test/1.0"
 defaultAuthorization: "required"
 
 types:
+   type_boolean:
+      type: boolean
+      description: "Type boolean"
+      default: True
+      
    type_number:
       type: number
       description: "Type number"
@@ -27,6 +32,10 @@ types:
          p2: { type: string }
 
 resources:
+   test_boolean:
+      type: boolean
+      links: { self: { path: "$/test_boolean" }  }
+      
    test_number:
       type: number
       links: { self: { path: "$/test_number" }  }

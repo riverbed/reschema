@@ -512,6 +512,7 @@ class Boolean(Schema):
     _type = 'boolean'
     def __init__(self, input, name, parent, **kwargs):
         Schema.__init__(self, Boolean._type, input, name, parent, **kwargs)
+        parse_prop(self, input, 'default')
 
         _check_input(self.fullname(), input)
 
