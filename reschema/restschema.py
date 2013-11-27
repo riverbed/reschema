@@ -17,7 +17,7 @@ from jsonpointer import resolve_pointer, JsonPointer
 from reschema.jsonschema import Schema
 from reschema.util import parse_prop
 from reschema import yaml_loader, json_loader
-from .exceptions import ParseError
+from reschema.exceptions import ParseError
 
 __all__ = ['RestSchema']
 
@@ -41,8 +41,9 @@ class RestSchema(object):
             elif filename.endswith(('.yml', '.yaml')):
                 obj = yaml_loader.marked_load(f)
             else:
-                raise ValueError("Unrecognized file extension, use '*.json' or '*.yaml': %s"
-                                 % filename)
+                raise ValueError(
+                  "Unrecognized file extension, use '*.json' or '*.yaml': %s"
+                  % filename)
         self.parse(obj)
 
     def parse_text(self, text, format='json'):
@@ -78,8 +79,10 @@ class RestSchema(object):
         self.types = OrderedDict()
         if 'types' in obj:
             for type_ in obj['types']:
-                self.types[type_] = Schema.parse(obj['types'][type_],
-                                                 name=type_, api=self.servicePath)
+                self.types[type_] = Schema.parse(
+                  obj['types'][type_],
+                  name=type_,
+                  api=self.servicePath)
         
         self.resources = OrderedDict()
         if 'resources' in obj:
@@ -89,10 +92,12 @@ class RestSchema(object):
                 self.resources[resource] = sch
                 
                 if 'self' not in sch.links:
-                    raise ParseError("Resource '%s' missing 'self' link" % resource, input_)
+                    raise ParseError("Resource '%s' missing 'self' link" %
+                                     resource, input_)
                 if sch.links['self'].path is None:
-                    raise ParseError("Resource '%s' 'self' link must define 'path'" % resource, input_)
-                    
+                    raise ParseError(
+                      "Resource '%s' 'self' link must define 'path'" %
+                      resource, input_)
                 
         parse_prop(self, obj, 'tasks', None)
         parse_prop(self, obj, 'request_headers', None)

@@ -63,7 +63,8 @@ class RestSchemaToHtml(object):
         type_menu = self.menu.add_submenu()
         for type_ in self.restschema.types.values():
             ResourceToHtml(type_, self.container, type_menu,
-                           self.restschema.servicePath, self.options).process(is_type=True)
+                           self.restschema.servicePath,
+                           self.options).process(is_type=True)
 
 
 class ResourceToHtml(object):
@@ -85,7 +86,9 @@ class ResourceToHtml(object):
         elif filename.endswith(('.yml', '.yaml')):
             input = yaml.load(f)
         else:
-            raise ValueError("Unrecognized file extension, use '*.json' or '*.yml': %s" % filename)
+            raise ValueError(
+              "Unrecognized file extension, use '*.json' or '*.yml': %s" %
+              filename)
 
         if additional:
             for a in additional:
@@ -107,7 +110,8 @@ class ResourceToHtml(object):
         logger.debug("Processing resource: %s" % self.schema.fullname())
         menu = self.menu
         schema = self.schema
-        baseid = ('type-' if is_type else 'resource-') + html_str_to_id(schema.fullid())
+        baseid = ('type-' if is_type
+                          else 'resource-') + html_str_to_id(schema.fullid())
 
         div = self.container.div(id=baseid)
         menu.add_item(schema.name, href=div)
@@ -130,12 +134,16 @@ class ResourceToHtml(object):
             self.process_methods(div, baseid, methodsmenu)
 
     def schema_table(self, schema, container,  baseid):
-        tabbar = TabBar(container, baseid+'-tabbar', printable=self.options.printable)
+        tabbar = TabBar(container, baseid+'-tabbar',
+                        printable=self.options.printable)
         if self.options.json:
             tabbar.add_tab("JSON", baseid+'-json', SchemaSummaryJson(schema))
         if self.options.xml:
             tabbar.add_tab("XML", baseid+'-xml', SchemaSummaryXML(schema))
-        #tabbar.add_tab("JSON Schema", "jsonschema", HTMLElement("pre", text=json.dumps(self.schema_raw, indent=2)))
+        #tabbar.add_tab("JSON Schema", "jsonschema",
+        #               HTMLElement("pre",
+        #                            text=json.dumps(self.schema_raw,
+        #                           indent=2)))
         tabbar.finish()
         container.append(SchemaTable(schema))
         
@@ -145,7 +153,8 @@ class ResourceToHtml(object):
             if name == 'self':
                 continue
 
-            logger.debug("Processing method: %s - %s" % (self.schema.fullname(), name))
+            logger.debug("Processing method: %s - %s" %
+                         (self.schema.fullname(), name))
             
             baseid = containerid + '-method-%s' % name
             div = container.div(id=baseid, cls="method-body")
@@ -175,7 +184,8 @@ class ResourceToHtml(object):
             if link.authorization == "required":
                 div.p().text = "This request requires authorization."
             elif link.authorization == "optional":
-                div.p().text = "This request may be made with or without authorization."
+                div.p().text = \
+                  "This request may be made with or without authorization."
             else:
                 div.p().text = "This request does not require authorization."
 
@@ -191,8 +201,8 @@ class ResourceToHtml(object):
             if httpmethod != "GET":
                 div.span(cls="h5").text = "Request Body"
                 if link.request is not None and httpmethod != "GET":
-                    # Need to look at the raw link._request to see if it's a ref,
-                    # as link.request is auto-resolved thru refs
+                    # Need to look at the raw link._request to see if it's
+                    # a ref, as link.request is auto-resolved thru refs
                     if type(link._request) is reschema.jsonschema.Ref:
                         p = div.p()
                         p.settext("Provide ",
@@ -380,7 +390,8 @@ class SchemaSummaryXML(HTMLElement):
                 if 'attributes' in spec:
                     for attr in spec['attributes']:
                         typestr = spec['attributes'][attr]
-                        parent.span(cls="xmlschema-attribute").text = ('%s%s' % (" " if first else attr_indent, attr))
+                        parent.span(cls="xmlschema-attribute").text = (
+                          '%s%s' % (" " if first else attr_indent, attr))
                         parent.span().text = '='
                         parent.span(cls="xmlschema-type").text = typestr
                         first = False
@@ -427,9 +438,11 @@ class SchemaSummaryXML(HTMLElement):
                 if not name:
                     name = dtype
                 if key:
-                    parent.span(cls="xmlschema-element").text = "%*s<%s key=string>" % (indent, "", name)
+                    parent.span(cls="xmlschema-element").text = (
+                      "%*s<%s key=string>" % (indent, "", name))
                 else:
-                    parent.span(cls="xmlschema-element").text = "%*s<%s>" % (indent, "", name)
+                    parent.span(cls="xmlschema-element").text = (
+                      "%*s<%s>" % (indent, "", name))
 
                 parent.a(cls="xmlschema-type",
                          href=_build_schema_href(schema.refschema),
@@ -438,13 +451,15 @@ class SchemaSummaryXML(HTMLElement):
 
         else:
             if key:
-                parent.span(cls="xmlschema-element").text = "%*s<%s " % (indent, "", name)
+                parent.span(cls="xmlschema-element").text = (
+                  "%*s<%s " % (indent, "", name))
                 parent.span(cls="xmlschema-attribute").text = key
                 parent.span().text = "="
                 parent.span(cls="xmlschema-type").text = "string"
                 parent.span().text = ">"
             else:
-                parent.span(cls="xmlschema-element").text = "%*s<%s>" % (indent, "", name)
+                parent.span(cls="xmlschema-element").text = (
+                  "%*s<%s>" % (indent, "", name))
             parent.span(cls="xmlschema-type").text = "%s" % schema.typestr
             parent.span(cls="xmlschema-element").text = "</%s>\n" % (name)
             
@@ -460,7 +475,8 @@ class SchemaSummaryXML(HTMLElement):
             if not prop.isSimple():
                 subelems = True
                 continue
-            parent.span(cls="xmlschema-attribute").text = ('%s%s' % (" " if first else attr_indent, k))
+            parent.span(cls="xmlschema-attribute").text = (
+              '%s%s' % (" " if first else attr_indent, k))
             parent.span().text = '='
             parent.span(cls="xmlschema-type").text = prop.typestr
             first = False
@@ -486,8 +502,11 @@ class SchemaSummaryXML(HTMLElement):
             keyname = subobj.xmlKeyName or 'key'
             try:
                 subobj.props = OrderedDict()
-                json = {'id':keyname, 'type':'string', 'description':'property name'}
-                subobj.props[keyname] = subobj.schema.parse(json, keyname, subobj)
+                json = {'id':keyname, 'type':'string',
+                        'description':'property name'}
+                subobj.props[keyname] = subobj.schema.parse(json,
+                                                            keyname,
+                                                            subobj)
                 for k in obj.additionalProps.props:
                     subobj.props[k] = obj.additionalProps.props[k]
             except:
@@ -503,7 +522,8 @@ class SchemaSummaryXML(HTMLElement):
         parent.span().text = "%*s<" % (indent, "")
         parent.span(cls="xmlschema-element").text = name
         parent.span().text = ">\n"
-        self.process(parent.span(), array.children[0], indent+2, name=array.children[0].id)
+        self.process(parent.span(), array.children[0], indent+2,
+                     name=array.children[0].id)
         parent.span().text = "%*s</" % (indent, "")
         parent.span(cls="xmlschema-element").text = name
         parent.span().text = ">\n"
@@ -543,8 +563,9 @@ class PropTable(HTMLTable):
                 if L[i+1][-1] != "]":
                     text += "."
                 
-            elem.span(cls="restschema-%s" % "basename" if i == 0 else "property",
-                        text=text)
+            elem.span(cls="restschema-%s" % "basename" if i == 0
+                                                       else "property",
+                      text=text)
             line += len(text)
         
     def makerow(self, schema, name):
@@ -648,7 +669,8 @@ class SchemaTable(PropTable):
                 tds = self.row(["", "", "", ""])
                 self.setname(tds[0], schema.fullname() + ".<prop>")
                 tds[1].span(cls="restschema-type").text = "<value>"
-                tds[2].text = "Additional properties may have any property name and value"
+                tds[2].text = ("Additional properties may have "
+                               "any property name and value")
                 
 if __name__ == '__main__':
     from optparse import OptionParser

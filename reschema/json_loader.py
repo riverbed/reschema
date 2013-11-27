@@ -45,7 +45,8 @@ def obj_hook(obj):
 
 
 def marked_load(stream):
-    return json.load(stream, cls=Decoder, object_hook=obj_hook, object_pairs_hook=obj_hook)
+    return json.load(stream, cls=Decoder,
+                     object_hook=obj_hook, object_pairs_hook=obj_hook)
 
 
 def clean_load(stream):

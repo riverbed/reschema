@@ -72,7 +72,8 @@ class NodeConstructor(SafeConstructor):
         if not isinstance(node, yaml.MappingNode):
             raise ConstructorError("while constructing an ordered map",
                                    node.start_mark,
-                                   "expected a mapping node, but found %s" % node.id, 
+                                   ("expected a mapping node, but found %s" %
+                                    node.id), 
                                    node.start_mark)
         for key_node, value_node in node.value:
             key = self.construct_object(key_node)
@@ -113,7 +114,8 @@ NodeConstructor.add_constructor('tag:yaml.org,2002:str',
                                 NodeConstructor.construct_yaml_str)
 
 
-class MarkedLoader(Reader, Scanner, Parser, Composer, NodeConstructor, Resolver):
+class MarkedLoader(Reader, Scanner, Parser,
+                   Composer, NodeConstructor, Resolver):
     def __init__(self, stream):
         Reader.__init__(self, stream)
         Scanner.__init__(self)

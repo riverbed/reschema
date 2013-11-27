@@ -10,7 +10,8 @@ import re
 from reschema.exceptions import ParseError
 
 
-def parse_prop(obj, srcobj, prop, defaultValue=None, required=False, checkType=None):
+def parse_prop(obj, srcobj, prop,
+               defaultValue=None, required=False, checkType=None):
     if prop in srcobj:
         val = srcobj[prop]
         del srcobj[prop]
@@ -25,7 +26,8 @@ def parse_prop(obj, srcobj, prop, defaultValue=None, required=False, checkType=N
                     break
 
             if not check:
-                msg = "Value provided for %s must be %s, got %s" % (prop, str(checkType), type(val))
+                msg = ("Value provided for %s must be %s, got %s" %
+                       (prop, str(checkType), type(val)))
                 raise ParseError(msg, srcobj)
 
     elif required:
