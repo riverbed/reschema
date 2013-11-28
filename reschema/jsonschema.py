@@ -116,18 +116,20 @@ class Schema(object):
     def __init__(self, typestr, input, name=None, parent=None, api=None):
         """Create a new Schema object of the given `typestr`.
 
-            `typestr` is the <json-schema> type
+        :param typestr: the <json-schema> type
 
-            `input` is the definition to parse
+        :param input: the definition to parse
 
-            `parent` allows nesting of schemas, may be None
+        :param parent: allows nesting of schemas, may be None
 
-            `name` is a label for this schema
+        :param name: a label for this schema
 
-            `api` is the base address for api calls
+        :param api: the base address for api calls
+                    If `api` is None, the parent's api is used.
 
-        If `api` is None, the parent's api is used.
-
+        :raises ValidationError: if neither `api` nor `parent` is specified.
+        :raises ParseError: if unexpected data or formats are encountered
+                            while parsing.
         """
         self._typestr = typestr
         self.parent = parent
@@ -157,28 +159,28 @@ class Schema(object):
 
         self.relations = OrderedDict()
         for key, value in parse_prop(None, input, 'relations', {},
-                                     checkType=dict).iteritems():
+                                     check_type=dict).iteritems():
             #logger.debug("Schema %s: adding relation '%s'" % (str(self), key))
             self.relations[key] = Relation(value, key, self)
             
         self.links = OrderedDict()
         for key, value in parse_prop(None, input, 'links', {},
-                                     checkType=dict).iteritems():
+                                     check_type=dict).iteritems():
             #logger.debug("Schema %s: adding link '%s'" % (str(self), key))
             self.links[key] = Link(value, key, self)
             
         self._anyof = []
-        for subinput in parse_prop(None, input, 'anyOf', [], checkType=list):
+        for subinput in parse_prop(None, input, 'anyOf', [], check_type=list):
             s = Schema.parse(subinput, parent=self)
             self._anyof.append(s)
 
         self._allof = []
-        for subinput in parse_prop(None, input, 'allOf', [], checkType=list):
+        for subinput in parse_prop(None, input, 'allOf', [], check_type=list):
             s = Schema.parse(subinput, parent=self)
             self._allof.append(s)
 
         self._oneof = []
-        for subinput in parse_prop(None, input, 'oneOf', [], checkType=list):
+        for subinput in parse_prop(None, input, 'oneOf', [], check_type=list):
             s = Schema.parse(subinput, parent=self)
             self._oneof.append(s)
 
@@ -197,16 +199,18 @@ class Schema(object):
     def parse(cls, input, name=None, parent=None, api=None):
         """Parse a <json-schema> definition for an object.
 
-            `input` is the definition to parse
+        :param input: the definition to parse
+        :type input: dict
 
-            `parent` allows nesting of schemas, may be None
+        :param parent: allows nesting of schemas, may be None
 
-            `name` is a label for this schema
+        :param name: a label for this schema
 
-            `api` is the base address for api calls
-
-        If `api` is None, the parent's api is used.
+        :param api: the base address for api calls
+                    If `api` is None, the parent's api is used.
             
+        :raises ParseError: if unexpected data or formats are encountered
+                            while parsing.
         """
     
         if not isinstance(input, dict):
@@ -230,7 +234,7 @@ class Schema(object):
 
         try:
             cls = type_map[typestr]
-        except:
+        except KeyError:
             msg = ('Unknown type: %s while parsing %s%s' %
                    (typestr, (parent.fullname() + '.') if parent else '', name))
             raise ParseError(msg, typestr)
@@ -253,7 +257,7 @@ class Schema(object):
         """The <json-schema> type for this schema."""
         return self._typestr
     
-    def isSimple(self):
+    def is_simple(self):
         """Returns True if this object is a simple data type.
 
         Simple data types have no linked children schema.  For example, Array
@@ -262,12 +266,15 @@ class Schema(object):
         """
         return True
 
-    def isRef(self):
+    def is_ref(self):
         """Return True if this schema is a reference."""
         return False
     
-    def isMulti(self):
-        """Return True if this schema is a multi instance."""
+    def is_multi(self):
+        """Return True if this schema is a multi instance.
+
+        Multi data types use the anyOf, oneOf or allOf properties
+        to combine multiple schema definitions."""
         return False
 
     def matches(self, other):
@@ -295,7 +302,7 @@ class Schema(object):
         """
         # xxxcj - used to be (self.id or self.name), not sure if that's needed
         if self.parent:
-            if self.parent.isRef() or self.parent.isMulti():
+            if self.parent.is_ref() or self.parent.is_multi():
                 return self.parent.fullid(api)
             else:
                 return self.parent.fullid(api) + '/' + self.id
@@ -452,7 +459,7 @@ class Multi(Schema):
         raise KeyError("%s cannot resolve '%s' as a key" %
                        (self.fullname(), name))
 
-    def isMulti(self):
+    def is_multi(self):
         return True
     
 _register_type(Multi)
@@ -481,14 +488,14 @@ class Ref(Schema):
             self._refschema = sch
         return self._refschema
     
-    def isSimple(self):
+    def is_simple(self):
         return False
 
-    def isRef(self):
+    def is_ref(self):
         """Return True if this schema is a reference."""
         return True
 
-    def isMulti(self):
+    def is_multi(self):
         """Return True if this schema is a mutli-instance."""
         return False
 
@@ -545,8 +552,8 @@ class String(Schema):
     _type = 'string'
     def __init__(self, input, name, parent, **kwargs):
         Schema.__init__(self, String._type, input, name, parent, **kwargs)
-        parse_prop(self, input, 'minLength', checkType=int )
-        parse_prop(self, input, 'maxLength', checkType=int )
+        parse_prop(self, input, 'minLength', check_type=int )
+        parse_prop(self, input, 'maxLength', check_type=int )
         parse_prop(self, input, 'pattern')
         parse_prop(self, input, 'enum')
         parse_prop(self, input, 'default')
@@ -609,14 +616,14 @@ class NumberOrInteger(Schema):
     def __init__(self, type, allowed_types, input, name, parent, **kwargs):
         Schema.__init__(self, type, input, name, parent, **kwargs)
         self.allowed_types = allowed_types
-        parse_prop(self, input, 'minimum', checkType=allowed_types)
-        parse_prop(self, input, 'maximum', checkType=allowed_types)
-        parse_prop(self, input, 'exclusiveMinimum', checkType=bool,
-                                                    defaultValue=False)
-        parse_prop(self, input, 'exclusiveMaximum', checkType=bool,
-                                                    defaultValue=False)
-        parse_prop(self, input, 'default', checkType=allowed_types)
-        parse_prop(self, input, 'enum', checkType=list)
+        parse_prop(self, input, 'minimum', check_type=allowed_types)
+        parse_prop(self, input, 'maximum', check_type=allowed_types)
+        parse_prop(self, input, 'exclusiveMinimum', check_type=bool,
+                                                    default_value=False)
+        parse_prop(self, input, 'exclusiveMaximum', check_type=bool,
+                                                    default_value=False)
+        parse_prop(self, input, 'default', check_type=allowed_types)
+        parse_prop(self, input, 'enum', check_type=list)
 
         _check_input(self.fullname(), input)
 
@@ -753,7 +760,7 @@ class Object(Schema):
 
         return super(Object, self).__getitem__(name)
     
-    def isSimple(self):
+    def is_simple(self):
         return False
     
     def validate(self, input):
@@ -798,7 +805,7 @@ class Object(Schema):
                 keyname = subobj.xmlKeyName or 'key'
 
 
-                if subobj.isSimple():
+                if subobj.is_simple():
                     subelem = ET.SubElement(elem, subobj.id)
                     subelem.set(keyname, k)
 
@@ -835,7 +842,7 @@ class Array(Schema):
 
         _check_input(self.fullname(), input)
 
-    def isSimple(self):
+    def is_simple(self):
         return False
     
     @property
@@ -889,7 +896,7 @@ class Data(Schema):
         # validation of that type of data seems beyond the scope of reschema
         pass
 
-    def isSimple(self):
+    def is_simple(self):
         return True
 _register_type(Data)
 
@@ -920,10 +927,10 @@ class Relation(object):
     def __repr__(self):
         return "<jsonschema.%s '%s'>" % (self.__class__.__name__, self.fullid())
 
-    def isRef(self):
+    def is_ref(self):
         return False
     
-    def isMulti(self):
+    def is_multi(self):
         return False
 
     @property
@@ -1023,7 +1030,7 @@ class Link(object):
             self._params = {}
             if 'params' in input:
                 for key,value in parse_prop(None, input, 'params',
-                                            {}, checkType=dict).iteritems():
+                                            {}, check_type=dict).iteritems():
                     self._params[key] = Schema.parse(value, parent=self,
                                                             name=key)
             
@@ -1034,10 +1041,10 @@ class Link(object):
     def __repr__(self):
         return "<jsonschema.%s '%s'>" % (self.__class__.__name__, self.fullid())
     
-    def isRef(self):
+    def is_ref(self):
         return False
     
-    def isMulti(self):
+    def is_multi(self):
         return False
 
     @classmethod

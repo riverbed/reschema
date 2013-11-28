@@ -24,15 +24,15 @@ __all__ = ['RestSchema']
 
 class RestSchema(object):
 
-    def __init__(self):
-        self.filename = None
-        self.dir = None
-
     def load(self, filename):
-        self.filename = filename
-        self.dir = os.path.dirname(os.path.abspath(filename))
+        """Loads and parses a JSON or YAML schema.
 
-        # Support both JSON(.json) and YAML(.yml/.yaml) file formats
+        Support both JSON(.json) and YAML(.yml/.yaml) file formats
+        as detected by filename extensions.
+
+        :param filename: The path to the JSON or YAML file.
+        :raises ValueError: if the file has an unsupported extension.
+        """
         # TODO: Add option for un-marked loads if performance becomes an issue
 
         with open(filename, 'r') as f:
@@ -47,6 +47,13 @@ class RestSchema(object):
         self.parse(obj)
 
     def parse_text(self, text, format='json'):
+        """Loads and parses a schema from a string.
+
+        :param text: The string containing the schema.
+        :param format: Either 'json' (the default), 'yaml' or 'yml'.
+                       This much match the format of the data in the string.
+        """
+        # TODO: Why not default format to 'yaml' as it will successfully
         stream = StringIO(text)
         if format == 'json':
             obj = json_loader.marked_load(stream)
@@ -56,6 +63,11 @@ class RestSchema(object):
         return self.parse(obj)
 
     def parse(self, obj):
+        """Parses a Python data object representing a schema.
+
+        :param obj: The Python object containig the schema data.
+        :type obj: dict
+        """
         # Common properties
 
         parse_prop(self, obj, 'restSchemaVersion', required=True)

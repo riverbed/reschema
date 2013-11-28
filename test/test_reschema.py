@@ -105,8 +105,8 @@ class TestReschema(unittest.TestCase):
         r = reschema.RestSchema()
         r.load(CATALOG_YAML)
         a = r.resources['author']
-        self.assertFalse(a.isRef())
-        self.assertFalse(a.isSimple())
+        self.assertFalse(a.is_ref())
+        self.assertFalse(a.is_simple())
         self.assertIn('id', a.props)
         self.assertIn('name', a.props)
         self.assertEqual(a.id, 'author')
@@ -152,8 +152,8 @@ class TestCatalog(unittest.TestCase):
 
     def test_string(self):
         s = self.r.resources['author'].props['name']
-        self.assertFalse(s.isRef())
-        self.assertTrue(s.isSimple())
+        self.assertFalse(s.is_ref())
+        self.assertTrue(s.is_simple())
 
         # successful validation will return None
         self.assertIsNone(s.validate('foo'))
@@ -164,8 +164,8 @@ class TestCatalog(unittest.TestCase):
 
     def test_integer(self):
         n = self.r.resources['author'].props['id']
-        self.assertFalse(n.isRef())
-        self.assertTrue(n.isSimple())
+        self.assertFalse(n.is_ref())
+        self.assertTrue(n.is_simple())
 
         # successful validation will return None
         self.assertIsNone(n.validate(443))
@@ -179,8 +179,8 @@ class TestCatalog(unittest.TestCase):
 
     def test_reference(self):
         ref = self.r.find('publisher').props['billing_address']
-        self.assertFalse(ref.isSimple())
-        self.assertTrue(ref.isRef())
+        self.assertFalse(ref.is_simple())
+        self.assertTrue(ref.is_ref())
         self.assertEqual(ref.typestr, 'address')
 
     def test_link_target(self):
@@ -209,8 +209,8 @@ class TestCatalog(unittest.TestCase):
     def test_object(self):
         # skip validation, we are checking that elsewhere
         s = self.r.resources['author']
-        self.assertFalse(s.isRef())
-        self.assertFalse(s.isSimple())
+        self.assertFalse(s.is_ref())
+        self.assertFalse(s.is_simple())
         self.assertIsInstance(repr(s), str)
 
     def test_object_xml(self):
@@ -231,8 +231,8 @@ class TestCatalog(unittest.TestCase):
 
     def test_array(self):
         s = self.r.resources['authors']
-        self.assertFalse(s.isRef())
-        self.assertFalse(s.isSimple())
+        self.assertFalse(s.is_ref())
+        self.assertFalse(s.is_simple())
 
         # successful validation will return None
         p = [{'id': 1, 'name': 'Ted Nugent'},
@@ -436,7 +436,7 @@ class TestJsonSchema(TestSchemaBase):
         schema = self.parse("type: data\n"
                             "content_type: text\n"
                             "description: simple data\n")
-        self.assertTrue(schema.isSimple())
+        self.assertTrue(schema.is_simple())
 
     def test_string(self):
         self.check_bad_schema("type: string\n"

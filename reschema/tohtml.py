@@ -472,7 +472,7 @@ class SchemaSummaryXML(HTMLElement):
         
         for k in obj.props:
             prop = obj.props[k]
-            if not prop.isSimple():
+            if not prop.is_simple():
                 subelems = True
                 continue
             parent.span(cls="xmlschema-attribute").text = (
@@ -488,7 +488,7 @@ class SchemaSummaryXML(HTMLElement):
         
         for k in obj.props:
             prop = obj.props[k]
-            if prop.isSimple():
+            if prop.is_simple():
                 continue
             s = parent.span()
             self.process(s, prop, indent+2, name=k)
