@@ -265,10 +265,16 @@ class Schema(object):
 
         """
         return True
+    def isSimple(self):
+        """Compatibility method."""
+        return self.is_simple()
 
     def is_ref(self):
         """Return True if this schema is a reference."""
         return False
+    def isRef(self):
+        """Compatibility method."""
+        return self.is_ref()
     
     def is_multi(self):
         """Return True if this schema is a multi instance.
@@ -276,6 +282,9 @@ class Schema(object):
         Multi data types use the anyOf, oneOf or allOf properties
         to combine multiple schema definitions."""
         return False
+    def isMulti(self):
+        """Compatibility method."""
+        return self.is_multi()
 
     def matches(self, other):
         """ Return True if this schema refers to the same schema as other based on 'self'. """
