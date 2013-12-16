@@ -802,9 +802,12 @@ class TestSchema(TestSchemaBase):
                                       'a3': 'f3'},
                                      ])
 
-        self.assertEqual(r['/a2/a21_string'].fullid(), '/test_allof/a2/a21_string')
-        self.assertEqual(r['/a2/a22_number'].fullid(), '/test_allof/a2/a22_number')
-        self.assertEqual(r['/a2/a22_array/0'].fullid(), '/test_allof/a2/a22_array/items')
+        self.assertEqual(r['/a2/a21_string'].fullid(),
+                         '/test_allof/a2/a21_string')
+        self.assertEqual(r['/a2/a22_number'].fullid(),
+                         '/test_allof/a2/a22_number')
+        self.assertEqual(r['/a2/a22_array/0'].fullid(),
+                         '/test_allof/a2/a22_array/items')
 
     def test_oneof(self):
         r = self.r.resources['test_oneof']
@@ -829,6 +832,16 @@ class TestSchema(TestSchemaBase):
                          valid = [ 1, 2 ],
                          invalid = ['one', '2'])
         
+    def test_link_req_resp_defaults(self):
+        r = self.r.resources['test_methods']
+
+        self.check_valid(r.links['delete'].request,
+                         valid=[None],
+                         invalid=[{}, [], '', 0])
+        self.check_valid(r.links['delete'].response,
+                         valid=[None],
+                         invalid=[{}, [], '', 0])
+
 if __name__ == '__main__':
     logging.basicConfig(filename='test.log', level=logging.DEBUG)
     unittest.main()

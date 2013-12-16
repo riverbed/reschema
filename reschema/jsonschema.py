@@ -1029,10 +1029,16 @@ class Link(object):
         if 'request' in input:
             self._request = Schema.parse(parse_prop(None, input, 'request'),
                                          parent=self, name='request')
+        elif name != 'self':
+            self._request = Schema.parse({'type': 'null'},
+                                         parent=self, name='request')
         
         self._response = None
         if 'response' in input:
             self._response = Schema.parse(parse_prop(None, input, 'response'),
+                                          parent=self, name='response')
+        elif name != 'self':
+            self._response = Schema.parse({'type': 'null'},
                                           parent=self, name='response')
 
         if name == 'self':
