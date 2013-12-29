@@ -80,11 +80,18 @@ from reschema.exceptions import ValidationError, MissingParameter, ParseError
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_REQ_RESP = {
+    'oneOf': [
+        {'type': 'null'},
+        {'type': 'string', 'maxLength': 0}
+    ]
+}
+
 # Map of 'json-schema' type to class that handles it
 type_map = {}
 def _register_type(cls):
     type_map[cls._type] = cls
-    
+
 
 __all__ = ['Schema']
 
@@ -1030,7 +1037,8 @@ class Link(object):
             self._request = Schema.parse(parse_prop(None, input, 'request'),
                                          parent=self, name='request')
         elif name != 'self':
-            self._request = Schema.parse({'type': 'null'},
+            # Must deepcopy because of how parse_prop() works later on.
+            self._request = Schema.parse(copy.deepcopy(DEFAULT_REQ_RESP),
                                          parent=self, name='request')
         
         self._response = None
@@ -1038,7 +1046,8 @@ class Link(object):
             self._response = Schema.parse(parse_prop(None, input, 'response'),
                                           parent=self, name='response')
         elif name != 'self':
-            self._response = Schema.parse({'type': 'null'},
+            # Must deepcopy because of how parse_prop() works later on.
+            self._response = Schema.parse(copy.deepcopy(DEFAULT_REQ_RESP),
                                           parent=self, name='response')
 
         if name == 'self':

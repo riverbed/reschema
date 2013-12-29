@@ -836,11 +836,11 @@ class TestSchema(TestSchemaBase):
         r = self.r.resources['test_methods']
 
         self.check_valid(r.links['delete'].request,
-                         valid=[None],
-                         invalid=[{}, [], '', 0])
+                         valid=[None, ''],
+                         invalid=[{}, [], 0, ' '])
         self.check_valid(r.links['delete'].response,
-                         valid=[None],
-                         invalid=[{}, [], '', 0])
+                         valid=[None, ''],
+                         invalid=[{}, [], 0, ' '])
 
 if __name__ == '__main__':
     logging.basicConfig(filename='test.log', level=logging.DEBUG)
