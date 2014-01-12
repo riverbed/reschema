@@ -1,2 +1,5 @@
--e git+git@github.com:stefankoegl/python-json-pointer.git#egg=python-json-pointer
--e .
+--extra-index-url http://pypibox.lab.nbttech.com/flyscript/development/
+PyYAML
+Markdown
+uritemplate
+jsonpointer
