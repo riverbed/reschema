@@ -80,12 +80,7 @@ from reschema.exceptions import ValidationError, MissingParameter, ParseError
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_REQ_RESP = {
-    'oneOf': [
-        {'type': 'null'},
-        {'type': 'string', 'maxLength': 0}
-    ]
-}
+DEFAULT_REQ_RESP = {'type': 'null'}
 
 # Map of 'json-schema' type to class that handles it
 type_map = {}
