@@ -397,12 +397,6 @@ class Schema(object):
                   self.fullname(), self)
 
     def __getitem__(self, name):
-        if name == 'relations':
-            return self.relations
-
-        if name == 'links':
-            return self.links
-
         if name == '/':
             # Special case jsonpointer
             return self

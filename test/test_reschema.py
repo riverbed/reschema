@@ -251,7 +251,6 @@ class TestCatalog(unittest.TestCase):
         self.assertEqual(type(book['title']), String)
         self.assertGreater(len(book.str_simple()), 0)
         self.assertGreater(len(book.str_detailed()), 0)
-        self.assertEqual(book['links'], book.links)
 
         a = book['author_ids']
         self.assertEqual(type(a), Array)
