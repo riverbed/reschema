@@ -132,7 +132,7 @@ class RestSchema(object):
             parts = p.parts
             if parts[0] in self.resources:
                 o = self.resources[parts[0]]
-                return o['/' + '/'.join(parts[1:])]
+                return o.by_pointer('/' + '/'.join(parts[1:]))
         elif name in self.resources:
             return self.resources[name]
         else:
