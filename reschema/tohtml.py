@@ -171,7 +171,8 @@ class ResourceToHtml(object):
             httpmethod = link.method
             if httpmethod == "GET":
                 # Handle link.request as parameters
-                if link.request is not None:
+                if link.request is not None and \
+                       type(link.request) != reschema.jsonschema.Null:
                     props = link.request.props
                     params = ["%s={%s}" % (param, props[param].typestr)
                               for param in props.keys()]
@@ -199,8 +200,12 @@ class ResourceToHtml(object):
                 #    table.row([name, p.typestr, p.description])
 
             if httpmethod != "GET":
-                div.span(cls="h5").text = "Request Body"
-                if link.request is not None and httpmethod != "GET":
+                if link.request is not None and \
+                       type(link.request) != reschema.jsonschema.Null and \
+                       httpmethod != "GET":
+
+                    div.span(cls="h5").text = "Request Body"
+
                     # Need to look at the raw link._request to see if it's
                     # a ref, as link.request is auto-resolved thru refs
                     if type(link._request) is reschema.jsonschema.Ref:
@@ -226,11 +231,13 @@ class ResourceToHtml(object):
                         self.schema_table(link.request, div, baseid + '-request')
 
                 elif httpmethod in ("PUT", "POST"):
+                    div.span(cls="h5").text = "Request Body"
                     div.p().text = "Do not provide a request body."
 
             div.span(cls="h5").text = "Response Body"
             schema = link.response
-            if schema:
+            if schema is not None and \
+                   type(schema) is not reschema.jsonschema.Null:
                 if type(link._response) is reschema.jsonschema.Ref:
                     p = div.p()
                     p.settext("Returns ",
