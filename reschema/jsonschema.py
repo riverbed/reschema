@@ -396,6 +396,10 @@ class Schema(object):
                   "%s: input should not match 'not' schema" %
                   self.fullname(), self)
 
+    def _pointer_part_to_index(self, part):
+        # Subclasses can overried to type convert if needed.
+        return part
+
     def by_pointer(self, pointer):
         """Index into a schema by breaking a jsonpointer into parts.
 
@@ -404,23 +408,22 @@ class Schema(object):
 
         :param pointer: The JSON pointer.  May be either absolute or relative.
         """
-        if pointer == '/':
-            # Special case root jsonpointer
+        if pointer in ('/', '0/'):
+            # Special case root jsonpointer or relative pointer to self
             return self
         
         if pointer[0] == '/':
             # Absolute but non-root jsonpointer
             p = JsonPointer(pointer)
-            o = self
-            for part in p.parts:
-                o = o[part]
-            return o
+            index = self._pointer_part_to_index(p.parts[0])
+            return self[index].by_pointer('/%s' % '/'.join(p.parts[1:]))
 
         m = re.match('^([0-9]+)(/.*)$', pointer)
         if m:
             # Looks like a relative jsonpointer
             uplevels = int(m.group(1))
-            p = JsonPointer(m.group(2))
+            base_pointer = m.group(2)
+            p = JsonPointer(base_pointer)
             o = self
             for i in range(uplevels):
                 if o.parent is None:
@@ -431,11 +434,7 @@ class Schema(object):
                     
             if len(p.parts) == 1 and p.parts[0] == '':
                 return o
-            
-            for part in p.parts:
-                o = o[part]
-
-            return o
+            return o.by_pointer(base_pointer)
 
         # TODO: Does this still make sense?
         #       Or should it be ValueError for json-pointer syntax?
@@ -837,7 +836,6 @@ class Array(Schema):
         Schema.__init__(self, Array._type, input, name, parent, **kwargs)
 
         items = parse_prop(None, input, 'items', required=True)
-
         if 'id' in items:
             childname = items['id']
         else:
@@ -858,13 +856,19 @@ class Array(Schema):
         return 'array of <%s>' % self.items.typestr
 
     def __getitem__(self, name):
-        try:
-            name = int(name)
-        except ValueError:
-            raise TypeError("list indices must be integers, not %r" %
-                            type(name).__name__)
+        # Use internal function for convenience even if not pointer part.
+        # This is just to get the right exception on both code paths.
+        self._pointer_part_to_index(name)
         return self.items
     
+    def _pointer_part_to_index(self, part):
+        try:
+            index = int(part)
+        except ValueError:
+            raise TypeError("list indices must be integers, not %r" %
+                            type(part).__name__)
+        return index
+
     def validate(self, input):
         if not isinstance(input, list):
             raise ValidationError("%s should be an array, got '%s'" %
