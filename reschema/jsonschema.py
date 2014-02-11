@@ -962,17 +962,6 @@ class Relation(object):
 
         return self._resource
 
-    @classmethod
-    def find_by_id(cls, api, id):
-        """Find a relation by fullid."""
-
-        for pre in ['', '/relations/']:
-            fullid = '%s/schema#/%s%s' % (api, pre, id)
-            if fullid in cls.relations:
-                return cls.relations[fullid]
-
-        return None
-
     def fullname(self):
         return self.schema.fullname() + '.relations.' + self.name
 
@@ -1073,17 +1062,6 @@ class Link(object):
 
     def is_multi(self):
         return False
-
-    @classmethod
-    def find_by_id(cls, api, id):
-        """Find a link by fullid."""
-
-        for pre in ['', '/links/']:
-            fullid = '%s/schema#/%s%s' % (api, pre, id)
-            if fullid in cls.links:
-                return cls.links[fullid]
-
-        return None
 
     def fullname(self):
         return self.schema.fullname() + '.links.' + self.name

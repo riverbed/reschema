@@ -692,10 +692,6 @@ class TestJsonSchema(TestSchemaBase):
         link = schema.links['self']
         self.assertIsInstance(repr(link), str)
 
-        # XXX investigate this API
-        self.assertIsNone(link.find_by_id('/api', link.fullid()))
-        self.assertIsNotNone(link.find_by_id('/api', 'root/links/self'))
-
 class TestSchema(TestSchemaBase):
 
     def setUp(self):
