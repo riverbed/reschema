@@ -1,8 +1,8 @@
 # Copyright (c) 2013 Riverbed Technology, Inc.
 #
-# This software is licensed under the terms and conditions of the 
+# This software is licensed under the terms and conditions of the
 # MIT License set forth at:
-#   https://github.com/riverbed/reschema/blob/master/LICENSE ("License").  
+#   https://github.com/riverbed/reschema/blob/master/LICENSE ("License").
 # This software is distributed "AS IS" as set forth in the License.
 
 import os
@@ -22,11 +22,11 @@ class Document(object):
         self.head.script(type="text/javascript", text="$script")
         self.head.style(type="text/css", text="$css")
         self.body = self.html.body()
-        
+
         self.header = self.body.div(cls="header")
         if self.printable:
             self.header.attrib['style'] = 'display: none'
-        
+
         if self.printable:
             self.main = self.body.div(cls="main-printable")
         else:
@@ -56,7 +56,7 @@ class Document(object):
         f2 = open(path + "/restschema.css", "r")
         text = text.replace("$css", "<!--" + f2.read() + "-->")
         f2.close()
-        
+
         f2 = open(path + "/restschema.js", "r")
         text = text.replace("$script", f2.read())
         f2.close()
@@ -79,7 +79,7 @@ class Document(object):
                                   ">\n<\\1",
                                   line)
             f.write(line + "\n")
-            
+
         f.close()
 
 
@@ -92,7 +92,7 @@ class TabBar(object):
         self.init = True
         self.count = 0
         self.printable = printable
-        
+
     def init_tabbar(self):
         if self.printable:
             if self.count > 0:
@@ -103,11 +103,11 @@ class TabBar(object):
         self.tabContainer = self.div.div().div(cls='tabContainer', id='%s-tabs' % self.baseid)
         self.ul = self.tabContainer.div(cls='digiTabs', id='%s-tabbar' % self.baseid)
         self.init = False
-        
+
     def add_tab(self, label, id, content):
         if self.init or self.printable:
             self.init_tabbar()
-            
+
         self.ul.li(cls=('selected' if self.selected else None),
                    id='%s-tab-%s' % (self.baseid, id),
                    onclick='showtab("%s", "%s")' % (self.baseid, id)).text = label
@@ -131,7 +131,7 @@ class HTMLElement(ElementBase):
                 delargs.append(arg)
         for arg in delargs:
             del kwargs[arg]
-    
+
         if 'cls' in kwargs:
             kwargs['class'] = kwargs['cls']
             del kwargs['cls']
@@ -166,7 +166,7 @@ class HTMLElement(ElementBase):
                     last.tail = e
             else:
                 last = e
-            
+
     def tostring(self):
         return ET.tostring(self)
 
@@ -196,11 +196,11 @@ class HTMLTable(HTMLElement):
         grp = self.colgroup()
         for _cls in classes:
             grp.col(cls=_cls)
-        
+
     def row(self, cells, header=False):
         if self._body is None:
             self._body = self.tbody()
-            
+
         tr = self._body.tr()
         tds = []
         for cell in cells:
@@ -215,17 +215,17 @@ class Menu(HTMLElement):
     def __init__(self, parent, *args, **kwargs):
         HTMLElement.__init__(self, 'ul', *args, **kwargs)
         parent.append(self)
-        
+
     def add_item(self, text, href=None):
         li = self.li()
         if href is not None:
             if isinstance(href, HTMLElement):
                 href = '#' + href.attrib['id']
             li.a(href=href, text=text)
-                
+
         else:
             li.text = text
         return li
-        
+
     def add_submenu(self):
         return Menu(self)

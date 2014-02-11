@@ -1,8 +1,8 @@
 # Copyright (c) 2013 Riverbed Technology, Inc.
 #
-# This software is licensed under the terms and conditions of the 
+# This software is licensed under the terms and conditions of the
 # MIT License set forth at:
-#   https://github.com/riverbed/reschema/blob/master/LICENSE ("License").  
+#   https://github.com/riverbed/reschema/blob/master/LICENSE ("License").
 # This software is distributed "AS IS" as set forth in the License.
 
 """
@@ -31,10 +31,10 @@ Consider the following:
 
     >>> print bookschema.str_simple()
     book                           object               Book object
-    book.author_ids                array                
-    book.author_ids.[items]        number               
-    book.id                        number               
-    book.title                     string               
+    book.author_ids                array
+    book.author_ids.[items]        number
+    book.id                        number
+    book.title                     string
 
 Note that 'Array' and 'Object' schemas link to children schemas
 representing the array items and object properties respectively:
@@ -44,13 +44,13 @@ representing the array items and object properties respectively:
 
     >>> type(bookschema['id'])
     reschema.jsonschema.Number
-    
+
     >>> type(bookschema['author_ids'])
     reschema.jsonschema.Array
-    
+
     >>> type(bookschema['author_ids'][0])
     reschema.jsonschema.Number
-    
+
 The `validate` method will ensure that input data conforms to
 a schema.  This method may be called on any Schema variant, and
 it recursively validates the entire input data object as needed:
@@ -94,9 +94,9 @@ def _check_input(name, input):
     """ Verify that input is empty, all keywords should have been parsed. """
     if input is None:
         return
-    
+
     if not isinstance(input, dict):
-        raise ParseError('%s: definition should be a dictionary, got: %s' % 
+        raise ParseError('%s: definition should be a dictionary, got: %s' %
                          (name, type(input)), input)
 
     badkeys = input.keys()
@@ -137,7 +137,7 @@ class Schema(object):
         self.parent = parent
         self.name = name
         self.children = []
-        
+
         if api is None:
             if parent is None:
                 raise ValidationError(
@@ -153,7 +153,7 @@ class Schema(object):
         parse_prop(self, input, 'readOnly',
                    parent.readOnly if (parent and isinstance(parent, Schema))
                                    else False)
-        
+
         parse_prop(self, input, 'xmlTag')
         parse_prop(self, input, 'xmlSchema')
         parse_prop(self, input, 'xmlExample')
@@ -164,13 +164,13 @@ class Schema(object):
                                      check_type=dict).iteritems():
             #logger.debug("Schema %s: adding relation '%s'" % (str(self), key))
             self.relations[key] = Relation(value, key, self)
-            
+
         self.links = OrderedDict()
         for key, value in parse_prop(None, input, 'links', {},
                                      check_type=dict).iteritems():
             #logger.debug("Schema %s: adding link '%s'" % (str(self), key))
             self.links[key] = Link(value, key, self)
-            
+
         self._anyof = []
         for subinput in parse_prop(None, input, 'anyOf', [], check_type=list):
             s = Schema.parse(subinput, parent=self)
@@ -196,7 +196,7 @@ class Schema(object):
 
     def __repr__(self):
         return "<jsonschema.%s '%s'>" % (self.__class__.__name__, self.fullid())
-    
+
     @classmethod
     def parse(cls, input, name=None, parent=None, api=None):
         """Parse a <json-schema> definition for an object.
@@ -210,23 +210,23 @@ class Schema(object):
 
         :param api: the base address for api calls
                     If `api` is None, the parent's api is used.
-            
+
         :raises ParseError: if unexpected data or formats are encountered
                             while parsing.
         """
-    
+
         if not isinstance(input, dict):
             raise ParseError("Schema definition must be an object: %s%s" %
                              ((parent.fullname() + '.') if parent else '',
                               name),
                              input)
-        
+
         if name is None:
             name = parse_prop(None, input, 'id')
             if name is None:
                 name = 'element%d' % cls.count
                 cls.count = cls.count + 1
-            
+
         if '$ref' in input:
             typestr = '$ref'
         elif 'type' not in input:
@@ -258,7 +258,7 @@ class Schema(object):
     def typestr(self):
         """The <json-schema> type for this schema."""
         return self._typestr
-    
+
     def is_simple(self):
         """Returns True if this object is a simple data type.
 
@@ -277,7 +277,7 @@ class Schema(object):
     def isRef(self):
         """Compatibility method."""
         return self.is_ref()
-    
+
     def is_multi(self):
         """Return True if this schema is a multi instance.
 
@@ -294,7 +294,7 @@ class Schema(object):
                  ('self' in other.links) and
                  (self.links['self'].path.template ==
                   other.links['self'].path.template) )
-        
+
     def fullname(self):
         """Return the full printable name using dotted notation."""
         # TODO: Should this be cached?  Do we support changing it?
@@ -342,7 +342,7 @@ class Schema(object):
             s += additional_details
 
         s += '\n'
-        
+
         for child in self.children:
             s += child.str_detailed()
 
@@ -380,7 +380,7 @@ class Schema(object):
                 except ValidationError:
                     continue
                 return
-        
+
             raise ValidationError(
               "%s: input does not match any 'anyOf' schema" %
               self.fullname(), self)
@@ -413,7 +413,7 @@ class Schema(object):
         if pointer in ('/', '0/'):
             # Special case root jsonpointer or relative pointer to self
             return self
-        
+
         if pointer[0] == '/':
             # Absolute but non-root jsonpointer
             p = JsonPointer(pointer)
@@ -433,7 +433,7 @@ class Schema(object):
                       ("%s cannot resolve '%s' as a relative JSON pointer, "
                        "not enough uplevels") % (self.fullname(), pointer))
                 o = o.parent
-                    
+
             if len(p.parts) == 1 and p.parts[0] == '':
                 return o
             return o.by_pointer(base_pointer)
@@ -441,7 +441,7 @@ class Schema(object):
         # TODO: Does this still make sense?
         #       Or should it be ValueError for json-pointer syntax?
         raise KeyError(pointer)
-    
+
     def toxml(self, input, parent=None):
         """Generate an XML Element structure representing this element."""
         if parent is not None:
@@ -459,7 +459,7 @@ class Multi(Schema):
         Schema.__init__(self, Ref._type, input, name, parent, **kwargs)
 
         _check_input(self.fullname(), input)
-    
+
     def __getitem__(self, name):
         # TODO: The previous implementation, in addition to ignoring the
         #       _allof and _oneof lists, was highly order-dependent.
@@ -472,10 +472,10 @@ class Multi(Schema):
 
     def is_multi(self):
         return True
-    
+
 _register_type(Multi)
 
-            
+
 class Ref(Schema):
     _type = '$ref'
     def __init__(self, input, name, parent, **kwargs):
@@ -498,7 +498,7 @@ class Ref(Schema):
             sch.parent.api = self.api
             self._refschema = sch
         return self._refschema
-    
+
     def is_simple(self):
         return False
 
@@ -513,7 +513,7 @@ class Ref(Schema):
     @property
     def typestr(self):
         return self.refschema.id
-    
+
     def validate(self, input):
         self.refschema.validate(input)
 
@@ -522,7 +522,7 @@ class Ref(Schema):
 
     def __getitem__(self, name):
         return self.refschema.__getitem__(name)
-    
+
 _register_type(Ref)
 
 
@@ -601,7 +601,7 @@ class String(Schema):
               "%s: input not a valid enumeration value: %s" %
               (self.fullname(), trunc), self)
         super(String, self).validate(input)
-            
+
     def str_detailed(self):
         s = ''
         if self.minLength or self.maxLength:
@@ -623,7 +623,7 @@ _register_type(String)
 
 class NumberOrInteger(Schema):
     _type = 'number'
-    
+
     def __init__(self, type, allowed_types, input, name, parent, **kwargs):
         Schema.__init__(self, type, input, name, parent, **kwargs)
         self.allowed_types = allowed_types
@@ -642,7 +642,7 @@ class NumberOrInteger(Schema):
         if not any(isinstance(input, t) for t in self.allowed_types):
             raise ValidationError("%s should be a number, got '%s'" %
                                   (self.fullname(), type(input)), self)
-        
+
         if self.minimum is not None:
             if self.exclusiveMinimum:
                 if not (input > self.minimum):
@@ -654,7 +654,7 @@ class NumberOrInteger(Schema):
                     raise ValidationError(
                       "%s: input must be >= minimum %d, got %d" %
                       (self.fullname(), self.minimum, input), self)
-            
+
         if self.maximum is not None:
             if self.exclusiveMaximum:
                 if not (input < self.maximum):
@@ -695,7 +695,7 @@ class Number(NumberOrInteger):
     def __init__(self, input, name, parent, **kwargs):
         super(Number, self).__init__(self._type, (int, float), input,
                                      name, parent, **kwargs)
-        
+
 _register_type(Number)
 
 
@@ -705,7 +705,7 @@ class Integer(NumberOrInteger):
     def __init__(self, input, name, parent, **kwargs):
         super(Integer, self).__init__(self._type, (int,), input,
                                       name, parent, **kwargs)
-        
+
 _register_type(Integer)
 
 
@@ -744,7 +744,7 @@ class Object(Schema):
     def __init__(self, input, name, parent, **kwargs):
         Schema.__init__(self, Object._type, input, name, parent, **kwargs)
         self.props = OrderedDict()
-        
+
         for prop, value in parse_prop(None, input,
                                      'properties', {}).iteritems():
             c = Schema.parse(value, prop, self)
@@ -752,7 +752,7 @@ class Object(Schema):
             self.children.append(c)
 
         parse_prop(self, input, 'required')
-        
+
         ap = parse_prop(None, input, 'additionalProperties',
                         check_type=[dict, bool])
         if ap in (None, True):
@@ -774,10 +774,10 @@ class Object(Schema):
             return self.additional_props
         # Be lazy about generating the right kind of exception:
         self.props[name]
-    
+
     def is_simple(self):
         return False
-    
+
     def validate(self, input):
         if not isinstance(input, dict):
             raise ValidationError("%s should be an object, got '%s'" %
@@ -799,7 +799,7 @@ class Object(Schema):
                       "Missing required property '%s' for '%s'" %
                       (k, self.fullname()), self)
         super(Object, self).validate(input)
-            
+
     def toxml(self, input, parent=None):
         """Return ElementTree object with `input` data.
         Additional Properties that are not explicitly defined are not supported.
@@ -808,7 +808,7 @@ class Object(Schema):
             elem = ET.SubElement(parent, self.id)
         else:
             elem = ET.Element(self.id)
-            
+
         subelems = OrderedDict()
         inline_props = OrderedDict()
         for k in input:
@@ -829,7 +829,7 @@ class Object(Schema):
                     subelem = subobj.toxml(input[k])
                     subelem.set(keyname, k)
                     elem.append(subelem)
-                    
+
             else:
                 prop = self.props[k]
                 prop.toxml(input[k], elem)
@@ -858,7 +858,7 @@ class Array(Schema):
 
     def is_simple(self):
         return False
-    
+
     @property
     def typestr(self):
         return 'array of <%s>' % self.items.typestr
@@ -868,7 +868,7 @@ class Array(Schema):
         # This is just to get the right exception on both code paths.
         self._pointer_part_to_index(name)
         return self.items
-    
+
     def _pointer_part_to_index(self, part):
         try:
             index = int(part)
@@ -892,7 +892,7 @@ class Array(Schema):
             elem = ET.SubElement(parent, '%s' % self.id)
         else:
             elem = ET.Element(self.id)
-            
+
         for o in input:
             subelem = self.children[0].toxml(o)
             elem.append(subelem)
@@ -924,7 +924,7 @@ class Relation(object):
     # Map of all known relations:
     #   schemas["<api>/schema#<fullid>/relations/<name>"] -> Schema
     relations = {}
-    
+
     def __init__(self, input, name, schema):
         self.name = name
         self.schema = schema
@@ -939,16 +939,16 @@ class Relation(object):
         self.relations[self.fullid(api=True)] = self
 
         _check_input(self.fullname(), input)
-        
+
     def __str__(self):
         return self.resource.name
-        
+
     def __repr__(self):
         return "<jsonschema.%s '%s'>" % (self.__class__.__name__, self.fullid())
 
     def is_ref(self):
         return False
-    
+
     def is_multi(self):
         return False
 
@@ -959,9 +959,9 @@ class Relation(object):
             if self._resource is None:
                 raise KeyError("Invalid resource '%s' for relation: %s" %
                                (self._resource_name, self.fullname()))
-            
+
         return self._resource
-    
+
     @classmethod
     def find_by_id(cls, api, id):
         """Find a relation by fullid."""
@@ -975,10 +975,10 @@ class Relation(object):
 
     def fullname(self):
         return self.schema.fullname() + '.relations.' + self.name
-    
+
     def fullid(self, api=False):
         return self.schema.fullid(api) + '/relations/' + self.name
-    
+
     def str_simple(self):
         return '%-30s %-20s\n' % (self.fullname(), '<relation>')
 
@@ -1004,14 +1004,14 @@ class Relation(object):
                 if var in vals:
                     schema.validate(vals[var])
                     params[var] = vals[var]
-        
+
         return (uri, params)
-       
+
 class Link(object):
     # Map of all known links:
     #   schemas["<api>/schema#<fullid>/links/<name>"] -> Schema
     links = {}
-    
+
     def __init__(self, input, name, schema):
         self.name = name
         self.schema = schema
@@ -1034,7 +1034,7 @@ class Link(object):
             self.path = self.schema.links['self'].path
         else:
             self.path = None
-            
+
         self._request = None
         if 'request' in input:
             self._request = Schema.parse(parse_prop(None, input, 'request'),
@@ -1043,7 +1043,7 @@ class Link(object):
             # Must deepcopy because of how parse_prop() works later on.
             self._request = Schema.parse(copy.deepcopy(DEFAULT_REQ_RESP),
                                          parent=self, name='request')
-        
+
         self._response = None
         if 'response' in input:
             self._response = Schema.parse(parse_prop(None, input, 'response'),
@@ -1060,17 +1060,17 @@ class Link(object):
                                             {}, check_type=dict).iteritems():
                     self._params[key] = Schema.parse(value, parent=self,
                                                             name=key)
-            
+
         self.links[self.fullid(api=True)] = self
-    
+
         _check_input(self.fullname(), input)
 
     def __repr__(self):
         return "<jsonschema.%s '%s'>" % (self.__class__.__name__, self.fullid())
-    
+
     def is_ref(self):
         return False
-    
+
     def is_multi(self):
         return False
 
@@ -1087,10 +1087,10 @@ class Link(object):
 
     def fullname(self):
         return self.schema.fullname() + '.links.' + self.name
-    
+
     def fullid(self, api=False):
         return self.schema.fullid(api) + '/links/' + self.name
-    
+
     def str_simple(self):
         return '%-30s %-20s %s\n' % (self.fullname(), '<link>',
                                      self.description)
@@ -1101,14 +1101,14 @@ class Link(object):
         if type(r) is Ref:
             r = r.refschema
         return r
-    
+
     @property
     def response(self):
         r =  self._response
         if type(r) is Ref:
             r = r.refschema
         return r
-    
+
 
 class Path(object):
     """The `Path` class manages URI templates and resolves variables for a schema.
@@ -1132,17 +1132,17 @@ class Path(object):
     Since URI templates can only specify simple variables, the second form is
     used as a level of indirection to move up or down in a data structure
     relative to the place where the link was defined.
-    
+
     """
 
     def __init__(self, link, pathdef):
         """Create a `Path` associated with `link`."""
-           
+
         self.link = link
 
         self.pathdef = pathdef
         self.vars = None
-        
+
         if isinstance(pathdef, dict):
             self.template = pathdef['template']
             self.vars = pathdef['vars']
@@ -1180,7 +1180,7 @@ class Path(object):
               (self.link.name, self.template, [x for x in
                                                required.difference(have)]),
               self)
-            
+
         uri = uritemplate.expand(self.template, values)
         if uri[0] == '$':
             uri = self.link.api + uri[1:]

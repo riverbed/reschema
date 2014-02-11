@@ -29,7 +29,7 @@ outdir = 'reschema_doc_coverage_output'
 
 if not os.path.exists(outdir):
     os.makedirs(outdir)
-    
+
 
 html = outdir + "/" + "test_schema.html"
 if os.path.exists(html):

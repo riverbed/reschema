@@ -25,7 +25,7 @@ resources:
    info:
       type: object
       invalid_type: foo
-      properties: 
+      properties:
          owner: { type: string }
          email: { type: string }
 
@@ -33,7 +33,7 @@ resources:
          self: { path: "$/info" }
          books: { target: books }
          authors: { target: authors }
-         get:  
+         get:
             method: GET
             response: { $ref: info }
          set:

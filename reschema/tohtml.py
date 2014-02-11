@@ -1,8 +1,8 @@
 # Copyright (c) 2013 Riverbed Technology, Inc.
 #
-# This software is licensed under the terms and conditions of the 
+# This software is licensed under the terms and conditions of the
 # MIT License set forth at:
-#   https://github.com/riverbed/reschema/blob/master/LICENSE ("License").  
+#   https://github.com/riverbed/reschema/blob/master/LICENSE ("License").
 # This software is distributed "AS IS" as set forth in the License.
 
 import re
@@ -39,7 +39,7 @@ def _build_schema_href(schema):
         h = "#type"
 
     return h + '-' + html_str_to_id(schema.fullid())
-    
+
 class RestSchemaToHtml(object):
     restschema = None
 
@@ -74,7 +74,7 @@ class ResourceToHtml(object):
         self.container = container
         self.basepath = basepath
         self.options = (options or Options())
-        
+
     def read(self, filename, pointer=None, additional=None):
         if filename == "-":
             f = sys.stdin
@@ -99,13 +99,13 @@ class ResourceToHtml(object):
         if pointer:
             input = jsonpointer.resolve_pointer(input, pointer)
             name = pointer
-            
+
         self.schema_raw = input
         self.schema = Schema.parse(input, name=name)
-        
+
         if f is not sys.stdin:
             f.close()
-        
+
     def process(self, is_type=False):
         logger.debug("Processing resource: %s" % self.schema.fullname())
         menu = self.menu
@@ -125,7 +125,7 @@ class ResourceToHtml(object):
             if uri[0] == '$':
                 uri = self.basepath + uri[1:]
             div.pre().text = "https://{device}" + uri
-        
+
         self.schema_table(schema, div, baseid)
 
         if (not is_type):
@@ -146,7 +146,7 @@ class ResourceToHtml(object):
         #                           indent=2)))
         tabbar.finish()
         container.append(SchemaTable(schema))
-        
+
     def process_methods(self, container, containerid, submenu):
         schema = self.schema
         for name, link in schema.links.iteritems():
@@ -155,19 +155,19 @@ class ResourceToHtml(object):
 
             logger.debug("Processing method: %s - %s" %
                          (self.schema.fullname(), name))
-            
+
             baseid = containerid + '-method-%s' % name
             div = container.div(id=baseid, cls="method-body")
             submenu.add_item(name, href=div)
             div.h4().text = link.schema.fullname() + ": " + link.name
             div.p().text = link.description
-            
+
             uri = link.path.template
             if uri[0] == '$':
                 uri = self.basepath + uri[1:]
-                
+
             path = ("https://{device}" + uri)
-            
+
             httpmethod = link.method
             if httpmethod == "GET":
                 # Handle link.request as parameters
@@ -282,7 +282,7 @@ class SchemaSummaryJson(HTMLElement):
             example = schema.refschema.example
         else:
             example = schema.example
-        
+
         if example is not None:
             self.span().text = "\n\nExample:\n%s\n" % json.dumps(example, indent=2)
 
@@ -301,7 +301,7 @@ class SchemaSummaryJson(HTMLElement):
                 parent.a(cls="restschema-type", href=href, text=schema.refschema.name)
         else:
             parent.span(cls="restschema-type").text = schema.typestr
-            
+
     def process_object(self, parent, obj, indent):
         logger.debug("process_object: obj: %s" % obj.fullname())
         parent.span().text = "{\n"
@@ -315,7 +315,7 @@ class SchemaSummaryJson(HTMLElement):
             self.process(s, obj.props[k], indent+2)
             last = parent.span()
             last.text = '\n'
-            
+
         if obj.additional_props:
             if last is not None:
                 last.text = ",\n"
@@ -330,12 +330,12 @@ class SchemaSummaryJson(HTMLElement):
                 parent.span().text = ": "
                 s = parent.span()
                 self.process(s, obj.additional_props, indent+2)
-                
+
             last = parent.span()
             last.text = '\n'
 
         parent.span().text = "%*.*s}" % (indent, indent, "")
-    
+
     def process_array(self, parent, array, indent):
         #print "Array.schema_summary: type(self.children[0]) is %s" % type(self.children[0])
         item = array.children[0]
@@ -356,7 +356,7 @@ class SchemaSummaryXML(HTMLElement):
     def __init__(self, schema):
         HTMLElement.__init__(self, "pre", cls="restschema")
         self.text = self.process(self, schema, 0)
-    
+
         if type(schema) is reschema.jsonschema.Ref:
             example = schema.refschema.example
         elif schema.xmlExample is not None:
@@ -366,13 +366,13 @@ class SchemaSummaryXML(HTMLElement):
             example = None
         else:
             example = schema.example
-        
+
         if example is not None:
             example_xml = schema.toxml(example)
 
             x2 = xml.dom.minidom.parseString(ET.tostring(example_xml))
             xs = x2.toprettyxml(indent="  ").split("\n")
-            
+
             if re.search("\?xml", xs[0]):
                 # Remove the leading "xml" tag
                 xs = xs[1:]
@@ -380,7 +380,7 @@ class SchemaSummaryXML(HTMLElement):
             example_str = "\n".join(xs)
 
             self.span().text = "\n\nExample:\n%s\n" % example_str
-                
+
 
     def process(self, parent, schema, indent=0, follow_refs=False, name=None, json=None, key=None):
         if schema.xmlSchema is not None:
@@ -412,7 +412,7 @@ class SchemaSummaryXML(HTMLElement):
                     parent.span().text = ">\n"
                 else:
                     parent.span().text = "/>\n"
-                    
+
             assert (len(schema.xmlSchema.keys()) == 1)
             tag = schema.xmlSchema.keys()[0]
             spec = schema.xmlSchema[tag]
@@ -469,14 +469,14 @@ class SchemaSummaryXML(HTMLElement):
                   "%*s<%s>" % (indent, "", name))
             parent.span(cls="xmlschema-type").text = "%s" % schema.typestr
             parent.span(cls="xmlschema-element").text = "</%s>\n" % (name)
-            
+
     def process_object(self, parent, obj, indent, name, key=None):
         parent.span().text = "%*s<" % (indent, "")
         parent.span(cls="xmlschema-element").text =  name
         subelems = obj.additional_props
         first = True
         attr_indent = "\n%*s" % (indent + 2 + len(name), "")
-        
+
         for k in obj.props:
             prop = obj.props[k]
             if not prop.is_simple():
@@ -489,17 +489,17 @@ class SchemaSummaryXML(HTMLElement):
             first = False
 
         if subelems:
-            parent.span().text = ">\n" 
+            parent.span().text = ">\n"
         else:
             parent.span().text = "/>\n"
-        
+
         for k in obj.props:
             prop = obj.props[k]
             if prop.is_simple():
                 continue
             s = parent.span()
             self.process(s, prop, indent+2, name=k)
-            
+
         if obj.additional_props is True:
             pass
         elif obj.additional_props:
@@ -519,12 +519,12 @@ class SchemaSummaryXML(HTMLElement):
             except:
                 pass
             self.process(s, subobj, indent+2, name=subobj.id, key=keyname)
-            
+
         if subelems:
             parent.span().text = "%*s</" % (indent, "")
             parent.span(cls="xmlschema-element").text = name
             parent.span().text = ">\n"
-    
+
     def process_array(self, parent, array, indent, name, key):
         parent.span().text = "%*s<" % (indent, "")
         parent.span(cls="xmlschema-element").text = name
@@ -569,12 +569,12 @@ class PropTable(HTMLTable):
             if i != len(L) - 1:
                 if L[i+1][-1] != "]":
                     text += "."
-                
+
             elem.span(cls="restschema-%s" % "basename" if i == 0
                                                        else "property",
                       text=text)
             line += len(text)
-        
+
     def makerow(self, schema, name):
         tds = self.row(["", "", "", ""])
 
@@ -584,7 +584,7 @@ class PropTable(HTMLTable):
         # characters.
 
         self.setname(tds[0], name)
-        
+
         if isinstance(schema, reschema.jsonschema.Ref):
             dtype = schema.typestr
             tds[1].a(cls="restschema-type",
@@ -600,13 +600,13 @@ class PropTable(HTMLTable):
 
         if schema.readOnly:
             parts.append("Read-only")
-            
+
         if ( (schema.parent is not None) and
              (isinstance(schema.parent, reschema.jsonschema.Object)) and
              (schema.parent.required is not None) and
              (name not in schema.parent.required) ):
             parts.append("Optional")
-            
+
         if ( isinstance(schema, reschema.jsonschema.Number) or
              isinstance(schema, reschema.jsonschema.Integer) ):
             minimum = None
@@ -634,10 +634,10 @@ class PropTable(HTMLTable):
 
             if schema.maxItems is not None:
                 parts.append("Maximum: %s" % (schema.maxItems))
-            
+
         if isinstance(schema, reschema.jsonschema.Timestamp):
             parts.append("Seconds since January 1, 1970")
-            
+
         if hasattr(schema, 'default') and schema.default is not None:
             parts.append("Default is %s" % schema.default)
 
@@ -661,7 +661,7 @@ class ParamTable(PropTable):
         for p in parameters:
             self.makerow(parameters[p], p)
 
-                         
+
 class SchemaTable(PropTable):
     def __init__(self, schema):
         PropTable.__init__(self, schema)
@@ -678,7 +678,7 @@ class SchemaTable(PropTable):
                 tds[1].span(cls="restschema-type").text = "<value>"
                 tds[2].text = ("Additional properties may have "
                                "any property name and value")
-                
+
 if __name__ == '__main__':
     from optparse import OptionParser
 

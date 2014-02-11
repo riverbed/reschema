@@ -15,8 +15,8 @@ body
    background-color: #fff;
 }
 
-.header 
-{ 
+.header
+{
   float: top;
   margin: 10px;
   padding-left: 10px;
@@ -26,16 +26,16 @@ body
   width: 1160px;
   }
 
-.headerleft 
-{ 
+.headerleft
+{
   margin-top: 13px;
   font-size: 22pt;
   padding-left: 25px;
   float: left;
   }
 
-.headerright 
-{ 
+.headerright
+{
   vertical-align: bottom;
   font-size: 10pt;
   font-style: italic;
@@ -44,15 +44,15 @@ body
   padding-top: 30px;
   }
 
-.headerimg 
-{ 
+.headerimg
+{
   float: left;
-  width: 180px; 
+  width: 180px;
   overflow: hidden;
-  vertical-align: middle;  
+  vertical-align: middle;
   }
 
-.headerimg img 
+.headerimg img
 {
   width: 100%;
   }
@@ -119,7 +119,7 @@ body
   }
 
 .toctitle
-{ 
+{
   font-family: Helvetica, clean, sans-serif;
   font-weight: bold;
   padding-left:0.5em;
@@ -127,11 +127,11 @@ body
   }
 
 .toc > p, .links > p
-{ 
+{
   padding-left:0;
   }
 
-.toc > ul, 
+.toc > ul,
 .toc > ul > li > ul,
 .toc > ul > li > ul > li > ul,
 .toc > ul > li > ul > li > ul > li > ul,
@@ -155,7 +155,7 @@ body
   padding-right:5px;
   width: 905px;
   height: 100%;
-  
+
   background-color: #ffffff;
   overflow: auto;
   }
@@ -202,7 +202,7 @@ h2
   font-weight: bold;
 
   margin: 24px 0 6px;
-  
+
   border-top: 1px solid #aaa;
   padding-top: 0.4em;
   padding-bottom: 0.2em;
@@ -256,7 +256,7 @@ a:hover
   }
 
 dt
-{ 
+{
   font-size: 105%;
   font-weight: bold;
   padding-left: 0.5em;
@@ -290,7 +290,7 @@ code
   line-height: 1.5;
   }
 
-table.paramtable 
+table.paramtable
 {
   font-family: verdana,arial,sans-serif;
   font-size:11px;
@@ -321,7 +321,7 @@ table.paramtable col.paramtable-notes
     width: 30%;
 }
 
-table.paramtable th 
+table.paramtable th
 {
   border-width: 1px;
   padding: 4px;
@@ -330,7 +330,7 @@ table.paramtable th
   background-color: #dedede;
   }
 
-table.paramtable td 
+table.paramtable td
 {
   border-width: 1px;
   padding: 4px;
@@ -340,20 +340,20 @@ table.paramtable td
   }
 
 pre.restschema
-{ 
+{
   margin-left: 10px;
   background-color: #ffd;
  }
 
 span.restschema-type, a.restschema-type
 
-{ 
+{
   color: #070;
   font-style: italic;
  }
 
 span.restschema-property
-{ 
+{
   color: #009;
   }
 
@@ -363,24 +363,24 @@ span.restschema-indent
 }
 
 span.restschema-basename
-{ 
+{
   color: #666;
   font-style: italic;
   }
 
 span.xmlschema-type, a.xmlschema-type
-{ 
+{
   color: #070;
   font-style: italic;
  }
 
 span.xmlschema-attribute
-{ 
+{
   color: #099;
   }
 
 span.xmlschema-element
-{ 
+{
   color: #009;
   }
 

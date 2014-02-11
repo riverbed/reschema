@@ -1,8 +1,8 @@
 # Copyright (c) 2013 Riverbed Technology, Inc.
 #
-# This software is licensed under the terms and conditions of the 
+# This software is licensed under the terms and conditions of the
 # MIT License set forth at:
-#   https://github.com/riverbed/reschema/blob/master/LICENSE ("License").  
+#   https://github.com/riverbed/reschema/blob/master/LICENSE ("License").
 # This software is distributed "AS IS" as set forth in the License.
 
 """
@@ -35,11 +35,11 @@ class RelJsonPointer(JsonPointer):
                                            "expected '<int>/<pointer>" % relpointer)
 
             if uplevels > len(self.parts):
-                raise JsonPointerException("Base pointer '%s' is not deep enough for " 
+                raise JsonPointerException("Base pointer '%s' is not deep enough for "
                                            "relative pointer '%s' levels" %
                                            (basepointer, relpointer))
             relparts = JsonPointer('/' + relpath).parts
-            
+
         if uplevels > 0:
             self.parts = self.parts[0:-uplevels]
 

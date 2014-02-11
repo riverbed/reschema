@@ -306,7 +306,7 @@ class TestCatalogLinks(unittest.TestCase):
 
         (uri, params) = author_id.relations['full'].resolve(book_data, '/author_ids/1')
         self.assertEqual(uri, '/api/catalog/1.0/authors/5')
-        
+
         author = self.r.resources['author']
         author_data = {'id': 1, 'name': 'John Q'}
         author.validate(author_data)
@@ -326,13 +326,13 @@ class TestSchemaBase(unittest.TestCase):
             schema = self.parse(s)
         else:
             schema = s
-        
+
         for a in valid:
             try:
                 schema.validate(a)
             except ValidationError, e:
                 self.fail("ValidationError: value should pass: %s, %s" % (a, e))
-            
+
             if toxml:
                 schema.toxml(a)
 
@@ -401,7 +401,7 @@ class TestJsonSchema(TestSchemaBase):
                 {'object': 'stuff', 'nmber': 2},
             ],
             invalid=[])
-        
+
     def test_boolean(self):
         self.check_valid("type: boolean\n",
 
@@ -439,7 +439,7 @@ class TestJsonSchema(TestSchemaBase):
                                   "123",
                                   "1234512345"],
                          )
-        
+
     def test_data(self):
         # missing 'content_type'
         self.check_bad_schema("type: data\n",
@@ -717,11 +717,11 @@ class TestSchema(TestSchemaBase):
                                     'prop_array': [ 99, 98 ] },
                                    ],
 
-                         invalid = [ 
+                         invalid = [
                                      { 'prop_array': [ 99, 98 ] },
                                      { 'prop_array': [ 99, 98 ],
                                        'prop_string': 'foo' } ])
-        
+
     @pytest.mark.xfail
     def test_anyof1(self):
         r = self.r.resources['test_anyof1']
@@ -812,7 +812,7 @@ class TestSchema(TestSchemaBase):
                                             'a22_array' : [ 1, 2, 3 ]},
                                     'a3': 'd1' },
                                    ],
-                         
+
                          invalid = [ {'a1': 2,
                                       'a2': { 'a21_number': 2,
                                               'a21_string': 'foo' },
@@ -841,8 +841,8 @@ class TestSchema(TestSchemaBase):
         r = self.r.resources['test_oneof']
         self.check_valid(r,
 
-                         valid = [ {'a1': 1, 'a2': 21 }, 
-                                   {'a1': 5, 'a2': 10 }, 
+                         valid = [ {'a1': 1, 'a2': 21 },
+                                   {'a1': 5, 'a2': 10 },
                                    ],
 
                          invalid = [ {'a1': 1, 'a2': 2 },
@@ -859,7 +859,7 @@ class TestSchema(TestSchemaBase):
         self.check_valid(r,
                          valid = [ 1, 2 ],
                          invalid = ['one', '2'])
-        
+
     def test_link_req_resp_defaults(self):
         r = self.r.resources['test_methods']
 

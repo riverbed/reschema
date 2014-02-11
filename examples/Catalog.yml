@@ -8,40 +8,40 @@ types:
    address:
       type: object
       id: address
-        
+
       properties:
-         street: 
+         street:
             type: string
             description: "Street Address"
          city:
             type: string
-            description: "City" 
+            description: "City"
          state:
             type: string
-            description: "State" 
+            description: "State"
             pattern: "[A-Z][A-Z]"
-         zip: 
+         zip:
             type: string
-            description: "Zip Code (5-digit)" 
+            description: "Zip Code (5-digit)"
             pattern: "[0-9][0-9][0-9][0-9][0-9]"
 
 resources:
    info:
       type: object
-      properties: 
+      properties:
          owner: { type: string }
          email: { type: string }
 
       links:
          self: { path: "$/info" }
-         get:  
+         get:
             method: GET
             response: { $ref: info }
          set:
             method: PUT
             request: { $ref: info }
             response: { $ref: info }
-         
+
       relations:
          books: { resource: books }
          authors: { resource: authors }
@@ -52,7 +52,7 @@ resources:
 
       links:
          self: { path: "$/authors" }
-         get:  
+         get:
             method: GET
             response: { $ref: authors }
          create:
@@ -67,9 +67,9 @@ resources:
          id: { type: integer }
          name: { type: string }
 
-      links: 
+      links:
          self: { path: "$/authors/{id}" }
-         get:  
+         get:
             method: GET
             response: { $ref: author }
          set:
@@ -92,7 +92,7 @@ resources:
 
       links:
          self: { path: "$/publishers" }
-         get:  
+         get:
             method: GET
             response: { $ref: publishers }
          create:
@@ -106,20 +106,20 @@ resources:
          id: { type: integer }
          name: { type: string }
          billing_address: { $ref: address }
-         
+
       links:
          self: { path: "$/publishers/{id}" }
 
-         get:  
+         get:
             method: GET
             response: { $ref: publisher }
-            
+
       relations:
          instances: { resource: publishers }
 
    books:
       type: array
-      items: 
+      items:
          type: object
          properties:
             id: { type: integer, readOnly: true }
@@ -140,15 +140,15 @@ resources:
                   id: "0/publisher_id" # this array item, 'id' property
 
       links:
-      
-         self: 
+
+         self:
             path: "$/books"
-            params: 
+            params:
                # Allow filtering by id or title
                author: { type: integer }
                title: { type: string }
 
-         get: 
+         get:
             method: GET
             response: { $ref: books }
 
@@ -159,7 +159,7 @@ resources:
 
    book:
       description: A book object
-      example: 
+      example:
          id: 100
          title: My first book
          publisher_id: 5
@@ -174,9 +174,9 @@ resources:
          id: { type: integer }
          title: { type: string }
          publisher_id: { type: integer }
-         author_ids: 
+         author_ids:
             type: array
-            items: 
+            items:
                id: author_id
                type: integer
                relations:
@@ -184,14 +184,14 @@ resources:
                      resource: author
                      vars: { id: "0" }
 
-         chapters: 
+         chapters:
             type: array
-            items: 
+            items:
                type: object
-               properties: 
+               properties:
                   num: { type: integer }
                   heading: { type: string }
-                  
+
                relations:
                   full:
                      resource: book_chapter
@@ -203,7 +203,7 @@ resources:
       links:
          self: { path: "$/books/{id}" }
 
-         get:  
+         get:
             method: GET
             response: { $ref: book }
          set:
@@ -236,7 +236,7 @@ resources:
 
       relations:
          instances: { resource: books }
-         publisher: 
+         publisher:
             resource: publisher
             vars: { id: "0/publisher_id" }
 
@@ -250,7 +250,7 @@ resources:
       links:
          self: { path: "$/books/{bookid}/chapters/{num}" }
 
-         get:  
+         get:
             method: GET
             response: { $ref: info }
          set:
@@ -270,7 +270,7 @@ resources:
             response: { type: string }
 
       relations:
-         book: 
+         book:
             resource: book
             vars: { id: "0/bookid" }
 

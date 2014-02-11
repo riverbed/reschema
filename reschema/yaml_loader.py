@@ -73,7 +73,7 @@ class NodeConstructor(SafeConstructor):
             raise ConstructorError("while constructing an ordered map",
                                    node.start_mark,
                                    ("expected a mapping node, but found %s" %
-                                    node.id), 
+                                    node.id),
                                    node.start_mark)
         for key_node, value_node in node.value:
             key = self.construct_object(key_node)
@@ -82,11 +82,11 @@ class NodeConstructor(SafeConstructor):
             except TypeError, exc:
                 raise ConstructorError('while constructing a mapping',
                                        node.start_mark,
-                                       'found unacceptable key (%s)' % exc, 
+                                       'found unacceptable key (%s)' % exc,
                                        key_node.start_mark)
             value = self.construct_object(value_node)
             mapping[key] = value
-            
+
     def construct_yaml_omap(self, node):
         obj, = self._construct_ordereddict(node)
         add_marks_to_node(obj, node.start_mark, node.end_mark)
@@ -104,10 +104,10 @@ class NodeConstructor(SafeConstructor):
         obj = SafeConstructor.construct_scalar(self, node)
         return unicode_node(obj, node.start_mark, node.end_mark)
 
-NodeConstructor.add_constructor('tag:yaml.org,2002:map', 
+NodeConstructor.add_constructor('tag:yaml.org,2002:map',
                                 NodeConstructor.construct_yaml_omap)
 
-NodeConstructor.add_constructor('tag:yaml.org,2002:seq', 
+NodeConstructor.add_constructor('tag:yaml.org,2002:seq',
                                 NodeConstructor.construct_yaml_seq)
 
 NodeConstructor.add_constructor('tag:yaml.org,2002:str',
@@ -132,7 +132,7 @@ def test_marked_yaml():
     def loc(obj):
         return (obj.start_mark.line, obj.start_mark.column,
                 obj.end_mark.line, obj.end_mark.column)
-    
+
     # note: test very sensitive to whitespace in string below
     d = marked_load('''\
     a:

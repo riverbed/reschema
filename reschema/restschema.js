@@ -1,7 +1,7 @@
 function showtab(basename, which)
 {
     var lis=document.getElementById(basename+"-tabbar").childNodes; //gets all the LI from the UL
-    
+
     for(i=0;i<lis.length;i++)
     {
         lis[i].className=""; //removes the classname from all the LI

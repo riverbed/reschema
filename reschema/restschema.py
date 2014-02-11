@@ -1,8 +1,8 @@
 # Copyright (c) 2013 Riverbed Technology, Inc.
 #
-# This software is licensed under the terms and conditions of the 
+# This software is licensed under the terms and conditions of the
 # MIT License set forth at:
-#   https://github.com/riverbed/reschema/blob/master/LICENSE ("License").  
+#   https://github.com/riverbed/reschema/blob/master/LICENSE ("License").
 # This software is distributed "AS IS" as set forth in the License.
 
 # System imports
@@ -83,7 +83,7 @@ class RestSchema(object):
         # where 'format' is optional and defaults to 'md'
 
         parse_prop(self, obj, 'description', 'REST Schema for ' + self.name)
-            
+
         parse_prop(self, obj, 'documentationLink', '')
         parse_prop(self, obj, 'servicePath', '')
         parse_prop(self, obj, 'defaultAuthorization', None)
@@ -95,14 +95,14 @@ class RestSchema(object):
                   obj['types'][type_],
                   name=type_,
                   api=self.servicePath)
-        
+
         self.resources = OrderedDict()
         if 'resources' in obj:
             for resource in obj['resources']:
                 input_ = obj['resources'][resource]
                 sch = Schema.parse(input_, name=resource, api=self.servicePath)
                 self.resources[resource] = sch
-                
+
                 if 'self' not in sch.links:
                     raise ParseError("Resource '%s' missing 'self' link" %
                                      resource, input_)
@@ -110,7 +110,7 @@ class RestSchema(object):
                     raise ParseError(
                       "Resource '%s' 'self' link must define 'path'" %
                       resource, input_)
-                
+
         parse_prop(self, obj, 'tasks', None)
         parse_prop(self, obj, 'request_headers', None)
         parse_prop(self, obj, 'response_headers', None)
