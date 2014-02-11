@@ -198,6 +198,7 @@ resources:
                      vars:
                         bookid: "2/id" # go up two-levels, then "id"
                         num: "0/num" # this array item, then "num"
+      additionalProperties: false
 
       links:
          self: { path: "$/books/{id}" }

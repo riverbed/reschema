@@ -297,6 +297,7 @@ class Schema(object):
         
     def fullname(self):
         """Return the full printable name using dotted notation."""
+        # TODO: Should this be cached?  Do we support changing it?
         if self.parent:
             if isinstance(self.parent, Array):
                 return self.parent.fullname() + '[' + self.name + ']'
@@ -311,6 +312,7 @@ class Schema(object):
         Include the api path if `api` is true.
 
         """
+        # TODO: Should this be cached?  Do we support changing it?
         # xxxcj - used to be (self.id or self.name), not sure if that's needed
         if self.parent:
             if self.parent.is_ref() or self.parent.is_multi():
@@ -750,22 +752,28 @@ class Object(Schema):
             self.children.append(c)
 
         parse_prop(self, input, 'required')
-
-        ap = parse_prop(None, input, 'additionalProperties')
+        
+        ap = parse_prop(None, input, 'additionalProperties',
+                        check_type=[dict, bool])
+        if ap in (None, True):
+            ap = {}
         if type(ap) is bool:
-            self.additionalProps = ap
-        elif ap is not None:
-            name = ap['id'] if ('id' in ap) else 'prop'
-            c = Schema.parse(ap, '<' + name + '>', self)
-            self.additionalProps = c
-            self.children.append(c)
+            self.additional_props = ap
         else:
-            self.additionalProps = True
+            ap_name = ap['id'] if ('id' in ap) else 'prop'
+            c = Schema.parse(ap, '<%s>' % ap_name, self)
+            self.additional_props = c
+            self.children.append(c)
 
         _check_input(self.fullname(), input)
 
     def __getitem__(self, name):
-        return self.props[name]
+        if name in  self.props:
+            return self.props[name]
+        if self.additional_props is not False:
+            return self.additional_props
+        # Be lazy about generating the right kind of exception:
+        self.props[name]
     
     def is_simple(self):
         return False
@@ -778,11 +786,11 @@ class Object(Schema):
         for k in input:
             if k in self.props:
                 self.props[k].validate(input[k])
-            elif self.additionalProps in (None, False):
+            elif self.additional_props is False:
                 raise ValidationError("'%s' is not a valid property for %s" %
                                       (k, self.fullname()), self)
-            elif isinstance (self.additionalProps, Schema):
-                self.additionalProps.validate(input[k])
+            elif isinstance (self.additional_props, Schema):
+                self.additional_props.validate(input[k])
 
         if self.required is not None:
             for k in self.required:
@@ -805,10 +813,10 @@ class Object(Schema):
         inline_props = OrderedDict()
         for k in input:
             if k not in self.props:
-                if self.additionalProps in (None, True, False):
+                if self.additional_props is False:
                     raise ValueError('Invalid property: %s' % k)
 
-                subobj = copy.copy(self.additionalProps)
+                subobj = copy.copy(self.additional_props)
                 keyname = subobj.xmlKeyName or 'key'
 
 

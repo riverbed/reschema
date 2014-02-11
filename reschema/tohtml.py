@@ -316,20 +316,20 @@ class SchemaSummaryJson(HTMLElement):
             last = parent.span()
             last.text = '\n'
             
-        if obj.additionalProps:
+        if obj.additional_props:
             if last is not None:
                 last.text = ",\n"
-            if obj.additionalProps is True:
+            if obj.additional_props is True:
                 parent.span(cls="restschema-type").text = '%*.*s%s' % (indent+2, indent+2, "",
                                                                        'prop')
                 parent.span().text = ": "
                 parent.span(cls="restschema-type").text = 'value'
             else:
                 parent.span(cls="restschema-type").text = '%*.*s%s' % (indent+2, indent+2, "",
-                                                                   obj.additionalProps.name)
+                                                                   obj.additional_props.name)
                 parent.span().text = ": "
                 s = parent.span()
-                self.process(s, obj.additionalProps, indent+2)
+                self.process(s, obj.additional_props, indent+2)
                 
             last = parent.span()
             last.text = '\n'
@@ -473,7 +473,7 @@ class SchemaSummaryXML(HTMLElement):
     def process_object(self, parent, obj, indent, name, key=None):
         parent.span().text = "%*s<" % (indent, "")
         parent.span(cls="xmlschema-element").text =  name
-        subelems = obj.additionalProps
+        subelems = obj.additional_props
         first = True
         attr_indent = "\n%*s" % (indent + 2 + len(name), "")
         
@@ -500,12 +500,12 @@ class SchemaSummaryXML(HTMLElement):
             s = parent.span()
             self.process(s, prop, indent+2, name=k)
             
-        if obj.additionalProps is True:
+        if obj.additional_props is True:
             pass
-        elif obj.additionalProps:
+        elif obj.additional_props:
             s = parent.span()
 
-            subobj = copy.copy(obj.additionalProps)
+            subobj = copy.copy(obj.additional_props)
             keyname = subobj.xmlKeyName or 'key'
             try:
                 subobj.props = OrderedDict()
@@ -514,8 +514,8 @@ class SchemaSummaryXML(HTMLElement):
                 subobj.props[keyname] = subobj.schema.parse(json,
                                                             keyname,
                                                             subobj)
-                for k in obj.additionalProps.props:
-                    subobj.props[k] = obj.additionalProps.props[k]
+                for k in obj.additional_props.props:
+                    subobj.props[k] = obj.additional_props.props[k]
             except:
                 pass
             self.process(s, subobj, indent+2, name=subobj.id, key=keyname)
@@ -672,7 +672,7 @@ class SchemaTable(PropTable):
         for child in schema.children:
             self.process(child)
         if isinstance(schema, reschema.jsonschema.Object):
-            if schema.additionalProps is True:
+            if schema.additional_props is True:
                 tds = self.row(["", "", "", ""])
                 self.setname(tds[0], schema.fullname() + ".<prop>")
                 tds[1].span(cls="restschema-type").text = "<value>"

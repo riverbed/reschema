@@ -329,6 +329,7 @@
           }
         }
       }, 
+      "additionalProperties": false,
       "links": {
         "self": {
           "path": "$/books/{id}"

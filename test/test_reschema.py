@@ -14,7 +14,8 @@ from yaml.error import MarkedYAMLError
 
 import reschema
 from reschema.exceptions import ValidationError, ParseError, MissingParameter
-from reschema.jsonschema import Object, Integer, Number, String, Array, Schema
+from reschema.jsonschema import (Object, Integer, Number, String,
+                                 Array, Multi, Schema)
 from reschema import yaml_loader
 
 logger = logging.getLogger(__name__)
@@ -274,6 +275,14 @@ class TestCatalog(unittest.TestCase):
         with self.assertRaises(TypeError): a['10a']
         with self.assertRaises(KeyError): a0.by_pointer('3/')
 
+        # Unlike book, auther does not specify odditionalProperties
+        author = self.r.resources['author']
+        empty = Schema.parse({}, name='<prop>', parent=author)
+        self.assertEqual(author['randomjunk'].fullid(), empty.fullid())
+        self.assertEqual(author['randomjunk'], author.additional_props)
+        self.assertEqual(author.additional_props,
+                         author.children[-1])
+
 
 class TestCatalogLinks(unittest.TestCase):
 
@@ -378,6 +387,21 @@ class TestJsonSchema(TestSchemaBase):
         with self.assertRaises(ParseError):
             Schema.parse(d, api='/')
 
+    def test_empty(self):
+        e = Schema.parse({}, api='/')
+        self.check_valid(e,
+            valid=[
+                None,
+                True,
+                False,
+                -1,
+                9999999.33333333,
+                'some string',
+                ['array', 42, {}],
+                {'object': 'stuff', 'nmber': 2},
+            ],
+            invalid=[])
+        
     def test_boolean(self):
         self.check_valid("type: boolean\n",
 
