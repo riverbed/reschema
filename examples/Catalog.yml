@@ -1,4 +1,4 @@
-restSchemaVersion: "2.0"
+$schema: "service_def/2.0"
 name: "catalog"
 version: "1.0"
 title: "REST API for a book catalog"

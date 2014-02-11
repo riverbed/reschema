@@ -1,5 +1,5 @@
 {
-  "restSchemaVersion": "2.0",
+  "$schema": "service_def/2.0",
   "name": "catalog",
   "version": "1.0",
   "title": "REST API for a book catalog",
@@ -101,7 +101,7 @@
       "type": "object",
       "properties": {
         "id": {
-          "type": "number"
+          "type": "integer"
         },
         "name": {
           "type": "string"
@@ -172,7 +172,7 @@
       "type": "object",
       "properties": {
         "id": {
-          "type": "number"
+          "type": "integer"
         },
         "name": {
           "type": "string"
@@ -204,11 +204,11 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "number",
+            "type": "integer",
             "readOnly": true
           },
           "publisher_id": {
-            "type": "number"
+            "type": "integer"
           },
           "title": {
             "type": "string"
@@ -234,7 +234,7 @@
           "path": "$/books",
           "params": {
             "author": {
-              "type": "number"
+              "type": "integer"
             },
             "title": {
               "type": "string"
@@ -282,19 +282,19 @@
       "type": "object",
       "properties": {
         "id": {
-          "type": "number"
+          "type": "integer"
         },
         "title": {
           "type": "string"
         },
         "publisher_id": {
-          "type": "number"
+          "type": "integer"
         },
         "author_ids": {
           "type": "array",
           "items": {
             "id": "author_id",
-            "type": "number",
+            "type": "integer",
             "relations": {
               "full": {
                 "resource": "author",
@@ -311,7 +311,7 @@
             "type": "object",
             "properties": {
               "num": {
-                "type": "number"
+                "type": "integer"
               },
               "heading": {
                 "type": "string"
@@ -359,7 +359,7 @@
             "type": "object",
             "properties": {
               "num_copies": {
-                "type": "number"
+                "type": "integer"
               },
               "shipping_address": {
                 "$ref": "address"
@@ -405,10 +405,10 @@
       "type": "object",
       "properties": {
         "bookid": {
-          "type": "number"
+          "type": "integer"
         },
         "num": {
-          "type": "number"
+          "type": "integer"
         },
         "heading": {
           "type": "string"

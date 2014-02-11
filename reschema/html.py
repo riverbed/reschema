@@ -53,11 +53,11 @@ class Document(object):
         text = ET.tostring(self.html, method="html")
         path = os.path.dirname(os.path.abspath(reschema.__file__))
 
-        f2 = open(path + "/restschema.css", "r")
+        f2 = open(path + "/servicedef.css", "r")
         text = text.replace("$css", "<!--" + f2.read() + "-->")
         f2.close()
 
-        f2 = open(path + "/restschema.js", "r")
+        f2 = open(path + "/servicedef.js", "r")
         text = text.replace("$script", f2.read())
         f2.close()
 

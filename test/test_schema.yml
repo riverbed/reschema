@@ -1,4 +1,4 @@
-restSchemaVersion: "1.0"
+$schema: "service_def/2.0"
 name: "Test"
 version: "1.0"
 title: "Test REST API"

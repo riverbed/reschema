@@ -33,18 +33,18 @@ class Options(object):
 
 
 def _build_schema_href(schema):
-    if schema.name in RestSchemaToHtml.restschema.resources:
+    if schema.name in ServiceDefToHtml.servicedef.resources:
         h = "#resource"
     else:
         h = "#type"
 
     return h + '-' + html_str_to_id(schema.fullid())
 
-class RestSchemaToHtml(object):
-    restschema = None
+class ServiceDefToHtml(object):
+    servicedef = None
 
-    def __init__(self, restschema, container, menu=None, options=None):
-        RestSchemaToHtml.restschema = restschema
+    def __init__(self, servicedef, container, menu=None, options=None):
+        ServiceDefToHtml.servicedef = servicedef
         self.container = container
         self.menu = menu
         self.options = (options or Options())
@@ -54,16 +54,16 @@ class RestSchemaToHtml(object):
         resources_div = self.container.div(id='resources')
         self.menu.add_item("Resources", href=resources_div)
         resource_menu = self.menu.add_submenu()
-        for resource in self.restschema.resources.values():
+        for resource in self.servicedef.resources.values():
             ResourceToHtml(resource, self.container, resource_menu,
-                           self.restschema.servicePath, self.options).process()
+                           self.servicedef.servicePath, self.options).process()
 
         types_div = self.container.div(id='types')
         self.menu.add_item("Types", href=types_div)
         type_menu = self.menu.add_submenu()
-        for type_ in self.restschema.types.values():
+        for type_ in self.servicedef.types.values():
             ResourceToHtml(type_, self.container, type_menu,
-                           self.restschema.servicePath,
+                           self.servicedef.servicePath,
                            self.options).process(is_type=True)
 
 
@@ -275,7 +275,7 @@ class ResourceToHtml(object):
 
 class SchemaSummaryJson(HTMLElement):
     def __init__(self, schema):
-        HTMLElement.__init__(self, "pre", cls="restschema")
+        HTMLElement.__init__(self, "pre", cls="servicedef")
         self.process(self, schema, 0)
 
         if isinstance(schema, reschema.jsonschema.Ref):
@@ -298,9 +298,9 @@ class SchemaSummaryJson(HTMLElement):
                 self.process(parent, schema.refschema, indent)
             else:
                 href=_build_schema_href(schema.refschema)
-                parent.a(cls="restschema-type", href=href, text=schema.refschema.name)
+                parent.a(cls="servicedef-type", href=href, text=schema.refschema.name)
         else:
-            parent.span(cls="restschema-type").text = schema.typestr
+            parent.span(cls="servicedef-type").text = schema.typestr
 
     def process_object(self, parent, obj, indent):
         logger.debug("process_object: obj: %s" % obj.fullname())
@@ -309,7 +309,7 @@ class SchemaSummaryJson(HTMLElement):
         for k in obj.props:
             if last is not None:
                 last.text = ",\n"
-            parent.span(cls="restschema-property").text = ('%*.*s"%s": ' %
+            parent.span(cls="servicedef-property").text = ('%*.*s"%s": ' %
                                                            (indent+2, indent+2, "", k))
             s = parent.span()
             self.process(s, obj.props[k], indent+2)
@@ -320,12 +320,12 @@ class SchemaSummaryJson(HTMLElement):
             if last is not None:
                 last.text = ",\n"
             if obj.additional_props is True:
-                parent.span(cls="restschema-type").text = '%*.*s%s' % (indent+2, indent+2, "",
+                parent.span(cls="servicedef-type").text = '%*.*s%s' % (indent+2, indent+2, "",
                                                                        'prop')
                 parent.span().text = ": "
-                parent.span(cls="restschema-type").text = 'value'
+                parent.span(cls="servicedef-type").text = 'value'
             else:
-                parent.span(cls="restschema-type").text = '%*.*s%s' % (indent+2, indent+2, "",
+                parent.span(cls="servicedef-type").text = '%*.*s%s' % (indent+2, indent+2, "",
                                                                    obj.additional_props.name)
                 parent.span().text = ": "
                 s = parent.span()
@@ -341,7 +341,7 @@ class SchemaSummaryJson(HTMLElement):
         item = array.children[0]
         if isinstance(item, reschema.jsonschema.Ref):
             s = parent.span()
-            s.settext( "[ ", s.a(cls="restschema-type",
+            s.settext( "[ ", s.a(cls="servicedef-type",
                                  href=_build_schema_href(item.refschema),
                                  text=item.refschema.name),
                        " ]")
@@ -354,7 +354,7 @@ class SchemaSummaryJson(HTMLElement):
 
 class SchemaSummaryXML(HTMLElement):
     def __init__(self, schema):
-        HTMLElement.__init__(self, "pre", cls="restschema")
+        HTMLElement.__init__(self, "pre", cls="servicedef")
         self.text = self.process(self, schema, 0)
 
         if type(schema) is reschema.jsonschema.Ref:
@@ -565,12 +565,12 @@ class PropTable(HTMLTable):
             if line + len(text) > limit:
                 elem.br()
                 line = 2
-                elem.span(cls="restschema-indent", text="")
+                elem.span(cls="servicedef-indent", text="")
             if i != len(L) - 1:
                 if L[i+1][-1] != "]":
                     text += "."
 
-            elem.span(cls="restschema-%s" % "basename" if i == 0
+            elem.span(cls="servicedef-%s" % "basename" if i == 0
                                                        else "property",
                       text=text)
             line += len(text)
@@ -587,11 +587,11 @@ class PropTable(HTMLTable):
 
         if isinstance(schema, reschema.jsonschema.Ref):
             dtype = schema.typestr
-            tds[1].a(cls="restschema-type",
+            tds[1].a(cls="servicedef-type",
                      href=_build_schema_href(schema.refschema),
                      text="<" + schema.refschema.name + ">")
         else:
-            tds[1].span(cls="restschema-type", text="<" + schema.typestr + ">")
+            tds[1].span(cls="servicedef-type", text="<" + schema.typestr + ">")
 
         tds[2].text = schema.description
 
@@ -675,7 +675,7 @@ class SchemaTable(PropTable):
             if schema.additional_props is True:
                 tds = self.row(["", "", "", ""])
                 self.setname(tds[0], schema.fullname() + ".<prop>")
-                tds[1].span(cls="restschema-type").text = "<value>"
+                tds[1].span(cls="servicedef-type").text = "<value>"
                 tds[2].text = ("Additional properties may have "
                                "any property name and value")
 

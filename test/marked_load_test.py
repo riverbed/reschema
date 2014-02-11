@@ -15,7 +15,7 @@ of parsing problems from source data.
 """
 
 yaml_snippet_bad = """\
-restSchemaVersion: "2.0"
+$schema: "service_def/2.0"
 name: "Catalog"
 version: "1.0"
 title: "REST API for a book catalog"
@@ -44,7 +44,7 @@ resources:
 
 json_snippet_bad = """\
 {
-  "restSchemaVersion": "2.0",
+  "$schema": "service_def/2.0",
   "name": "Catalog",
   "version": "1.0",
   "title": "REST API for a book catalog",
@@ -97,7 +97,7 @@ print ''
 print 'Parsing bad YAML ...'
 print '-' * 80
 try:
-    r = reschema.RestSchema()
+    r = reschema.ServiceDef()
     r.parse_text(yaml_snippet_bad, format='yaml')
 except ReschemaException as e:
     print e
@@ -106,7 +106,7 @@ print ''
 print 'Parsing bad YAML from File ...'
 print '-' * 80
 try:
-    r = reschema.RestSchema()
+    r = reschema.ServiceDef()
     r.load(TEST_SCHEMA_YAML)
 except ReschemaException as e:
     print e
@@ -115,7 +115,7 @@ print ''
 print 'Parsing bad JSON ...'
 print '-' * 80
 try:
-    r = reschema.RestSchema()
+    r = reschema.ServiceDef()
     r.parse_text(json_snippet_bad)
 except ReschemaException as e:
     print e
@@ -124,7 +124,7 @@ print ''
 print 'Validating good YAML with bad values ...'
 print '-' * 80
 try:
-    r = reschema.RestSchema()
+    r = reschema.ServiceDef()
     r.load(TEST_SCHEMA_YAML)
     a = r.resources['test_string']
     a.validate(42)
@@ -135,7 +135,7 @@ except ReschemaException as e:
 #print 'Validating good JSON with bad values ...'
 #print '-' * 80
 #try:
-#    r = reschema.RestSchema()
+#    r = reschema.ServiceDef()
 #    r.load(TEST_SCHEMA_JSON)
 #    a = r.resources['test_string']
 #    a.validate(42)

@@ -339,30 +339,30 @@ table.paramtable td
   background-color: #ffffff;
   }
 
-pre.restschema
+pre.servicedef
 {
   margin-left: 10px;
   background-color: #ffd;
  }
 
-span.restschema-type, a.restschema-type
+span.servicedef-type, a.servicedef-type
 
 {
   color: #070;
   font-style: italic;
  }
 
-span.restschema-property
+span.servicedef-property
 {
   color: #009;
   }
 
-span.restschema-indent
+span.servicedef-indent
 {
     padding-left: 1em;
 }
 
-span.restschema-basename
+span.servicedef-basename
 {
   color: #666;
   font-style: italic;

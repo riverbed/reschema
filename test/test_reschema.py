@@ -39,12 +39,12 @@ class TestReschema(unittest.TestCase):
         pass
 
     def test_load_schema(self):
-        r = reschema.RestSchema()
+        r = reschema.ServiceDef()
         r.load(CATALOG_YAML)
         self.assertEqual(r.name, 'catalog')
 
     def test_load_schema_json(self):
-        r = reschema.RestSchema()
+        r = reschema.ServiceDef()
         r.load(CATALOG_JSON)
         self.assertEqual(r.name, 'catalog')
 
@@ -57,20 +57,20 @@ class TestReschema(unittest.TestCase):
             f.write('testingdata')
             f.close()
 
-            r = reschema.RestSchema()
+            r = reschema.ServiceDef()
             with self.assertRaises(ValueError):
                 r.load(name)
         finally:
             os.unlink(name)
 
     def test_parse_schema(self):
-        r = reschema.RestSchema()
+        r = reschema.ServiceDef()
         with open(CATALOG_YAML, 'r') as f:
             r.parse_text(f.read(), format='yaml')
         self.assertEqual(r.name, 'catalog')
 
     def test_parse_schema_json(self):
-        r = reschema.RestSchema()
+        r = reschema.ServiceDef()
         with open(CATALOG_JSON, 'r') as f:
             r.parse_text(f.read())
         self.assertEqual(r.name, 'catalog')
@@ -80,12 +80,12 @@ class TestReschema(unittest.TestCase):
             schema = f.readlines()
         schema.insert(31, '      bad_object_name: foo\n')
 
-        r = reschema.RestSchema()
+        r = reschema.ServiceDef()
         with self.assertRaises(MarkedYAMLError):
             r.parse_text(''.join(schema), format='yml')
 
     def test_resource_load(self):
-        r = reschema.RestSchema()
+        r = reschema.ServiceDef()
         r.load(CATALOG_YAML)
         self.assertEquals(len(r.resources), 8)
         self.assertIn('info', r.resources)
@@ -96,7 +96,7 @@ class TestReschema(unittest.TestCase):
             r.find_resource('no_resource')
 
     def test_type_load(self):
-        r = reschema.RestSchema()
+        r = reschema.ServiceDef()
         r.load(CATALOG_YAML)
         self.assertIn('address', r.types)
         self.assertTrue(r.find_type('address'))
@@ -104,7 +104,7 @@ class TestReschema(unittest.TestCase):
             r.find_type('no_type')
 
     def test_resource_objects(self):
-        r = reschema.RestSchema()
+        r = reschema.ServiceDef()
         r.load(CATALOG_YAML)
         a = r.resources['author']
         self.assertFalse(a.is_ref())
@@ -117,7 +117,7 @@ class TestReschema(unittest.TestCase):
         self.assertEqual(len(resources), 8)
 
     def test_find_name_basic(self):
-        r = reschema.RestSchema()
+        r = reschema.ServiceDef()
         r.load(CATALOG_YAML)
         a = r.find('author')
         self.assertEqual(a.id, 'author')
@@ -125,7 +125,7 @@ class TestReschema(unittest.TestCase):
             r.find('no_type')
 
     def test_find_name_complex(self):
-        r = reschema.RestSchema()
+        r = reschema.ServiceDef()
         r.load(CATALOG_YAML)
         c = r.find('/book/chapters')
         self.assertEqual(c.id, 'chapters')
@@ -146,7 +146,7 @@ class TestReschema(unittest.TestCase):
 class TestCatalog(unittest.TestCase):
 
     def setUp(self):
-        self.r = reschema.RestSchema()
+        self.r = reschema.ServiceDef()
         self.r.load(CATALOG_YAML)
 
     def tearDown(self):
@@ -287,7 +287,7 @@ class TestCatalog(unittest.TestCase):
 class TestCatalogLinks(unittest.TestCase):
 
     def setUp(self):
-        self.r = reschema.RestSchema()
+        self.r = reschema.ServiceDef()
         self.r.load(CATALOG_YAML)
 
     def tearDown(self):
@@ -695,7 +695,7 @@ class TestJsonSchema(TestSchemaBase):
 class TestSchema(TestSchemaBase):
 
     def setUp(self):
-        self.r = reschema.RestSchema()
+        self.r = reschema.ServiceDef()
         self.r.load(TEST_SCHEMA_YAML)
 
     def tearDown(self):

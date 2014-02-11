@@ -17,10 +17,10 @@ cov.start()
 
 import reschema
 from reschema.html import *
-from reschema.restschema import RestSchema
-from reschema.tohtml import RestSchemaToHtml, ResourceToHtml, Options
+from reschema import ServiceDef
+from reschema.tohtml import ServiceDefToHtml, ResourceToHtml, Options
 
-rs = RestSchema()
+rs = ServiceDef()
 rs.load(TEST_SCHEMA)
 
 title = "%s v%s %s" % (rs.title, rs.version, rs.status)
@@ -36,7 +36,7 @@ if os.path.exists(html):
     os.remove(html)
 
 htmldoc = reschema.html.Document(title, printable=False)
-r2h = RestSchemaToHtml(rs, htmldoc.content, htmldoc.menu,
+r2h = ServiceDefToHtml(rs, htmldoc.content, htmldoc.menu,
                        options=Options(printable=False,
                                        json=True, xml=True))
 r2h.process()

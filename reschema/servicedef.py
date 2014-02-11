@@ -19,10 +19,10 @@ from reschema.util import parse_prop
 from reschema import yaml_loader, json_loader
 from reschema.exceptions import ParseError
 
-__all__ = ['RestSchema']
+__all__ = ['ServiceDef']
 
 
-class RestSchema(object):
+class ServiceDef(object):
 
     def load(self, filename):
         """Loads and parses a JSON or YAML schema.
@@ -70,7 +70,7 @@ class RestSchema(object):
         """
         # Common properties
 
-        parse_prop(self, obj, 'restSchemaVersion', required=True)
+        self.schema = parse_prop(None, obj, '$schema', required=True)
         parse_prop(self, obj, 'name', required=True)
         parse_prop(self, obj, 'version', required=True)
         parse_prop(self, obj, 'title', self.name)
@@ -82,7 +82,7 @@ class RestSchema(object):
         #    'description' : { 'text': <string>, 'format': <format> }
         # where 'format' is optional and defaults to 'md'
 
-        parse_prop(self, obj, 'description', 'REST Schema for ' + self.name)
+        parse_prop(self, obj, 'description', 'Service Definition for ' + self.name)
 
         parse_prop(self, obj, 'documentationLink', '')
         parse_prop(self, obj, 'servicePath', '')

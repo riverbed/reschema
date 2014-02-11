@@ -10,8 +10,8 @@ from optparse import OptionParser
 
 import reschema
 from reschema.html import *
-from reschema.restschema import RestSchema
-from reschema.tohtml import RestSchemaToHtml, ResourceToHtml, Options
+from reschema import ServiceDef
+from reschema.tohtml import ServiceDefToHtml, ResourceToHtml, Options
 
 parser = OptionParser()
 parser.add_option('-f', '--file', dest='filename',
@@ -53,7 +53,7 @@ if not options.pdf and not options.html:
     parser.print_usage()
     sys.exit(1)
 
-rs = RestSchema()
+rs = ServiceDef()
 rs.load(options.filename)
 
 title = "%s v%s %s" % (rs.title, rs.version, rs.status)
@@ -80,7 +80,7 @@ if options.html:
         os.remove(html)
 
     htmldoc = reschema.html.Document(title, printable=False)
-    r2h = RestSchemaToHtml(rs, htmldoc.content, htmldoc.menu,
+    r2h = ServiceDefToHtml(rs, htmldoc.content, htmldoc.menu,
                            options=Options(printable=False,
                                            json=(not options.nojson),
                                            xml=(not options.noxml)))
@@ -95,7 +95,7 @@ if options.pdf:
         os.remove(phtml)
 
     htmldoc = reschema.html.Document(title, printable=True)
-    r2h = RestSchemaToHtml(rs, htmldoc.content, htmldoc.menu,
+    r2h = ServiceDefToHtml(rs, htmldoc.content, htmldoc.menu,
                            options=Options(printable=True,
                                            json=(not options.nojson),
                                            xml=(not options.noxml)))
