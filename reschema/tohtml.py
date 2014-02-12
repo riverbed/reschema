@@ -40,6 +40,7 @@ def _build_schema_href(schema):
 
     return h + '-' + html_str_to_id(schema.fullid())
 
+
 class ServiceDefToHtml(object):
     servicedef = None
 
@@ -298,7 +299,8 @@ class SchemaSummaryJson(HTMLElement):
                 self.process(parent, schema.refschema, indent)
             else:
                 href=_build_schema_href(schema.refschema)
-                parent.a(cls="servicedef-type", href=href, text=schema.refschema.name)
+                parent.a(cls="servicedef-type", href=href,
+                         text=schema.refschema.name)
         else:
             parent.span(cls="servicedef-type").text = schema.typestr
 
@@ -309,8 +311,10 @@ class SchemaSummaryJson(HTMLElement):
         for k in obj.props:
             if last is not None:
                 last.text = ",\n"
-            parent.span(cls="servicedef-property").text = ('%*.*s"%s": ' %
-                                                           (indent+2, indent+2, "", k))
+
+            txt = ('%*.*s"%s": ' % (indent+2, indent+2, "", k))
+            parent.span(cls="servicedef-property").text = txt
+            
             s = parent.span()
             self.process(s, obj.props[k], indent+2)
             last = parent.span()
@@ -320,13 +324,14 @@ class SchemaSummaryJson(HTMLElement):
             if last is not None:
                 last.text = ",\n"
             if obj.additional_props is True:
-                parent.span(cls="servicedef-type").text = '%*.*s%s' % (indent+2, indent+2, "",
-                                                                       'prop')
+                txt = '%*.*s%s' % (indent+2, indent+2, "", 'prop')
+                parent.span(cls="servicedef-type").text = txt
                 parent.span().text = ": "
                 parent.span(cls="servicedef-type").text = 'value'
             else:
-                parent.span(cls="servicedef-type").text = '%*.*s%s' % (indent+2, indent+2, "",
-                                                                   obj.additional_props.name)
+                txt = '%*.*s%s' % (indent+2, indent+2, "",
+                                   obj.additional_props.name)
+                parent.span(cls="servicedef-type").text = txt
                 parent.span().text = ": "
                 s = parent.span()
                 self.process(s, obj.additional_props, indent+2)
@@ -337,12 +342,11 @@ class SchemaSummaryJson(HTMLElement):
         parent.span().text = "%*.*s}" % (indent, indent, "")
 
     def process_array(self, parent, array, indent):
-        #print "Array.schema_summary: type(self.children[0]) is %s" % type(self.children[0])
         item = array.children[0]
         if isinstance(item, reschema.jsonschema.Ref):
             s = parent.span()
-            s.settext( "[ ", s.a(cls="servicedef-type",
-                                 href=_build_schema_href(item.refschema),
+            s.settext("[ ", s.a(cls="servicedef-type",
+                                href=_build_schema_href(item.refschema),
                                  text=item.refschema.name),
                        " ]")
 

@@ -18,7 +18,7 @@ cov.start()
 import reschema
 from reschema.html import *
 from reschema import ServiceDef
-from reschema.tohtml import ServiceDefToHtml, ResourceToHtml, Options
+from reschema.tohtml import ServiceDefToHtml, Options
 
 rs = ServiceDef()
 rs.load(TEST_SCHEMA)

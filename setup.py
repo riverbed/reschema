@@ -34,8 +34,8 @@ readme = open('README.rst').read()
 setup(
     name='reschema',
     version=get_version(),
-    description=("reschema - Parse REST API service defintions into Python objects, "
-                 "support documentation generation"),
+    description=("reschema - Parse REST API service defintions into Python "
+                 "objects, support documentation generation"),
     long_description=readme,
     author="Riverbed Technology",
     author_email="cwhite@riverbed.com",

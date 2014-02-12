@@ -82,7 +82,8 @@ class ServiceDef(object):
         #    'description' : { 'text': <string>, 'format': <format> }
         # where 'format' is optional and defaults to 'md'
 
-        parse_prop(self, obj, 'description', 'Service Definition for ' + self.name)
+        parse_prop(self, obj, 'description',
+                   'Service Definition for ' + self.name)
 
         parse_prop(self, obj, 'documentationLink', '')
         parse_prop(self, obj, 'servicePath', '')
