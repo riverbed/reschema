@@ -74,7 +74,8 @@ class ServiceDef(object):
 
         self.schema = parse_prop(None, obj, '$schema', required=True)
         if self.schema != "http://support.riverbed.com/apis/service_def/2.1":
-            raise UnsupportedSchema("Unsupported schema format: %s" % self.schema)
+            raise UnsupportedSchema("Unsupported schema format: %s" %
+                                    self.schema)
 
         parse_prop(self, obj, 'id', required=True)
         parse_prop(self, obj, 'provider', required=True)
@@ -174,7 +175,7 @@ class ServiceDef(object):
 
         If `reference` is not provide, a reference of the latter 2 forms
         will raise a NoContext exception.
- 
+
         """
         parsed_reference = urlparse.urlparse(reference)
         if parsed_reference.netloc:
