@@ -78,7 +78,7 @@ class TestReschema(unittest.TestCase):
     def test_load_bad_schema(self):
         with open(CATALOG_YAML, 'r') as f:
             schema = f.readlines()
-        for i,line in enumerate(schema):
+        for i, line in enumerate(schema):
             if "type: object" in line:
                 schema.insert(i-1, '      bad_object_name: foo\n')
                 break
@@ -198,7 +198,8 @@ class TestCatalog(unittest.TestCase):
         link = pub.links['self']
         path = link.path
         self.assertEqual(str(path), '$/publishers/{id}')
-        self.assertEqual(path.resolve('/api/catalog/1.0', {'id': 12}), '/api/catalog/1.0/publishers/12')
+        self.assertEqual(path.resolve('/api/catalog/1.0', {'id': 12}),
+                         '/api/catalog/1.0/publishers/12')
 
     def test_link_template_path(self):
         book = self.r.find('book')
@@ -206,7 +207,8 @@ class TestCatalog(unittest.TestCase):
         items = chapters.items
         book_chapter = items.relations['full']
         data = {'book': book.example}
-        (uri, params) = book_chapter.resolve('/api/catalog/1.0', data, '/book/chapters/1')
+        (uri, params) = book_chapter.resolve('/api/catalog/1.0', data,
+                                             '/book/chapters/1')
         self.assertEqual(uri, '/api/catalog/1.0/books/100/chapters/2')
         with self.assertRaises(MissingParameter):
             book_chapter.resolve('/api/catalog/1.0', None)
@@ -299,7 +301,7 @@ class TestCatalogLinks(unittest.TestCase):
     def test_links(self):
         book = self.r.resources['book']
         book_data = {'id': 1, 'title': 'My first book',
-                     'publisher_id': 5, 'author_ids' : [1, 5]}
+                     'publisher_id': 5, 'author_ids': [1, 5]}
         book.validate(book_data)
 
         author_id = book['author_ids'][0]
@@ -307,21 +309,25 @@ class TestCatalogLinks(unittest.TestCase):
 
         (uri, params) = (author_id
                          .relations['full']
-                         .resolve('/api/catalog/1.0', book_data, '/author_ids/0'))
+                         .resolve('/api/catalog/1.0',
+                                  book_data, '/author_ids/0'))
 
         self.assertEqual(uri, '/api/catalog/1.0/authors/1')
 
         (uri, params) = (author_id
                          .relations['full']
-                         .resolve('/api/catalog/1.0', book_data, '/author_ids/1'))
-        
+                         .resolve('/api/catalog/1.0', book_data,
+                                  '/author_ids/1'))
+
         self.assertEqual(uri, '/api/catalog/1.0/authors/5')
 
         author = self.r.resources['author']
         author_data = {'id': 1, 'name': 'John Q'}
         author.validate(author_data)
 
-        (uri, params) = author.relations['books'].resolve('/api/catalog/1.0', author_data)
+        (uri, params) = (author
+                         .relations['books']
+                         .resolve('/api/catalog/1.0', author_data))
         logger.debug('author.relations.books uri: %s %s' % (uri, params))
 
 

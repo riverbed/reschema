@@ -115,7 +115,8 @@ class Schema(object):
     #   <servicedef.id>#<relpath>
     schemas = {}
 
-    def __init__(self, typestr, input, name=None, parent=None, servicedef=None):
+    def __init__(self, typestr, input, name=None,
+                 parent=None, servicedef=None):
         """Create a new Schema object of the given `typestr`.
 
         :param typestr: the <json-schema> type
@@ -143,7 +144,7 @@ class Schema(object):
         if servicedef is None:
             if parent is None:
                 raise ValidationError(
-                  "Must specify 'servicedef' if parent is None", input)
+                    "Must specify 'servicedef' if parent is None", input)
             servicedef = parent.servicedef
 
         self.servicedef = servicedef
@@ -320,7 +321,8 @@ class Schema(object):
                 return self.parent.fullid(relative)
             else:
                 return self.parent.fullid(relative) + '/' + self.id
-        return ((self.servicedef.id + '#') if (not relative) else '#') + self.id
+        return ((self.servicedef.id + '#')
+                if (not relative) else '#') + self.id
 
     def str_simple(self):
         """Return a string representation of this element as a basic table."""
@@ -482,11 +484,12 @@ class Ref(Schema):
     def __init__(self, input, name, parent, **kwargs):
         Schema.__init__(self, Ref._type, input, name, parent, **kwargs)
 
-        # Lazy resolution because references may be used before they are defined
+        # Lazy resolution because references may be used before they
+        # are defined
         self._refschema = None
         ref_id = parse_prop(None, input, '$ref', required=True)
         self.refschema_id = self.servicedef.expand_id(ref_id, self.servicedef)
-        
+
         _check_input(self.fullname(), input)
 
     @property
@@ -931,10 +934,12 @@ class Relation(object):
         self.schema = schema
         self.vars = None
 
-        # Lazy resolution because references may be used before they are defined
+        # Lazy resolution because references may be used before they
+        # are defined
         self._resource = None
         ref_id = parse_prop(None, input, 'resource', required=True)
-        self._resource_id = schema.servicedef.expand_id(ref_id, schema.servicedef)
+        self._resource_id = (schema.servicedef
+                             .expand_id(ref_id, schema.servicedef))
 
         self.vars = parse_prop(self, input, 'vars')
 

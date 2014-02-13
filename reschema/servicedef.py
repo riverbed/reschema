@@ -19,7 +19,7 @@ from jsonpointer import resolve_pointer, JsonPointer
 from reschema.jsonschema import Schema
 from reschema.util import parse_prop
 from reschema import yaml_loader, json_loader
-from reschema.exceptions import ParseError, UnsupportedSchema
+from reschema.exceptions import ParseError, UnsupportedSchema, NoContext
 
 __all__ = ['ServiceDef']
 
@@ -75,7 +75,7 @@ class ServiceDef(object):
         self.schema = parse_prop(None, obj, '$schema', required=True)
         if self.schema != "http://support.riverbed.com/apis/service_def/2.1":
             raise UnsupportedSchema("Unsupported schema format: %s" % self.schema)
-        
+
         parse_prop(self, obj, 'id', required=True)
         parse_prop(self, obj, 'provider', required=True)
         parse_prop(self, obj, 'name', required=True)
@@ -83,9 +83,10 @@ class ServiceDef(object):
 
         m = re.match('^(.*)/%s/%s' % (self.name, self.version), self.id)
         if not m:
-            raise ParseError("Service definition 'id' property must end with 'name'/'version'")
+            raise ParseError("Service definition 'id' property must end "
+                             "with 'name'/'version'")
         self.id_root = m.group(1)
-        
+
         parse_prop(self, obj, 'title', self.name)
         parse_prop(self, obj, 'status', '')
 
@@ -112,7 +113,9 @@ class ServiceDef(object):
         if 'resources' in obj:
             for resource in obj['resources']:
                 input_ = obj['resources'][resource]
-                sch = Schema.parse(input_, name='/resources/' + resource, servicedef=self)
+                sch = Schema.parse(input_,
+                                   name='/resources/' + resource,
+                                   servicedef=self)
                 self.resources[resource] = sch
 
                 if 'self' not in sch.links:
@@ -171,7 +174,7 @@ class ServiceDef(object):
 
         If `reference` is not provide, a reference of the latter 2 forms
         will raise a NoContext exception.
-        
+ 
         """
         parsed_reference = urlparse.urlparse(reference)
         if parsed_reference.netloc:
