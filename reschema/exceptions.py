@@ -13,6 +13,20 @@ class ReschemaException(Exception):
     """ Base exception class for reschema errors. """
 
 
+class UnsupportedSchema(ReschemaException):
+    """ Schema could not be parsed because it defines an unsupported schema format. """
+    pass
+
+class NoContext(ReschemaException):
+    """ A relative reference was provided with no supporting context. """
+
+    def __init__(self, reference):
+        self._reference = reference
+    
+    def __str__(self):
+        return "Relative reference connot be resolve without context: %s" % self._reference
+
+
 #
 # jsonschema parsing errors
 #
@@ -45,6 +59,7 @@ class MissingParameter(MarkedError):
 
 class ParseError(MarkedError):
     """ Schema parsing error. """
+
 
 
 #

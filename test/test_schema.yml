@@ -1,8 +1,9 @@
-$schema: "service_def/2.0"
-name: "Test"
+$schema: "http://support.riverbed.com/apis/service_def/2.1"
+id: "http://support.riverbed.com/apis/test/1.0"
+provider: "riverbed"
+name: "test"
 version: "1.0"
 title: "Test REST API"
-servicePath: "/api/test/1.0"
 defaultAuthorization: "required"
 
 types:

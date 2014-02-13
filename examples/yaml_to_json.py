@@ -12,7 +12,11 @@ Takes YAML input file and prints out a JSON representation to stdout.
 
 def convert(stream):
     yml = marked_load(stream)
-    return json.dumps(yml, indent=2)
+    s = json.dumps(yml, indent=2).split("\n")
+    result = []
+    for line in s:
+        result.append(line.rstrip())
+    return '\n'.join(result)
 
 
 if __name__ == '__main__':

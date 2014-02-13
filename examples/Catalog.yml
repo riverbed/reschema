@@ -1,126 +1,131 @@
-$schema: "service_def/2.0"
+$schema: "http://support.riverbed.com/apis/service_def/2.1"
+id: "http://support.riverbed.com/apis/catalog/1.0"
+provider: "riverbed"
 name: "catalog"
 version: "1.0"
 title: "REST API for a book catalog"
-servicePath: "/api/catalog/1.0"
 defaultAuthorization: "required"
 types:
    address:
       type: object
-      id: address
-
+      additionalProperties: false
       properties:
-         street:
+         street: 
             type: string
             description: "Street Address"
          city:
             type: string
-            description: "City"
+            description: "City" 
          state:
             type: string
-            description: "State"
+            description: "State" 
             pattern: "[A-Z][A-Z]"
-         zip:
+         zip: 
             type: string
-            description: "Zip Code (5-digit)"
+            description: "Zip Code (5-digit)" 
             pattern: "[0-9][0-9][0-9][0-9][0-9]"
 
 resources:
    info:
       type: object
-      properties:
+
+      additionalProperties: false
+      properties: 
          owner: { type: string }
          email: { type: string }
 
       links:
          self: { path: "$/info" }
-         get:
+         get:  
             method: GET
-            response: { $ref: info }
+            response: { $ref: '#/resources/info' }
          set:
             method: PUT
-            request: { $ref: info }
-            response: { $ref: info }
-
+            request: { $ref: '#/resources/info' }
+            response: { $ref: '#/resources/info' }
+         
       relations:
-         books: { resource: books }
-         authors: { resource: authors }
+         books: { resource: '#/resources/books' }
+         authors: { resource: '#/resources/authors' }
 
    authors:
       type: array
-      items: { $ref: author }
+      items: { $ref: '#/resources/author' }
 
       links:
          self: { path: "$/authors" }
-         get:
+         get:  
             method: GET
-            response: { $ref: authors }
+            response: { $ref: '#/resources/authors' }
          create:
             method: POST
-            request: { $ref: author }
-            response: { $ref: author }
+            request: { $ref: '#/resources/author' }
+            response: { $ref: '#/resources/author' }
 
 
    author:
       type: object
+      additionalProperties: true
       properties:
          id: { type: integer }
          name: { type: string }
 
-      links:
+      links: 
          self: { path: "$/authors/{id}" }
-         get:
+         get:  
             method: GET
-            response: { $ref: author }
+            response: { $ref: '#/resources/author' }
          set:
             method: PUT
-            request: { $ref: author }
-            response: { $ref: author }
+            request: { $ref: '#/resources/author' }
+            response: { $ref: '#/resources/author' }
          delete:
             method: DELETE
 
       relations:
          books:
-            resource: books
+            resource: '#/resources/books'
             vars: { author: "0/id" }
 
-         instances: { resource: authors }
+         instances: { resource: '#/resources/authors' }
 
    publishers:
       type: array
-      items: { $ref: publisher }
+      items: { $ref: '#/resources/publisher' }
 
       links:
          self: { path: "$/publishers" }
-         get:
+         get:  
             method: GET
-            response: { $ref: publishers }
+            response: { $ref: '#/resources/publishers' }
          create:
             method: POST
-            request: { $ref: publisher }
-            response: { $ref: publisher }
+            request: { $ref: '#/resources/publisher' }
+            response: { $ref: '#/resources/publisher' }
 
    publisher:
       type: object
+      additionalProperties: false
       properties:
          id: { type: integer }
          name: { type: string }
-         billing_address: { $ref: address }
-
+         billing_address: { $ref: '#/types/address' }
+         
       links:
          self: { path: "$/publishers/{id}" }
 
-         get:
+         get:  
             method: GET
-            response: { $ref: publisher }
-
+            response: { $ref: '#/resources/publisher' }
+            
       relations:
-         instances: { resource: publishers }
+         instances: { resource: '#/resources/publishers' }
 
    books:
       type: array
-      items:
+      items: 
          type: object
+         additionalProperties: false
          properties:
             id: { type: integer, readOnly: true }
             publisher_id: { type: integer }
@@ -129,37 +134,37 @@ resources:
          relations:
             full:
                # Build a book link from the 'id' property
-               resource: book
+               resource: '#/resources/book'
                vars:
                   id: "0/id" # this array item, 'id' property
 
             publisher:
                # Build a book link from the 'id' property
-               resource: publisher
+               resource: '#/resources/publisher'
                vars:
                   id: "0/publisher_id" # this array item, 'id' property
 
       links:
-
-         self:
+      
+         self: 
             path: "$/books"
-            params:
+            params: 
                # Allow filtering by id or title
                author: { type: integer }
                title: { type: string }
 
-         get:
+         get: 
             method: GET
-            response: { $ref: books }
+            response: { $ref: '#/resources/books' }
 
          create:
             method: POST
-            request: { $ref: book }
-            response: { $ref: book }
+            request: { $ref: '#/resources/book' }
+            response: { $ref: '#/resources/book' }
 
    book:
       description: A book object
-      example:
+      example: 
          id: 100
          title: My first book
          publisher_id: 5
@@ -170,46 +175,47 @@ resources:
             - num: 2
               heading: Conclusion
       type: object
+      additionalProperties: false
       properties:
          id: { type: integer }
          title: { type: string }
          publisher_id: { type: integer }
-         author_ids:
+         author_ids: 
             type: array
-            items:
+            items: 
                id: author_id
                type: integer
                relations:
                   full:
-                     resource: author
+                     resource: '#/resources/author'
                      vars: { id: "0" }
 
-         chapters:
+         chapters: 
             type: array
-            items:
+            items: 
                type: object
-               properties:
+               additionalProperties: false
+               properties: 
                   num: { type: integer }
                   heading: { type: string }
-
+                  
                relations:
                   full:
-                     resource: book_chapter
+                     resource: '#/resources/book_chapter'
                      vars:
                         bookid: "2/id" # go up two-levels, then "id"
                         num: "0/num" # this array item, then "num"
-      additionalProperties: false
 
       links:
          self: { path: "$/books/{id}" }
 
-         get:
+         get:  
             method: GET
-            response: { $ref: book }
+            response: { $ref: '#/resources/book' }
          set:
             method: PUT
-            request: { $ref: book }
-            response: { $ref: book }
+            request: { $ref: '#/resources/book' }
+            response: { $ref: '#/resources/book' }
          delete:
             method: DELETE
 
@@ -218,12 +224,14 @@ resources:
             method: POST
             request:
                type: object
+               additionalProperties: false
                properties:
                   num_copies: { type: integer }
-                  shipping_address: { $ref: address }
+                  shipping_address: { $ref: '#/types/address' }
 
             response:
                type: object
+               additionalProperties: false
                properties:
                   delivery_date: { type: string }
                   final_cost: { type: number }
@@ -231,17 +239,18 @@ resources:
          new_chapter:
             path: "$/books/{id}/chapter"
             method: POST
-            request: { $ref: book_chapter }
-            response: { $ref: book_chapter }
+            request: { $ref: '#/resources/book_chapter' }
+            response: { $ref: '#/resources/book_chapter' }
 
       relations:
-         instances: { resource: books }
-         publisher:
-            resource: publisher
+         instances: { resource: '#/resources/books' }
+         publisher: 
+            resource: '#/resources/publisher'
             vars: { id: "0/publisher_id" }
 
    book_chapter:
       type: object
+      additionalProperties: false
       properties:
          bookid: { type: integer }
          num: { type: integer }
@@ -250,13 +259,13 @@ resources:
       links:
          self: { path: "$/books/{bookid}/chapters/{num}" }
 
-         get:
+         get:  
             method: GET
-            response: { $ref: info }
+            response: { $ref: '#/resources/info' }
          set:
             method: PUT
-            request: { $ref: info }
-            response: { $ref: info }
+            request: { $ref: '#/resources/info' }
+            response: { $ref: '#/resources/info' }
 
          get_text:
             method: GET
@@ -270,7 +279,7 @@ resources:
             response: { type: string }
 
       relations:
-         book:
-            resource: book
+         book: 
+            resource: '#/resources/book'
             vars: { id: "0/bookid" }
 

@@ -112,10 +112,10 @@ class Schema(object):
     count = 1
 
     # Map of all known schemas:
-    #   schemas["<api>/schema#<fullid>"] -> Schema
+    #   <servicedef.id>#<relpath>
     schemas = {}
 
-    def __init__(self, typestr, input, name=None, parent=None, api=None):
+    def __init__(self, typestr, input, name=None, parent=None, servicedef=None):
         """Create a new Schema object of the given `typestr`.
 
         :param typestr: the <json-schema> type
@@ -126,25 +126,27 @@ class Schema(object):
 
         :param name: a label for this schema
 
-        :param api: the base address for api calls
-                    If `api` is None, the parent's api is used.
+        :param servicedef: the servicedef instance this instance is
+            assocaited with. If None, inherit from parent.
 
-        :raises ValidationError: if neither `api` nor `parent` is specified.
-        :raises ParseError: if unexpected data or formats are encountered
-                            while parsing.
+        :raises ValidationError: if neither `servicedef` nor `parent`
+            is specified.
+
+        :raises ParseError: if unexpected data or formats are
+            encountered while parsing.
         """
         self._typestr = typestr
         self.parent = parent
         self.name = name
         self.children = []
 
-        if api is None:
+        if servicedef is None:
             if parent is None:
                 raise ValidationError(
-                  "Must specify 'api' if parent is None", input)
-            api = parent.api
+                  "Must specify 'servicedef' if parent is None", input)
+            servicedef = parent.servicedef
 
-        self.api = api
+        self.servicedef = servicedef
 
         parse_prop(self, input, 'description', '')
         parse_prop(self, input, 'notes', '')
@@ -192,13 +194,14 @@ class Schema(object):
         else:
             self._not = None
 
-        self.schemas[self.fullid(api=True)] = self
+        print "Adding schema: %s - parent %s" % (self.fullid(), parent)
+        self.schemas[self.fullid()] = self
 
     def __repr__(self):
         return "<jsonschema.%s '%s'>" % (self.__class__.__name__, self.fullid())
 
     @classmethod
-    def parse(cls, input, name=None, parent=None, api=None):
+    def parse(cls, input, name=None, parent=None, servicedef=None):
         """Parse a <json-schema> definition for an object.
 
         :param input: the definition to parse
@@ -208,11 +211,11 @@ class Schema(object):
 
         :param name: a label for this schema
 
-        :param api: the base address for api calls
-                    If `api` is None, the parent's api is used.
+        :param servicedef: the servicedef instance this instance is
+            assocaited with. If None, inherit from parent.
 
-        :raises ParseError: if unexpected data or formats are encountered
-                            while parsing.
+        :raises ParseError: if unexpected data or formats are
+            encountered while parsing.
         """
 
         if not isinstance(input, dict):
@@ -241,16 +244,14 @@ class Schema(object):
                    (typestr, (parent.fullname() + '.') if parent else '', name))
             raise ParseError(msg, typestr)
 
-        return cls(input, name, parent, api=api)
+        return cls(input, name, parent, servicedef=servicedef)
 
     @classmethod
-    def find_by_id(cls, api, id):
+    def find_by_id(cls, id):
         """Find a schema by fullid."""
 
-        for pre in ['', '/types/', '/schemas/']:
-            fullid = '%s/schema#/%s%s' % (api, pre, id)
-            if fullid in cls.schemas:
-                return cls.schemas[fullid]
+        if id in cls.schemas:
+            return cls.schemas[id]
 
         return None
 
@@ -306,20 +307,20 @@ class Schema(object):
 
         return self.name
 
-    def fullid(self, api=False):
+    def fullid(self, relative=False):
         """Return the full id using path notation.
 
-        Include the api path if `api` is true.
+        :param relative: set to False to relative to this servicedef
 
         """
         # TODO: Should this be cached?  Do we support changing it?
         # xxxcj - used to be (self.id or self.name), not sure if that's needed
         if self.parent:
             if self.parent.is_ref() or self.parent.is_multi():
-                return self.parent.fullid(api)
+                return self.parent.fullid(relative)
             else:
-                return self.parent.fullid(api) + '/' + self.id
-        return ((self.api + '/schema#/') if api else '/') + self.id
+                return self.parent.fullid(relative) + '/' + self.id
+        return ((self.servicedef.id + '#') if (not relative) else '#') + self.id
 
     def str_simple(self):
         """Return a string representation of this element as a basic table."""
@@ -480,22 +481,25 @@ class Ref(Schema):
     _type = '$ref'
     def __init__(self, input, name, parent, **kwargs):
         Schema.__init__(self, Ref._type, input, name, parent, **kwargs)
-        self._refschema = None
-        self.refschema_id = parse_prop(None, input, '$ref', required=True)
 
+        # Lazy resolution because references may be used before they are defined
+        self._refschema = None
+        ref_id = parse_prop(None, input, '$ref', required=True)
+        self.refschema_id = self.servicedef.expand_id(ref_id, self.servicedef)
+        
         _check_input(self.fullname(), input)
 
     @property
     def refschema(self):
         if self._refschema is None:
-            sch = Schema.find_by_id(self.api, self.refschema_id)
+            sch = Schema.find_by_id(self.refschema_id)
             if sch is None:
                 msg = ("No such schema '%s' for '$ref': %s" %
                        (self.refschema_id, self.fullname()))
                 raise ParseError(msg, self)
-            sch = copy.deepcopy(sch)
-            sch.parent = self
-            sch.parent.api = self.api
+            #sch = copy.deepcopy(sch)
+            #sch.parent = self
+            #sch.parent.api = self.api
             self._refschema = sch
         return self._refschema
 
@@ -921,22 +925,18 @@ _register_type(Data)
 
 
 class Relation(object):
-    # Map of all known relations:
-    #   schemas["<api>/schema#<fullid>/relations/<name>"] -> Schema
-    relations = {}
 
     def __init__(self, input, name, schema):
         self.name = name
         self.schema = schema
-        self.api = schema.api
-
         self.vars = None
 
+        # Lazy resolution because references may be used before they are defined
         self._resource = None
-        self._resource_name = parse_prop(None, input, 'resource', required=True)
-        self.vars = parse_prop(self, input, 'vars')
+        ref_id = parse_prop(None, input, 'resource', required=True)
+        self._resource_id = schema.servicedef.expand_id(ref_id, schema.servicedef)
 
-        self.relations[self.fullid(api=True)] = self
+        self.vars = parse_prop(self, input, 'vars')
 
         _check_input(self.fullname(), input)
 
@@ -955,7 +955,7 @@ class Relation(object):
     @property
     def resource(self):
         if self._resource is None:
-            self._resource = Schema.find_by_id(self.api, self._resource_name)
+            self._resource = Schema.find_by_id(self._resource_id)
             if self._resource is None:
                 raise KeyError("Invalid resource '%s' for relation: %s" %
                                (self._resource_name, self.fullname()))
@@ -965,13 +965,13 @@ class Relation(object):
     def fullname(self):
         return self.schema.fullname() + '.relations.' + self.name
 
-    def fullid(self, api=False):
-        return self.schema.fullid(api) + '/relations/' + self.name
+    def fullid(self, relative=False):
+        return self.schema.fullid(relative) + '/relations/' + self.name
 
     def str_simple(self):
         return '%-30s %-20s\n' % (self.fullname(), '<relation>')
 
-    def resolve(self, data, fragment=None, params=None):
+    def resolve(self, servicepath, data, fragment=None, params=None):
         target_self = self.resource.links['self']
         target_params = target_self._params
 
@@ -985,7 +985,7 @@ class Relation(object):
                 for var,relp in self.vars.iteritems():
                     vals[var] = resolve_rel_pointer(data, fragment or '', relp)
 
-        uri = target_self.path.resolve(vals)
+        uri = target_self.path.resolve(servicepath, vals)
 
         params = {}
         if target_params:
@@ -997,14 +997,11 @@ class Relation(object):
         return (uri, params)
 
 class Link(object):
-    # Map of all known links:
-    #   schemas["<api>/schema#<fullid>/links/<name>"] -> Schema
-    links = {}
 
     def __init__(self, input, name, schema):
         self.name = name
         self.schema = schema
-        self.api = schema.api
+        self.servicedef = schema.servicedef
 
         parse_prop(self, input, 'description', '')
         parse_prop(self, input, 'notes', '')
@@ -1050,8 +1047,6 @@ class Link(object):
                     self._params[key] = Schema.parse(value, parent=self,
                                                             name=key)
 
-        self.links[self.fullid(api=True)] = self
-
         _check_input(self.fullname(), input)
 
     def __repr__(self):
@@ -1066,8 +1061,8 @@ class Link(object):
     def fullname(self):
         return self.schema.fullname() + '.links.' + self.name
 
-    def fullid(self, api=False):
-        return self.schema.fullid(api) + '/links/' + self.name
+    def fullid(self, relative=False):
+        return self.schema.fullid(relative) + '/links/' + self.name
 
     def str_simple(self):
         return '%-30s %-20s %s\n' % (self.fullname(), '<link>',
@@ -1131,7 +1126,7 @@ class Path(object):
     def __str__(self):
         return self.template
 
-    def resolve(self, data, pointer=None):
+    def resolve(self, servicepath, data, pointer=None):
         """Resolve all variables in this path template from `data` relative to `pointer`."""
         values = {}
         if data:
@@ -1160,6 +1155,8 @@ class Path(object):
               self)
 
         uri = uritemplate.expand(self.template, values)
+
         if uri[0] == '$':
-            uri = self.link.api + uri[1:]
+            uri = servicepath + uri[1:]
+
         return uri

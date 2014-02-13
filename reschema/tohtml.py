@@ -57,15 +57,14 @@ class ServiceDefToHtml(object):
         resource_menu = self.menu.add_submenu()
         for resource in self.servicedef.resources.values():
             ResourceToHtml(resource, self.container, resource_menu,
-                           self.servicedef.servicePath, self.options).process()
+                           "$", self.options).process()
 
         types_div = self.container.div(id='types')
         self.menu.add_item("Types", href=types_div)
         type_menu = self.menu.add_submenu()
         for type_ in self.servicedef.types.values():
             ResourceToHtml(type_, self.container, type_menu,
-                           self.servicedef.servicePath,
-                           self.options).process(is_type=True)
+                           "$", self.options).process(is_type=True)
 
 
 class ResourceToHtml(object):

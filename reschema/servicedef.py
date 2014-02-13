@@ -8,6 +8,8 @@
 # System imports
 import os
 import json
+import urlparse
+import re
 from cStringIO import StringIO
 from collections import OrderedDict
 
@@ -17,7 +19,7 @@ from jsonpointer import resolve_pointer, JsonPointer
 from reschema.jsonschema import Schema
 from reschema.util import parse_prop
 from reschema import yaml_loader, json_loader
-from reschema.exceptions import ParseError
+from reschema.exceptions import ParseError, UnsupportedSchema
 
 __all__ = ['ServiceDef']
 
@@ -71,8 +73,19 @@ class ServiceDef(object):
         # Common properties
 
         self.schema = parse_prop(None, obj, '$schema', required=True)
+        if self.schema != "http://support.riverbed.com/apis/service_def/2.1":
+            raise UnsupportedSchema("Unsupported schema format: %s" % self.schema)
+        
+        parse_prop(self, obj, 'id', required=True)
+        parse_prop(self, obj, 'provider', required=True)
         parse_prop(self, obj, 'name', required=True)
         parse_prop(self, obj, 'version', required=True)
+
+        m = re.match('^(.*)/%s/%s' % (self.name, self.version), self.id)
+        if not m:
+            raise ParseError("Service definition 'id' property must end with 'name'/'version'")
+        self.id_root = m.group(1)
+        
         parse_prop(self, obj, 'title', self.name)
         parse_prop(self, obj, 'status', '')
 
@@ -86,22 +99,20 @@ class ServiceDef(object):
                    'Service Definition for ' + self.name)
 
         parse_prop(self, obj, 'documentationLink', '')
-        parse_prop(self, obj, 'servicePath', '')
         parse_prop(self, obj, 'defaultAuthorization', None)
 
         self.types = OrderedDict()
         if 'types' in obj:
             for type_ in obj['types']:
-                self.types[type_] = Schema.parse(
-                  obj['types'][type_],
-                  name=type_,
-                  api=self.servicePath)
+                self.types[type_] = Schema.parse(obj['types'][type_],
+                                                 name='/types/' + type_,
+                                                 servicedef=self)
 
         self.resources = OrderedDict()
         if 'resources' in obj:
             for resource in obj['resources']:
                 input_ = obj['resources'][resource]
-                sch = Schema.parse(input_, name=resource, api=self.servicePath)
+                sch = Schema.parse(input_, name='/resources/' + resource, servicedef=self)
                 self.resources[resource] = sch
 
                 if 'self' not in sch.links:
@@ -138,3 +149,43 @@ class ServiceDef(object):
             return self.resources[name]
         else:
             raise KeyError("%s has no such resource: %s" % (self, name))
+
+    @classmethod
+    def expand_id(cls, reference, servicedef=None):
+        """ Resolve a reference using this servicedef as a relative base
+
+        :param reference: string reference to resolve
+
+        :param servicedef: a ServiceDef instance to use as context for
+           relative names
+
+        The `reference` may be one of three supported forms:
+
+           * `<server><path>#<fragment>` - fully qualified reference
+
+           * `<path>#<fragment>` - reference is resolved against the
+             same <server> as `servicedef`.  <path> starts with '/'
+
+           * `#<fragment>` - reference is resolved against the same
+             <server> and <path> as `servicedef`
+
+        If `reference` is not provide, a reference of the latter 2 forms
+        will raise a NoContext exception.
+        
+        """
+        parsed_reference = urlparse.urlparse(reference)
+        if parsed_reference.netloc:
+            # Already a fully qualified address, let urlparse rejoin
+            # to normalize it
+            return parsed_reference.geturl()
+
+        if servicedef is None:
+            # relative references require a servicedef for context
+            raise NoContext(reference)
+
+        if not parsed_reference.path:
+            # relative reference within the same service def
+            return urlparse.urljoin(servicedef.id, reference)
+
+        # Netloc is none, so same provider, but different service
+        return servicedef.id_root + reference

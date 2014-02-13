@@ -1,9 +1,10 @@
 {
-  "$schema": "service_def/2.0",
+  "$schema": "http://support.riverbed.com/apis/service_def/2.1",
+  "id": "http://support.riverbed.com/apis/catalog/1.0",
+  "provider": "riverbed",
   "name": "catalog",
   "version": "1.0",
   "title": "REST API for a book catalog",
-  "servicePath": "/api/catalog/1.0",
   "defaultAuthorization": "required",
   "types": {
     "address": {
@@ -49,32 +50,32 @@
         "get": {
           "method": "GET",
           "response": {
-            "$ref": "info"
+            "$ref": "#/resources/info"
           }
         },
         "set": {
           "method": "PUT",
           "request": {
-            "$ref": "info"
+            "$ref": "#/resources/info"
           },
           "response": {
-            "$ref": "info"
+            "$ref": "#/resources/info"
           }
         }
       },
       "relations": {
         "books": {
-          "resource": "books"
+          "resource": "#/resources/books"
         },
         "authors": {
-          "resource": "authors"
+          "resource": "#/resources/authors"
         }
       }
     },
     "authors": {
       "type": "array",
       "items": {
-        "$ref": "author"
+        "$ref": "#/resources/author"
       },
       "links": {
         "self": {
@@ -83,16 +84,16 @@
         "get": {
           "method": "GET",
           "response": {
-            "$ref": "authors"
+            "$ref": "#/resources/authors"
           }
         },
         "create": {
           "method": "POST",
           "request": {
-            "$ref": "author"
+            "$ref": "#/resources/author"
           },
           "response": {
-            "$ref": "author"
+            "$ref": "#/resources/author"
           }
         }
       }
@@ -114,16 +115,16 @@
         "get": {
           "method": "GET",
           "response": {
-            "$ref": "author"
+            "$ref": "#/resources/author"
           }
         },
         "set": {
           "method": "PUT",
           "request": {
-            "$ref": "author"
+            "$ref": "#/resources/author"
           },
           "response": {
-            "$ref": "author"
+            "$ref": "#/resources/author"
           }
         },
         "delete": {
@@ -132,20 +133,20 @@
       },
       "relations": {
         "books": {
-          "resource": "books",
+          "resource": "#/resources/books",
           "vars": {
             "author": "0/id"
           }
         },
         "instances": {
-          "resource": "authors"
+          "resource": "#/resources/authors"
         }
       }
     },
     "publishers": {
       "type": "array",
       "items": {
-        "$ref": "publisher"
+        "$ref": "#/resources/publisher"
       },
       "links": {
         "self": {
@@ -154,16 +155,16 @@
         "get": {
           "method": "GET",
           "response": {
-            "$ref": "publishers"
+            "$ref": "#/resources/publishers"
           }
         },
         "create": {
           "method": "POST",
           "request": {
-            "$ref": "publisher"
+            "$ref": "#/resources/publisher"
           },
           "response": {
-            "$ref": "publisher"
+            "$ref": "#/resources/publisher"
           }
         }
       }
@@ -178,7 +179,7 @@
           "type": "string"
         },
         "billing_address": {
-          "$ref": "address"
+          "$ref": "#/types/address"
         }
       },
       "links": {
@@ -188,13 +189,13 @@
         "get": {
           "method": "GET",
           "response": {
-            "$ref": "publisher"
+            "$ref": "#/resources/publisher"
           }
         }
       },
       "relations": {
         "instances": {
-          "resource": "publishers"
+          "resource": "#/resources/publishers"
         }
       }
     },
@@ -216,13 +217,13 @@
         },
         "relations": {
           "full": {
-            "resource": "book",
+            "resource": "#/resources/book",
             "vars": {
               "id": "0/id"
             }
           },
           "publisher": {
-            "resource": "publisher",
+            "resource": "#/resources/publisher",
             "vars": {
               "id": "0/publisher_id"
             }
@@ -244,16 +245,16 @@
         "get": {
           "method": "GET",
           "response": {
-            "$ref": "books"
+            "$ref": "#/resources/books"
           }
         },
         "create": {
           "method": "POST",
           "request": {
-            "$ref": "book"
+            "$ref": "#/resources/book"
           },
           "response": {
-            "$ref": "book"
+            "$ref": "#/resources/book"
           }
         }
       }
@@ -297,7 +298,7 @@
             "type": "integer",
             "relations": {
               "full": {
-                "resource": "author",
+                "resource": "#/resources/author",
                 "vars": {
                   "id": "0"
                 }
@@ -319,7 +320,7 @@
             },
             "relations": {
               "full": {
-                "resource": "book_chapter",
+                "resource": "#/resources/book_chapter",
                 "vars": {
                   "bookid": "2/id",
                   "num": "0/num"
@@ -329,7 +330,6 @@
           }
         }
       },
-      "additionalProperties": false,
       "links": {
         "self": {
           "path": "$/books/{id}"
@@ -337,16 +337,16 @@
         "get": {
           "method": "GET",
           "response": {
-            "$ref": "book"
+            "$ref": "#/resources/book"
           }
         },
         "set": {
           "method": "PUT",
           "request": {
-            "$ref": "book"
+            "$ref": "#/resources/book"
           },
           "response": {
-            "$ref": "book"
+            "$ref": "#/resources/book"
           }
         },
         "delete": {
@@ -362,7 +362,7 @@
                 "type": "integer"
               },
               "shipping_address": {
-                "$ref": "address"
+                "$ref": "#/types/address"
               }
             }
           },
@@ -382,19 +382,19 @@
           "path": "$/books/{id}/chapter",
           "method": "POST",
           "request": {
-            "$ref": "book_chapter"
+            "$ref": "#/resources/book_chapter"
           },
           "response": {
-            "$ref": "book_chapter"
+            "$ref": "#/resources/book_chapter"
           }
         }
       },
       "relations": {
         "instances": {
-          "resource": "books"
+          "resource": "#/resources/books"
         },
         "publisher": {
-          "resource": "publisher",
+          "resource": "#/resources/publisher",
           "vars": {
             "id": "0/publisher_id"
           }
@@ -421,16 +421,16 @@
         "get": {
           "method": "GET",
           "response": {
-            "$ref": "info"
+            "$ref": "#/resources/info"
           }
         },
         "set": {
           "method": "PUT",
           "request": {
-            "$ref": "info"
+            "$ref": "#/resources/info"
           },
           "response": {
-            "$ref": "info"
+            "$ref": "#/resources/info"
           }
         },
         "get_text": {
@@ -453,7 +453,7 @@
       },
       "relations": {
         "book": {
-          "resource": "book",
+          "resource": "#/resources/book",
           "vars": {
             "id": "0/bookid"
           }

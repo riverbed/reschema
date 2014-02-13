@@ -16,7 +16,7 @@ import reschema
 from reschema.exceptions import ValidationError, ParseError, MissingParameter
 from reschema.jsonschema import (Object, Integer, Number, String,
                                  Array, Multi, Schema)
-from reschema import yaml_loader
+from reschema import yaml_loader, ServiceDef
 
 logger = logging.getLogger(__name__)
 
@@ -39,12 +39,12 @@ class TestReschema(unittest.TestCase):
         pass
 
     def test_load_schema(self):
-        r = reschema.ServiceDef()
+        r = ServiceDef()
         r.load(CATALOG_YAML)
         self.assertEqual(r.name, 'catalog')
 
     def test_load_schema_json(self):
-        r = reschema.ServiceDef()
+        r = ServiceDef()
         r.load(CATALOG_JSON)
         self.assertEqual(r.name, 'catalog')
 
@@ -57,20 +57,20 @@ class TestReschema(unittest.TestCase):
             f.write('testingdata')
             f.close()
 
-            r = reschema.ServiceDef()
+            r = ServiceDef()
             with self.assertRaises(ValueError):
                 r.load(name)
         finally:
             os.unlink(name)
 
     def test_parse_schema(self):
-        r = reschema.ServiceDef()
+        r = ServiceDef()
         with open(CATALOG_YAML, 'r') as f:
             r.parse_text(f.read(), format='yaml')
         self.assertEqual(r.name, 'catalog')
 
     def test_parse_schema_json(self):
-        r = reschema.ServiceDef()
+        r = ServiceDef()
         with open(CATALOG_JSON, 'r') as f:
             r.parse_text(f.read())
         self.assertEqual(r.name, 'catalog')
@@ -78,14 +78,17 @@ class TestReschema(unittest.TestCase):
     def test_load_bad_schema(self):
         with open(CATALOG_YAML, 'r') as f:
             schema = f.readlines()
-        schema.insert(31, '      bad_object_name: foo\n')
+        for i,line in enumerate(schema):
+            if "type: object" in line:
+                schema.insert(i-1, '      bad_object_name: foo\n')
+                break
 
-        r = reschema.ServiceDef()
+        r = ServiceDef()
         with self.assertRaises(MarkedYAMLError):
             r.parse_text(''.join(schema), format='yml')
 
     def test_resource_load(self):
-        r = reschema.ServiceDef()
+        r = ServiceDef()
         r.load(CATALOG_YAML)
         self.assertEquals(len(r.resources), 8)
         self.assertIn('info', r.resources)
@@ -96,7 +99,7 @@ class TestReschema(unittest.TestCase):
             r.find_resource('no_resource')
 
     def test_type_load(self):
-        r = reschema.ServiceDef()
+        r = ServiceDef()
         r.load(CATALOG_YAML)
         self.assertIn('address', r.types)
         self.assertTrue(r.find_type('address'))
@@ -104,35 +107,35 @@ class TestReschema(unittest.TestCase):
             r.find_type('no_type')
 
     def test_resource_objects(self):
-        r = reschema.ServiceDef()
+        r = ServiceDef()
         r.load(CATALOG_YAML)
         a = r.resources['author']
         self.assertFalse(a.is_ref())
         self.assertFalse(a.is_simple())
         self.assertIn('id', a.props)
         self.assertIn('name', a.props)
-        self.assertEqual(a.id, 'author')
+        self.assertEqual(a.fullid(True), '#/resources/author')
         self.assertIsNone(a.parent)
         resources = [x for x in r.resource_iter()]
         self.assertEqual(len(resources), 8)
 
     def test_find_name_basic(self):
-        r = reschema.ServiceDef()
+        r = ServiceDef()
         r.load(CATALOG_YAML)
         a = r.find('author')
-        self.assertEqual(a.id, 'author')
+        self.assertEqual(a.id, '/resources/author')
         with self.assertRaises(KeyError):
             r.find('no_type')
 
     def test_find_name_complex(self):
-        r = reschema.ServiceDef()
+        r = ServiceDef()
         r.load(CATALOG_YAML)
         c = r.find('/book/chapters')
-        self.assertEqual(c.id, 'chapters')
+        self.assertEqual(c.fullid(True), '#/resources/book/chapters')
         self.assertEqual(c._type, 'array')
         self.assertEqual(c.typestr, 'array of <object>')
         c = r.find('/book/chapters/1')
-        self.assertEqual(c.fullid(), '/book/chapters/items')
+        self.assertEqual(c.fullid(True), '#/resources/book/chapters/items')
         self.assertEqual(c._type, 'object')
         c = r.find('/book/author_ids')
         self.assertEqual(c._type, 'array')
@@ -146,7 +149,7 @@ class TestReschema(unittest.TestCase):
 class TestCatalog(unittest.TestCase):
 
     def setUp(self):
-        self.r = reschema.ServiceDef()
+        self.r = ServiceDef()
         self.r.load(CATALOG_YAML)
 
     def tearDown(self):
@@ -183,7 +186,7 @@ class TestCatalog(unittest.TestCase):
         ref = self.r.find('publisher').props['billing_address']
         self.assertFalse(ref.is_simple())
         self.assertTrue(ref.is_ref())
-        self.assertEqual(ref.typestr, 'address')
+        self.assertEqual(ref.typestr, '/types/address')
 
     def test_link_target(self):
         s = self.r.resources['author']
@@ -195,7 +198,7 @@ class TestCatalog(unittest.TestCase):
         link = pub.links['self']
         path = link.path
         self.assertEqual(str(path), '$/publishers/{id}')
-        self.assertEqual(path.resolve({'id': 12}), '/api/catalog/1.0/publishers/12')
+        self.assertEqual(path.resolve('/api/catalog/1.0', {'id': 12}), '/api/catalog/1.0/publishers/12')
 
     def test_link_template_path(self):
         book = self.r.find('book')
@@ -203,10 +206,10 @@ class TestCatalog(unittest.TestCase):
         items = chapters.items
         book_chapter = items.relations['full']
         data = {'book': book.example}
-        (uri, params) = book_chapter.resolve(data, '/book/chapters/1')
+        (uri, params) = book_chapter.resolve('/api/catalog/1.0', data, '/book/chapters/1')
         self.assertEqual(uri, '/api/catalog/1.0/books/100/chapters/2')
         with self.assertRaises(MissingParameter):
-            book_chapter.resolve(None)
+            book_chapter.resolve('/api/catalog/1.0', None)
 
     def test_object(self):
         # skip validation, we are checking that elsewhere
@@ -287,7 +290,7 @@ class TestCatalog(unittest.TestCase):
 class TestCatalogLinks(unittest.TestCase):
 
     def setUp(self):
-        self.r = reschema.ServiceDef()
+        self.r = ServiceDef()
         self.r.load(CATALOG_YAML)
 
     def tearDown(self):
@@ -295,23 +298,30 @@ class TestCatalogLinks(unittest.TestCase):
 
     def test_links(self):
         book = self.r.resources['book']
-        book_data = {'id': 1, 'title': 'My first book', 'publisher_id': 5, 'author_ids' : [1, 5]}
+        book_data = {'id': 1, 'title': 'My first book',
+                     'publisher_id': 5, 'author_ids' : [1, 5]}
         book.validate(book_data)
 
         author_id = book['author_ids'][0]
         logger.debug('author_id: %s' % author_id)
 
-        (uri, params) = author_id.relations['full'].resolve(book_data, '/author_ids/0')
+        (uri, params) = (author_id
+                         .relations['full']
+                         .resolve('/api/catalog/1.0', book_data, '/author_ids/0'))
+
         self.assertEqual(uri, '/api/catalog/1.0/authors/1')
 
-        (uri, params) = author_id.relations['full'].resolve(book_data, '/author_ids/1')
+        (uri, params) = (author_id
+                         .relations['full']
+                         .resolve('/api/catalog/1.0', book_data, '/author_ids/1'))
+        
         self.assertEqual(uri, '/api/catalog/1.0/authors/5')
 
         author = self.r.resources['author']
         author_data = {'id': 1, 'name': 'John Q'}
         author.validate(author_data)
 
-        (uri, params) = author.relations['books'].resolve(author_data)
+        (uri, params) = author.relations['books'].resolve('/api/catalog/1.0', author_data)
         logger.debug('author.relations.books uri: %s %s' % (uri, params))
 
 
@@ -319,7 +329,10 @@ class TestSchemaBase(unittest.TestCase):
 
     def parse(self, string):
         d = yaml_loader.marked_load(string)
-        return Schema.parse(d, 'root', api='/api')
+        s = ServiceDef()
+        s.id = 'http://support.riverbed.com/apis/testschema/1.0'
+        s.id_root = 'http://support.riverbed.com/apis'
+        return Schema.parse(d, 'root', servicedef=s)
 
     def check_valid(self, s, valid=None, invalid=None, toxml=False):
         if type(s) is str:
@@ -355,7 +368,9 @@ class TestSchemaBase(unittest.TestCase):
 class TestJsonSchema(TestSchemaBase):
 
     def setUp(self):
-        pass
+        self.servicedef = reschema.ServiceDef()
+        self.servicedef.id = 'http://support.riverbed.com/apis/testschema/1.0'
+        self.servicedef.id_root = 'http://support.riverbed.com/apis'
 
     def tearDown(self):
         pass
@@ -369,7 +384,7 @@ class TestJsonSchema(TestSchemaBase):
         except ValidationError, e:
             self.assertIsNotNone(str(e))
 
-    def test_missing_api(self):
+    def test_missing_servicedef(self):
         s = "type: boolean\n"
         d = yaml_loader.marked_load(s)
         with self.assertRaises(ValidationError):
@@ -378,17 +393,17 @@ class TestJsonSchema(TestSchemaBase):
     def test_unnamed(self):
         s = "type: boolean\n"
         d = yaml_loader.marked_load(s)
-        j = Schema.parse(d, api='/')
+        j = Schema.parse(d, servicedef=self.servicedef)
         self.assertTrue(j.name.startswith('element'))
 
     def test_unknown_type(self):
         s = "type: frobnosticator\n"
         d = yaml_loader.marked_load(s)
         with self.assertRaises(ParseError):
-            Schema.parse(d, api='/')
+            Schema.parse(d)
 
     def test_empty(self):
-        e = Schema.parse({}, api='/')
+        e = Schema.parse({}, servicedef=self.servicedef)
         self.check_valid(e,
             valid=[
                 None,
@@ -790,7 +805,7 @@ class TestSchema(TestSchemaBase):
                                      ] )
 
         a2 = self.r.find('/test_anyof3/a2')
-        self.assertEqual(a2.fullid(), '/test_anyof3/a2')
+        self.assertEqual(a2.fullid(True), '#/resources/test_anyof3/a2')
 
     @pytest.mark.xfail
     def test_allof(self):
@@ -826,12 +841,12 @@ class TestSchema(TestSchemaBase):
                                       'a3': 'f3'},
                                      ])
 
-        self.assertEqual(r.by_pointer('/a2/a21_string').fullid(),
-                         '/test_allof/a2/a21_string')
-        self.assertEqual(r.by_pointer('/a2/a22_number').fullid(),
-                         '/test_allof/a2/a22_number')
-        self.assertEqual(r.by_pointer('/a2/a22_array/0').fullid(),
-                         '/test_allof/a2/a22_array/items')
+        self.assertEqual(r.by_pointer('/a2/a21_string').fullid(True),
+                         '#/resources/test_allof/a2/a21_string')
+        self.assertEqual(r.by_pointer('/a2/a22_number').fullid(True),
+                         '#/resources/test_allof/a2/a22_number')
+        self.assertEqual(r.by_pointer('/a2/a22_array/0').fullid(True),
+                         '#/resources/test_allof/a2/a22_array/items')
 
     def test_oneof(self):
         r = self.r.resources['test_oneof']

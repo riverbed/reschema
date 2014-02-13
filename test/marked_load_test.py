@@ -107,6 +107,7 @@ print 'Parsing bad YAML from File ...'
 print '-' * 80
 try:
     r = reschema.ServiceDef()
+    print "TEST_SCHEMA_YAML: %s" % TEST_SCHEMA_YAML
     r.load(TEST_SCHEMA_YAML)
 except ReschemaException as e:
     print e
