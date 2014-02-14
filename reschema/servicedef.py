@@ -144,16 +144,20 @@ class ServiceDef(object):
 
         """
 
-        errors = []
         def _check(r):
+
             if type(r) is jsonschema.Ref:
                 try:
-                    refschema = r.refschema
+                    # Simply access r.refschema which will cause
+                    # the refence to be checked
+                    r.refschema
                 except InvalidReference:
                     errors.append(r)
             else:
                 for c in r.children:
                     _check(c)
+
+        errors = []
 
         for r in self.resource_iter():
             _check(r)
@@ -230,7 +234,8 @@ class ServiceDef(object):
             return urlparse.urljoin(servicedef.id, reference)
 
         if reference[0] != '/':
-            raise InvalidReference("relative references should start with '#' or '/'",
+            raise InvalidReference("relative references should "
+                                   "start with '#' or '/'",
                                    reference)
 
         # Netloc is none, so same provider, but different service

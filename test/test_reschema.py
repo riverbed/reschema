@@ -438,7 +438,7 @@ class TestJsonSchema(TestSchemaBase):
                                   1]
                          )
 
-    def test_ref(self):
+    def test_ref_parse_error(self):
         with self.assertRaises(ParseError):
             self.parse("type: object\n"
                        "properties:\n"
@@ -446,7 +446,7 @@ class TestJsonSchema(TestSchemaBase):
                        "    name: { type: string }\n"
                        "    billing_address: { $ref: address }\n")
 
-    def test_ref(self):
+    def test_ref_invalid(self):
         schema = self.parse("type: object\n"
                             "properties:\n"
                             "    id: { type: number }\n"
