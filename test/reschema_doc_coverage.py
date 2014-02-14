@@ -10,6 +10,7 @@ import coverage
 
 TEST_PATH = os.path.abspath(os.path.dirname(__file__))
 TEST_SCHEMA = os.path.join(TEST_PATH, 'test_schema.yml')
+CATALOG_SCHEMA = os.path.join(TEST_PATH, '../examples/Catalog.yml')
 
 cov = coverage.coverage()
 
@@ -20,31 +21,34 @@ from reschema.html import *
 from reschema import ServiceDef
 from reschema.tohtml import ServiceDefToHtml, Options
 
-rs = ServiceDef()
-rs.load(TEST_SCHEMA)
+for filename in [TEST_SCHEMA, CATALOG_SCHEMA]:
+    rs = ServiceDef()
+    rs.load(filename)
 
-title = "%s v%s %s" % (rs.title, rs.version, rs.status)
+    title = "%s v%s %s" % (rs.title, rs.version, rs.status)
 
-outdir = 'reschema_doc_coverage_output'
+    outdir = 'reschema_doc_coverage_output'
 
-if not os.path.exists(outdir):
-    os.makedirs(outdir)
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)
 
 
-html = outdir + "/" + "test_schema.html"
-if os.path.exists(html):
-    os.remove(html)
+    base = os.path.splitext(os.path.basename(filename))[0]
 
-htmldoc = reschema.html.Document(title, printable=False)
-r2h = ServiceDefToHtml(rs, htmldoc.content, htmldoc.menu,
-                       options=Options(printable=False,
-                                       json=True, xml=True))
-r2h.process()
-htmldoc.write(html)
+    html = "%s/%s.html" % (outdir, base)
+    if os.path.exists(html):
+        os.remove(html)
+
+    htmldoc = reschema.html.Document(title, printable=False)
+    r2h = ServiceDefToHtml(rs, htmldoc.content, htmldoc.menu,
+                           root='/api',
+                           options=Options(printable=False,
+                                           json=True, xml=True))
+    r2h.process()
+    htmldoc.write(html)
+    print "HTML output: ./%s" % html
 
 cov.stop()
 cov.html_report(directory=outdir)
 
 print "Report written: ./%s/index.html" % outdir
-print "HTML output: ./%s/test_schema.html" % outdir
-

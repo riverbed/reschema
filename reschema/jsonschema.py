@@ -115,12 +115,11 @@ class Schema(object):
     # Counter used for assigning names/ids for anonymous types
     count = 1
 
-    # Map of all known schemas:
-    #   <servicedef.id>#<relpath>
+    # Map of all known schemas by fullid()
     schemas = {}
 
     def __init__(self, typestr, input, name=None,
-                 parent=None, servicedef=None):
+                 parent=None, servicedef=None, id_prefix=None):
         """Create a new Schema object of the given `typestr`.
 
         :param typestr: the <json-schema> type
@@ -143,6 +142,7 @@ class Schema(object):
         self._typestr = typestr
         self.parent = parent
         self.name = name
+        self.id_prefix = id_prefix
         self.children = []
 
         if servicedef is None:
@@ -153,9 +153,9 @@ class Schema(object):
 
         self.servicedef = servicedef
 
+        parse_prop(self, input, 'label', name)
         parse_prop(self, input, 'description', '')
         parse_prop(self, input, 'notes', '')
-        parse_prop(self, input, 'id', name)
         parse_prop(self, input, 'example')
         parse_prop(self, input, 'readOnly',
                    parent.readOnly if (parent and isinstance(parent, Schema))
@@ -207,7 +207,7 @@ class Schema(object):
                                          self.fullid())
 
     @classmethod
-    def parse(cls, input, name=None, parent=None, servicedef=None):
+    def parse(cls, input, name=None, parent=None, servicedef=None, id_prefix=None):
         """Parse a <json-schema> definition for an object.
 
         :param input: the definition to parse
@@ -231,7 +231,7 @@ class Schema(object):
                              input)
 
         if name is None:
-            name = parse_prop(None, input, 'id')
+            name = parse_prop(None, input, 'label')
             if name is None:
                 name = 'element%d' % cls.count
                 cls.count = cls.count + 1
@@ -251,7 +251,7 @@ class Schema(object):
                     name))
             raise ParseError(msg, typestr)
 
-        return cls(input, name, parent, servicedef=servicedef)
+        return cls(input, name, parent, servicedef=servicedef, id_prefix=id_prefix)
 
     @classmethod
     def find_by_id(cls, id):
@@ -322,13 +322,13 @@ class Schema(object):
 
         """
         # TODO: Should this be cached?  Do we support changing it?
-        # xxxcj - used to be (self.id or self.name), not sure if that's needed
+        selfid = "%s/%s" % (self.id_prefix or '', self.name)
         if self.parent:
             if self.parent.is_ref() or self.parent.is_multi():
                 return self.parent.fullid(relative)
             else:
-                return self.parent.fullid(relative) + '/' + self.id
-        return '%s#%s' % (('' if relative else self.servicedef.id), self.id)
+                return self.parent.fullid(relative) + selfid
+        return '%s#%s' % (('' if relative else self.servicedef.id), selfid)
 
     def str_simple(self):
         """Return a string representation of this element as a basic table."""
@@ -454,10 +454,10 @@ class Schema(object):
     def toxml(self, input, parent=None):
         """Generate an XML Element structure representing this element."""
         if parent is not None:
-            parent.set(self.id, str(input))
+            parent.set(self.name, str(input))
             return parent
         else:
-            elem = ET.Element(self.id)
+            elem = ET.Element(self.name)
             elem.text = str(input)
             return elem
 
@@ -465,7 +465,7 @@ class Schema(object):
 class Multi(Schema):
     _type = 'multi'
     def __init__(self, input, name, parent, **kwargs):
-        Schema.__init__(self, Ref._type, input, name, parent, **kwargs)
+        Schema.__init__(self, Multi._type, input, name, parent, **kwargs)
 
         _check_input(self.fullname(), input)
 
@@ -481,6 +481,10 @@ class Multi(Schema):
 
     def is_multi(self):
         return True
+
+    @property
+    def typestr(self):
+        return "multiple"
 
 _register_type(Multi)
 
@@ -533,7 +537,7 @@ class Ref(Schema):
 
     @property
     def typestr(self):
-        return self.refschema.id
+        return self.refschema.name
 
     def validate(self, input):
         self.refschema.validate(input)
@@ -781,7 +785,7 @@ class Object(Schema):
         if type(ap) is bool:
             self.additional_props = ap
         else:
-            ap_name = ap['id'] if ('id' in ap) else 'prop'
+            ap_name = ap['label'] if ('label' in ap) else 'prop'
             c = Schema.parse(ap, '<%s>' % ap_name, self)
             self.additional_props = c
             self.children.append(c)
@@ -829,9 +833,9 @@ class Object(Schema):
 
         """
         if parent is not None:
-            elem = ET.SubElement(parent, self.id)
+            elem = ET.SubElement(parent, self.name)
         else:
-            elem = ET.Element(self.id)
+            elem = ET.Element(self.name)
 
         subelems = OrderedDict()
         inline_props = OrderedDict()
@@ -845,7 +849,7 @@ class Object(Schema):
 
 
                 if subobj.is_simple():
-                    subelem = ET.SubElement(elem, subobj.id)
+                    subelem = ET.SubElement(elem, subobj.name)
                     subelem.set(keyname, k)
 
                     subelem.text = str(input[k])
@@ -868,8 +872,8 @@ class Array(Schema):
         Schema.__init__(self, Array._type, input, name, parent, **kwargs)
 
         items = parse_prop(None, input, 'items', required=True)
-        if 'id' in items:
-            childname = items['id']
+        if 'label' in items:
+            childname = items['label']
         else:
             childname = 'items'
         self.items = Schema.parse(items, childname, self)
@@ -913,9 +917,9 @@ class Array(Schema):
 
     def toxml(self, input, parent=None):
         if parent is not None:
-            elem = ET.SubElement(parent, '%s' % self.id)
+            elem = ET.SubElement(parent, '%s' % self.name)
         else:
-            elem = ET.Element(self.id)
+            elem = ET.Element(self.name)
 
         for o in input:
             subelem = self.children[0].toxml(o)

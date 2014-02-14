@@ -336,6 +336,13 @@ resources:
       items: { type: number }
       links: { self: { path: "$/test_array_max" } }
 
+   test_array_min_max:
+      type: array
+      minItems: 10
+      maxItems: 20
+      items: { type: number }
+      links: { self: { path: "$/test_array_min_max" } }
+
    test_anyof1:
       anyOf:
          -  type: object

@@ -22,10 +22,10 @@ parser.add_option('-o', '--outdir', dest='outdir', default=None,
 
 parser.add_option('--html', dest='html', default=False,
                   help="Generate HTML", action="store_true")
-                  
+
 parser.add_option('--pdf', dest='pdf', default=False,
                   help="Generate PDF", action="store_true")
-                  
+
 parser.add_option('-r', '--root', dest='root', default=None,
                   help='Root output filename, default is built from title, version, status', action="store")
 
@@ -40,6 +40,12 @@ parser.add_option('--nojson', action="store_true", default=False,
 
 parser.add_option('--noxml', action="store_true", default=False,
                   help='Do not include XML tabs')
+
+parser.add_option('--device', dest='device', default='{device}',
+                  help='Device hosting this service')
+
+parser.add_option('--root', dest='root', default='/api',
+                  help='Root path for all resources')
 
 (options, args) = parser.parse_args()
 
@@ -72,7 +78,7 @@ else:
 
 if not os.path.exists(outdir):
     os.makedirs(outdir)
-    
+
 # HTML version
 if options.html:
     html = outdir + "/" + rootname + ".html"
@@ -81,6 +87,7 @@ if options.html:
 
     htmldoc = reschema.html.Document(title, printable=False)
     r2h = ServiceDefToHtml(rs, htmldoc.content, htmldoc.menu,
+                           device=device, root=root,
                            options=Options(printable=False,
                                            json=(not options.nojson),
                                            xml=(not options.noxml)))
@@ -96,6 +103,7 @@ if options.pdf:
 
     htmldoc = reschema.html.Document(title, printable=True)
     r2h = ServiceDefToHtml(rs, htmldoc.content, htmldoc.menu,
+                           device=device, root=root,
                            options=Options(printable=True,
                                            json=(not options.nojson),
                                            xml=(not options.noxml)))
@@ -147,12 +155,12 @@ if options.pdf:
     f.write(ET.tostring(cover_base, method="html"))
     f.close()
 
-    pdf = outdir + "/" + rootname + ".pdf" 
+    pdf = outdir + "/" + rootname + ".pdf"
     if os.path.exists(pdf):
         os.remove(pdf)
 
     args = [ wkhtmltopdf,
-             '--title', title, 
+             '--title', title,
              coverarg, cover,
              tocarg, '--toc-header-text', 'Contents',
              '--footer-center', '[page]',

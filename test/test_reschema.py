@@ -125,7 +125,7 @@ class TestReschema(unittest.TestCase):
         r = ServiceDef()
         r.load(CATALOG_YAML)
         a = r.find('author')
-        self.assertEqual(a.id, '/resources/author')
+        self.assertEqual(a.fullid(True), '#/resources/author')
         with self.assertRaises(KeyError):
             r.find('no_type')
 
@@ -188,7 +188,7 @@ class TestCatalog(unittest.TestCase):
         ref = self.r.find('publisher').props['billing_address']
         self.assertFalse(ref.is_simple())
         self.assertTrue(ref.is_ref())
-        self.assertEqual(ref.typestr, '/types/address')
+        self.assertEqual(ref.typestr, 'address')
 
     def test_link_target(self):
         s = self.r.resources['author']

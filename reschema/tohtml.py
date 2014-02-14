@@ -44,11 +44,13 @@ def _build_schema_href(schema):
 class ServiceDefToHtml(object):
     servicedef = None
 
-    def __init__(self, servicedef, container, menu=None, options=None):
+    def __init__(self, servicedef, container, menu=None, options=None,
+                 device="{device}", root="/{root}"):
         ServiceDefToHtml.servicedef = servicedef
         self.container = container
         self.menu = menu
         self.options = (options or Options())
+        self.servicepath = "http://%s%s" % (device, root)
 
     def process(self):
 
@@ -57,14 +59,14 @@ class ServiceDefToHtml(object):
         resource_menu = self.menu.add_submenu()
         for resource in self.servicedef.resources.values():
             ResourceToHtml(resource, self.container, resource_menu,
-                           "$", self.options).process()
+                           self.servicepath, self.options).process()
 
         types_div = self.container.div(id='types')
         self.menu.add_item("Types", href=types_div)
         type_menu = self.menu.add_submenu()
         for type_ in self.servicedef.types.values():
             ResourceToHtml(type_, self.container, type_menu,
-                           "$", self.options).process(is_type=True)
+                           self.servicepath, self.options).process(is_type=True)
 
 
 class ResourceToHtml(object):
@@ -124,7 +126,7 @@ class ResourceToHtml(object):
             uri = schema.links['self'].path.template
             if uri[0] == '$':
                 uri = self.basepath + uri[1:]
-            div.pre().text = "https://{device}" + uri
+            div.pre().text = uri
 
         self.schema_table(schema, div, baseid)
 
@@ -166,7 +168,7 @@ class ResourceToHtml(object):
             if uri[0] == '$':
                 uri = self.basepath + uri[1:]
 
-            path = ("https://{device}" + uri)
+            path = uri
 
             httpmethod = link.method
             if httpmethod == "GET":
@@ -313,7 +315,7 @@ class SchemaSummaryJson(HTMLElement):
 
             txt = ('%*.*s"%s": ' % (indent+2, indent+2, "", k))
             parent.span(cls="servicedef-property").text = txt
-            
+
             s = parent.span()
             self.process(s, obj.props[k], indent+2)
             last = parent.span()
@@ -422,22 +424,13 @@ class SchemaSummaryXML(HTMLElement):
             write_xmlschema(tag, spec, 0)
             return
 
-        if name is None:
-            if schema.id is None:
-                name = schema.name
-            else:
-                name = schema.id
+        name = name or schema.name
         if name == "[]":
             name = "items"
         if type(schema) is reschema.jsonschema.Object:
             self.process_object(parent, schema, indent, name, key=key)
 
         elif isinstance(schema, reschema.jsonschema.Array):
-            if name is None:
-                if schema.id is None:
-                    name = schema.name
-                else:
-                    name = schema.id
             self.process_array(parent, schema, indent, name, key=key)
 
         elif isinstance(schema, reschema.jsonschema.Ref):
@@ -521,7 +514,7 @@ class SchemaSummaryXML(HTMLElement):
                     subobj.props[k] = obj.additional_props.props[k]
             except:
                 pass
-            self.process(s, subobj, indent+2, name=subobj.id, key=keyname)
+            self.process(s, subobj, indent+2, name=subobj.name, key=keyname)
 
         if subelems:
             parent.span().text = "%*s</" % (indent, "")
@@ -533,7 +526,7 @@ class SchemaSummaryXML(HTMLElement):
         parent.span(cls="xmlschema-element").text = name
         parent.span().text = ">\n"
         self.process(parent.span(), array.children[0], indent+2,
-                     name=array.children[0].id)
+                     name=array.children[0].name)
         parent.span().text = "%*s</" % (indent, "")
         parent.span(cls="xmlschema-element").text = name
         parent.span().text = ">\n"
@@ -606,8 +599,8 @@ class PropTable(HTMLTable):
 
         if ( (schema.parent is not None) and
              (isinstance(schema.parent, reschema.jsonschema.Object)) and
-             (schema.parent.required is not None) and
-             (name not in schema.parent.required) ):
+             ((schema.parent.required is None) or
+              (name not in schema.parent.required)) ):
             parts.append("Optional")
 
         if ( isinstance(schema, reschema.jsonschema.Number) or
@@ -621,22 +614,24 @@ class PropTable(HTMLTable):
             maximum = None
             if schema.maximum is not None:
                 maximum = str(schema.maximum)
-                if schema.exclusiveMaximum is not None:
+                if schema.exclusiveMaximum:
                     maximum = "(%s)" % str(maximum)
 
             if (minimum is not None) and (maximum is not None):
                 parts.append("Range: %s to %s" % (minimum, maximum))
             elif (minimum is not None):
-                parts.append("Min %s"  % (minimum))
+                parts.append("Minimum %s"  % (minimum))
             elif (maximum is not None):
-                parts.append("Max %s" % (maximum))
+                parts.append("Maximum %s" % (maximum))
 
         if isinstance(schema, reschema.jsonschema.Array):
-            if schema.minItems is not None:
-                parts.append("Minimum: %s" % (schema.minItems))
-
-            if schema.maxItems is not None:
-                parts.append("Maximum: %s" % (schema.maxItems))
+            if schema.minItems is not None and \
+                   schema.maxItems is not None:
+                parts.append("%s-%s items" % (schema.minItems, schema.maxItems))
+            elif schema.minItems is not None:
+                parts.append("Minimum: %s items" % (schema.minItems))
+            elif schema.maxItems is not None:
+                parts.append("Maximum: %s items" % (schema.maxItems))
 
         if isinstance(schema, reschema.jsonschema.Timestamp):
             parts.append("Seconds since January 1, 1970")

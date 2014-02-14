@@ -107,7 +107,8 @@ class ServiceDef(object):
         if 'types' in obj:
             for type_ in obj['types']:
                 self.types[type_] = Schema.parse(obj['types'][type_],
-                                                 name='/types/' + type_,
+                                                 name=type_,
+                                                 id_prefix='/types',
                                                  servicedef=self)
 
         self.resources = OrderedDict()
@@ -115,7 +116,8 @@ class ServiceDef(object):
             for resource in obj['resources']:
                 input_ = obj['resources'][resource]
                 sch = Schema.parse(input_,
-                                   name='/resources/' + resource,
+                                   name=resource,
+                                   id_prefix='/resources',
                                    servicedef=self)
                 self.resources[resource] = sch
 

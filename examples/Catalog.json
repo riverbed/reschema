@@ -299,7 +299,7 @@
         "author_ids": {
           "type": "array",
           "items": {
-            "id": "author_id",
+            "label": "author_id",
             "type": "integer",
             "relations": {
               "full": {
