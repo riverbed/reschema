@@ -13,7 +13,8 @@ import pytest
 from yaml.error import MarkedYAMLError
 
 import reschema
-from reschema.exceptions import ValidationError, ParseError, MissingParameter
+from reschema.exceptions import \
+     ValidationError, ParseError, MissingParameter, InvalidReference
 from reschema.jsonschema import (Object, Integer, Number, String,
                                  Array, Multi, Schema)
 from reschema import yaml_loader, ServiceDef
@@ -42,6 +43,7 @@ class TestReschema(unittest.TestCase):
         r = ServiceDef()
         r.load(CATALOG_YAML)
         self.assertEqual(r.name, 'catalog')
+        self.assertEqual(r.check_references(), [])
 
     def test_load_schema_json(self):
         r = ServiceDef()
@@ -437,12 +439,20 @@ class TestJsonSchema(TestSchemaBase):
                          )
 
     def test_ref(self):
+        with self.assertRaises(ParseError):
+            self.parse("type: object\n"
+                       "properties:\n"
+                       "    id: { type: number }\n"
+                       "    name: { type: string }\n"
+                       "    billing_address: { $ref: address }\n")
+
+    def test_ref(self):
         schema = self.parse("type: object\n"
                             "properties:\n"
                             "    id: { type: number }\n"
                             "    name: { type: string }\n"
-                            "    billing_address: { $ref: address }\n")
-        with self.assertRaises(ParseError):
+                            "    billing_address: { $ref: '#/address' }\n")
+        with self.assertRaises(InvalidReference):
             schema.validate({'id': 2,
                              'name': 'Frozzle',
                              'billing_address': "doesn't exist"})
@@ -721,6 +731,9 @@ class TestSchema(TestSchemaBase):
 
     def tearDown(self):
         self.r = None
+
+    def test_check_references(self):
+        self.assertEqual(self.r.check_references(), [])
 
     def test_object_required(self):
         r = self.r.resources['test_object_required']

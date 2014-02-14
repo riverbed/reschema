@@ -32,6 +32,14 @@ types:
          p1: { type: number }
          p2: { type: string }
 
+   type_object_with_refs:
+      type: object
+      description: "Type object with references to other types"
+      additionalProperties: False
+      properties:
+         p1: { $ref: "#/types/type_boolean" }
+         p2: { $ref: "#/types/type_number" }
+
 resources:
    test_boolean:
       type: boolean
@@ -56,7 +64,7 @@ resources:
 
    test_array_ref:
       type: array
-      items: { $ref: type_number }
+      items: { $ref: '#/types/type_number' }
       links: { self: { path: "$/test_array_ref" }  }
 
    test_object:
@@ -92,9 +100,9 @@ resources:
    test_object_ref:
       type: object
       properties:
-         prop_number_ref: { $ref: type_number }
-         prop_string_ref: { $ref: type_string }
-         prop_object_ref: { $ref: type_object }
+         prop_number_ref: { $ref: '#/types/type_number' }
+         prop_string_ref: { $ref: '#/types/type_string' }
+         prop_object_ref: { $ref: '#/types/type_object' }
       links: { self: { path: "$/test_object_ref" } }
 
    test_descr:
@@ -154,7 +162,7 @@ resources:
          self: { path: "$/test_methods" }
          get:
             method: GET
-            response: { $ref: test_methods }
+            response: { $ref: '#/resources/test_methods' }
 
          get_req:
             method: GET
@@ -163,22 +171,22 @@ resources:
                properties:
                   p1: { type: number }
                   p2: { type: string }
-            response: { $ref: test_methods }
+            response: { $ref: '#/resources/test_methods' }
 
          get_auth_req:
             method: GET
             authorization: required
-            response: { $ref: test_methods }
+            response: { $ref: '#/resources/test_methods' }
 
          get_auth_opt:
             method: GET
             authorization: optional
-            response: { $ref: test_methods }
+            response: { $ref: '#/resources/test_methods' }
 
          set:
             method: PUT
-            request: { $ref: test_methods }
-            response: { $ref: test_methods }
+            request: { $ref: '#/resources/test_methods' }
+            response: { $ref: '#/resources/test_methods' }
 
          delete:
             method: DELETE
@@ -251,7 +259,7 @@ resources:
          p3:
             type: array
             items:
-               { $ref: type_number }
+               { $ref: '#/types/type_number' }
 
       links: { self: { path: "$/test_object_full_readonly" } }
 
@@ -263,7 +271,7 @@ resources:
          p3:
             type: array
             items:
-               { $ref: type_number }
+               { $ref: '#/types/type_number' }
 
       links: { self: { path: "$/test_object_full_readonly" } }
 

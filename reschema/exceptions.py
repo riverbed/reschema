@@ -22,12 +22,22 @@ class NoContext(ReschemaException):
     """ A relative reference was provided with no supporting context. """
 
     def __init__(self, reference):
-        self._reference = reference
+        self.reference = reference
 
     def __str__(self):
         return ("Relative reference connot be resolve without context: %s"
-                % self._reference)
+                % self.reference)
 
+
+class InvalidReference(ReschemaException):
+    """ Invalid reference. """
+
+    def __init__(self, msg, reference):
+        self.msg = msg
+        self.reference = reference
+
+    def __str__(self):
+        return ("Invalid reference '%s': %s" % (self.reference, self.msg))
 
 #
 # jsonschema parsing errors
@@ -63,10 +73,8 @@ class ParseError(MarkedError):
     """ Schema parsing error. """
 
 
-
 #
 # jsonschema validation errors
 #
 class ValidationError(ReschemaException):
     """ Schema validation error. """
-

@@ -16,10 +16,12 @@ from collections import OrderedDict
 from jsonpointer import resolve_pointer, JsonPointer
 
 # Local imports
+import reschema.jsonschema as jsonschema
 from reschema.jsonschema import Schema
 from reschema.util import parse_prop
 from reschema import yaml_loader, json_loader
-from reschema.exceptions import ParseError, UnsupportedSchema, NoContext
+from reschema.exceptions import \
+     ParseError, UnsupportedSchema, NoContext, InvalidReference
 
 __all__ = ['ServiceDef']
 
@@ -132,9 +134,42 @@ class ServiceDef(object):
         parse_prop(self, obj, 'response_headers', None)
         parse_prop(self, obj, 'errors', None)
 
+    def check_references(self):
+        """ Iterate through all schemas and check references.
+
+        Check all resources and types associated with this service
+        defintion and verify that all references can be properly
+        resolved.  This returns an array of jsonschema.Ref instances
+        that cannot be resolved.
+
+        """
+
+        errors = []
+        def _check(r):
+            if type(r) is jsonschema.Ref:
+                try:
+                    refschema = r.refschema
+                except InvalidReference:
+                    errors.append(r)
+            else:
+                for c in r.children:
+                    _check(c)
+
+        for r in self.resource_iter():
+            _check(r)
+
+        for r in self.type_iter():
+            _check(r)
+
+        return errors
+
     def resource_iter(self):
         for r in self.resources:
             yield self.resources[r]
+
+    def type_iter(self):
+        for r in self.types:
+            yield self.types[r]
 
     def find_resource(self, name):
         return self.resources[name]
@@ -173,8 +208,11 @@ class ServiceDef(object):
            * `#<fragment>` - reference is resolved against the same
              <server> and <path> as `servicedef`
 
-        If `reference` is not provide, a reference of the latter 2 forms
-        will raise a NoContext exception.
+        :raises NoContext: `reference` is relative but `servicedef` is
+            not provided
+
+        :raises InvalidReference: `reference` does not appear to
+            be to the correct syntax
 
         """
         parsed_reference = urlparse.urlparse(reference)
@@ -190,6 +228,10 @@ class ServiceDef(object):
         if not parsed_reference.path:
             # relative reference within the same service def
             return urlparse.urljoin(servicedef.id, reference)
+
+        if reference[0] != '/':
+            raise InvalidReference("relative references should start with '#' or '/'",
+                                   reference)
 
         # Netloc is none, so same provider, but different service
         return servicedef.id_root + reference

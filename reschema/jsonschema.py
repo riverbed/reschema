@@ -58,9 +58,11 @@ it recursively validates the entire input data object as needed:
     >>> bookinput = {'id': 1, 'title': 'A good book!'}
     >>> bookschema.validate(bookinput)
 
-    >>> bookinput = {'id': 1, 'title': 'A good book!', author_ids: ['bad author']}
+    >>> bookinput = {'id': 1, 'title': 'A good book!',
+                     'author_ids': ['bad author']}
     >>> bookschema.validate(bookinput)
-    ValidationError: 'bad author' expected to be a number for book.author_ids.[items]
+    ValidationError: 'bad author' expected to be a number for
+    book.author_ids.[items]
 
 See each individual Schema type for the complete list of validation rules.
 """
@@ -77,7 +79,8 @@ from jsonpointer import resolve_pointer, JsonPointer
 import reschema
 from reschema.util import parse_prop
 from reschema.reljsonpointer import resolve_rel_pointer, RelJsonPointer
-from reschema.exceptions import ValidationError, MissingParameter, ParseError
+from reschema.exceptions import \
+     ValidationError, MissingParameter, ParseError, InvalidReference
 
 logger = logging.getLogger(__name__)
 
@@ -196,11 +199,12 @@ class Schema(object):
         else:
             self._not = None
 
-        print "Adding schema: %s - parent %s" % (self.fullid(), parent)
+        #print "Adding schema: %s - parent %s" % (self.fullid(), parent)
         self.schemas[self.fullid()] = self
 
     def __repr__(self):
-        return "<jsonschema.%s '%s'>" % (self.__class__.__name__, self.fullid())
+        return "<jsonschema.%s '%s'>" % (self.__class__.__name__,
+                                         self.fullid())
 
     @classmethod
     def parse(cls, input, name=None, parent=None, servicedef=None):
@@ -243,7 +247,8 @@ class Schema(object):
             cls = type_map[typestr]
         except KeyError:
             msg = ('Unknown type: %s while parsing %s%s' %
-                   (typestr, (parent.fullname() + '.') if parent else '', name))
+                   (typestr, (parent.fullname() + '.') if parent else '',
+                    name))
             raise ParseError(msg, typestr)
 
         return cls(input, name, parent, servicedef=servicedef)
@@ -292,7 +297,7 @@ class Schema(object):
         return self.is_multi()
 
     def matches(self, other):
-        """ Return True if this schema refers to the same schema as other based on 'self'. """
+        """ Return True if other refers to the same schema based on 'self'. """
         return ( ('self' in self.links) and
                  ('self' in other.links) and
                  (self.links['self'].path.template ==
@@ -489,19 +494,21 @@ class Ref(Schema):
         # are defined
         self._refschema = None
         ref_id = parse_prop(None, input, '$ref', required=True)
-        self.refschema_id = reschema.ServiceDef.expand_id(ref_id, self.servicedef)
-        #self.refschema_id = self.servicedef.expand_id(ref_id, self.servicedef)
+        try:
+            self._refschema_id = (reschema.ServiceDef
+                                  .expand_id(ref_id, self.servicedef))
+        except InvalidReference as e:
+            raise ParseError(str(e), input)
 
         _check_input(self.fullname(), input)
 
     @property
     def refschema(self):
         if self._refschema is None:
-            sch = Schema.find_by_id(self.refschema_id)
+            sch = Schema.find_by_id(self._refschema_id)
             if sch is None:
-                msg = ("No such schema '%s' for '$ref': %s" %
-                       (self.refschema_id, self.fullname()))
-                raise ParseError(msg, self)
+                raise InvalidReference(("%s $ref" % self.fullname()),
+                                       self._refschema_id)
 
             # XXXCJ - Hopefully we can drop this deepcopy -- need to
             # make sure docs and sleepwalker don't rely on it
@@ -816,7 +823,10 @@ class Object(Schema):
 
     def toxml(self, input, parent=None):
         """Return ElementTree object with `input` data.
-        Additional Properties that are not explicitly defined are not supported.
+
+        Additional Properties that are not explicitly defined are not
+        supported.
+
         """
         if parent is not None:
             elem = ET.SubElement(parent, self.id)
@@ -945,7 +955,7 @@ class Relation(object):
         # are defined
         self._resource = None
         ref_id = parse_prop(None, input, 'resource', required=True)
-        self._resource_id = (schema.servicedef
+        self._resource_id = (reschema.ServiceDef
                              .expand_id(ref_id, schema.servicedef))
 
         self.vars = parse_prop(self, input, 'vars')
@@ -956,7 +966,8 @@ class Relation(object):
         return self.resource.name
 
     def __repr__(self):
-        return "<jsonschema.%s '%s'>" % (self.__class__.__name__, self.fullid())
+        return "<jsonschema.%s '%s'>" % (self.__class__.__name__,
+                                         self.fullid())
 
     def is_ref(self):
         return False
@@ -969,8 +980,8 @@ class Relation(object):
         if self._resource is None:
             self._resource = Schema.find_by_id(self._resource_id)
             if self._resource is None:
-                raise KeyError("Invalid resource '%s' for relation: %s" %
-                               (self._resource_name, self.fullname()))
+                raise InvalidReference(("%s resource" % self.fullname()),
+                                       self._resource_id)
 
         return self._resource
 
@@ -1068,7 +1079,8 @@ class Link(object):
         _check_input(self.fullname(), input)
 
     def __repr__(self):
-        return "<jsonschema.%s '%s'>" % (self.__class__.__name__, self.fullid())
+        return "<jsonschema.%s '%s'>" % (self.__class__.__name__,
+                                         self.fullid())
 
     def is_ref(self):
         return False
@@ -1108,7 +1120,7 @@ class Link(object):
 
 
 class Path(object):
-    """The `Path` class manages URI templates and resolves variables for a schema.
+    """The `Path` class manages URI templates and resolves variables.
 
     The `resolve` method supports resolving variables in the template from
     a data object conforming to the linked schema.
@@ -1123,12 +1135,13 @@ class Path(object):
                         '<var2>' : <rel-json-pointer>,
                         ... } }
 
-    In both cases, the '<uri-template>' is follows RFC6570 syntax.  Variables
-    in the template are resolved first looking to vars, then do the data object.
+    In both cases, the '<uri-template>' is follows RFC6570 syntax.
+    Variables in the template are resolved first looking to vars, then
+    do the data object.
 
-    Since URI templates can only specify simple variables, the second form is
-    used as a level of indirection to move up or down in a data structure
-    relative to the place where the link was defined.
+    Since URI templates can only specify simple variables, the second
+    form is used as a level of indirection to move up or down in a
+    data structure relative to the place where the link was defined.
 
     """
 
@@ -1151,7 +1164,7 @@ class Path(object):
         return self.template
 
     def resolve(self, servicepath, data, pointer=None):
-        """Resolve all variables in this path template from `data` relative to `pointer`."""
+        """Resolve variables in template from `data` relative to `pointer`."""
         values = {}
         if data:
             values['$'] = resolve_pointer(data, pointer or '')
