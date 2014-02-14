@@ -9,7 +9,7 @@
   "types": {
     "address": {
       "type": "object",
-      "id": "address",
+      "additionalProperties": false,
       "properties": {
         "street": {
           "type": "string",
@@ -35,6 +35,7 @@
   "resources": {
     "info": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "owner": {
           "type": "string"
@@ -100,6 +101,7 @@
     },
     "author": {
       "type": "object",
+      "additionalProperties": true,
       "properties": {
         "id": {
           "type": "integer"
@@ -171,6 +173,7 @@
     },
     "publisher": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "id": {
           "type": "integer"
@@ -203,6 +206,7 @@
       "type": "array",
       "items": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "id": {
             "type": "integer",
@@ -281,6 +285,7 @@
         ]
       },
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "id": {
           "type": "integer"
@@ -310,6 +315,7 @@
           "type": "array",
           "items": {
             "type": "object",
+            "additionalProperties": false,
             "properties": {
               "num": {
                 "type": "integer"
@@ -357,6 +363,7 @@
           "method": "POST",
           "request": {
             "type": "object",
+            "additionalProperties": false,
             "properties": {
               "num_copies": {
                 "type": "integer"
@@ -368,6 +375,7 @@
           },
           "response": {
             "type": "object",
+            "additionalProperties": false,
             "properties": {
               "delivery_date": {
                 "type": "string"
@@ -403,6 +411,7 @@
     },
     "book_chapter": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "bookid": {
           "type": "integer"

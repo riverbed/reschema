@@ -74,6 +74,7 @@ from collections import OrderedDict
 import uritemplate
 from jsonpointer import resolve_pointer, JsonPointer
 
+import reschema
 from reschema.util import parse_prop
 from reschema.reljsonpointer import resolve_rel_pointer, RelJsonPointer
 from reschema.exceptions import ValidationError, MissingParameter, ParseError
@@ -311,7 +312,8 @@ class Schema(object):
     def fullid(self, relative=False):
         """Return the full id using path notation.
 
-        :param relative: set to False to relative to this servicedef
+        :param relative: set to True to return an id relative to this
+            servicedef
 
         """
         # TODO: Should this be cached?  Do we support changing it?
@@ -321,8 +323,7 @@ class Schema(object):
                 return self.parent.fullid(relative)
             else:
                 return self.parent.fullid(relative) + '/' + self.id
-        return ((self.servicedef.id + '#')
-                if (not relative) else '#') + self.id
+        return '%s#%s' % (('' if relative else self.servicedef.id), self.id)
 
     def str_simple(self):
         """Return a string representation of this element as a basic table."""
@@ -488,7 +489,8 @@ class Ref(Schema):
         # are defined
         self._refschema = None
         ref_id = parse_prop(None, input, '$ref', required=True)
-        self.refschema_id = self.servicedef.expand_id(ref_id, self.servicedef)
+        self.refschema_id = reschema.ServiceDef.expand_id(ref_id, self.servicedef)
+        #self.refschema_id = self.servicedef.expand_id(ref_id, self.servicedef)
 
         _check_input(self.fullname(), input)
 
@@ -500,10 +502,15 @@ class Ref(Schema):
                 msg = ("No such schema '%s' for '$ref': %s" %
                        (self.refschema_id, self.fullname()))
                 raise ParseError(msg, self)
+
+            # XXXCJ - Hopefully we can drop this deepcopy -- need to
+            # make sure docs and sleepwalker don't rely on it
             #sch = copy.deepcopy(sch)
             #sch.parent = self
             #sch.parent.api = self.api
+
             self._refschema = sch
+
         return self._refschema
 
     def is_simple(self):
@@ -971,6 +978,12 @@ class Relation(object):
         return self.schema.fullname() + '.relations.' + self.name
 
     def fullid(self, relative=False):
+        """Return the full id using path notation.
+
+        :param relative: set to True to return an id relative to this
+            servicedef
+
+        """
         return self.schema.fullid(relative) + '/relations/' + self.name
 
     def str_simple(self):
@@ -1067,6 +1080,12 @@ class Link(object):
         return self.schema.fullname() + '.links.' + self.name
 
     def fullid(self, relative=False):
+        """Return the full id using path notation.
+
+        :param relative: set to True to return an id relative to this
+            servicedef
+
+        """
         return self.schema.fullid(relative) + '/links/' + self.name
 
     def str_simple(self):
