@@ -80,16 +80,14 @@ class ServiceDef(object):
                                     self.schema)
 
         parse_prop(self, obj, 'id', required=True)
+        parsed_id = urlparse.urlparse(self.id)
+        if not parsed_id.netloc:
+            raise ParseError("Service definition 'id' property must be a "
+                             "fully qualified URI: %s" % id)
+
         parse_prop(self, obj, 'provider', required=True)
         parse_prop(self, obj, 'name', required=True)
         parse_prop(self, obj, 'version', required=True)
-
-        m = re.match('^(.*)/%s/%s' % (self.name, self.version), self.id)
-        if not m:
-            raise ParseError("Service definition 'id' property must end "
-                             "with 'name'/'version'")
-        self.id_root = m.group(1)
-
         parse_prop(self, obj, 'title', self.name)
         parse_prop(self, obj, 'status', '')
 
@@ -229,14 +227,10 @@ class ServiceDef(object):
             # relative references require a servicedef for context
             raise NoContext(reference)
 
-        if not parsed_reference.path:
-            # relative reference within the same service def
-            return urlparse.urljoin(servicedef.id, reference)
-
-        if reference[0] != '/':
+        if reference[0] not in ['/', '#']:
             raise InvalidReference("relative references should "
                                    "start with '#' or '/'",
                                    reference)
 
-        # Netloc is none, so same provider, but different service
-        return servicedef.id_root + reference
+        # urljoin will take care of the rest
+        return urlparse.urljoin(servicedef.id, reference)

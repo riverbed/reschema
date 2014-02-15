@@ -339,7 +339,6 @@ class TestSchemaBase(unittest.TestCase):
         d = yaml_loader.marked_load(string)
         s = ServiceDef()
         s.id = 'http://support.riverbed.com/apis/testschema/1.0'
-        s.id_root = 'http://support.riverbed.com/apis'
         return Schema.parse(d, 'root', servicedef=s)
 
     def check_valid(self, s, valid=None, invalid=None, toxml=False):
@@ -378,7 +377,6 @@ class TestJsonSchema(TestSchemaBase):
     def setUp(self):
         self.servicedef = reschema.ServiceDef()
         self.servicedef.id = 'http://support.riverbed.com/apis/testschema/1.0'
-        self.servicedef.id_root = 'http://support.riverbed.com/apis'
 
     def tearDown(self):
         pass
@@ -899,6 +897,27 @@ class TestSchema(TestSchemaBase):
         self.check_valid(r.links['delete'].response,
                          valid=[None],
                          invalid=[{}, [], 0, '', ' '])
+
+class TestExpandId(unittest.TestCase):
+
+    def setUp(self):
+        self.s = reschema.ServiceDef()
+        self.s.id = 'http://support.riverbed.com/apis/testschema/1.0'
+
+    def test_local_ref(self):
+        self.assertEqual(
+            ServiceDef.expand_id("#/foo/bar", self.s),
+            self.s.id + "#/foo/bar")
+
+    def test_provider_ref(self):
+        self.assertEqual(
+            ServiceDef.expand_id("/apis/otherschema/2.0#/foo/bar", self.s),
+            "http://support.riverbed.com/apis/otherschema/2.0#/foo/bar")
+
+    def test_full_ref(self):
+        id_ = "http://support.riverbed.com/apis/otherschema/2.0#/foo/bar"
+        self.assertEqual(ServiceDef.expand_id(id_, self.s), id_)
+
 
 if __name__ == '__main__':
     logging.basicConfig(filename='test.log', level=logging.DEBUG)
