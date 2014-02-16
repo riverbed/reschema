@@ -16,6 +16,12 @@ types:
       type: number
       description: "Type number"
 
+   type_number_limits:
+      type: number
+      description: "Type number with limits"
+      minimum: 10
+      maximum: 20
+
    type_integer:
       type: integer
       description: "Type integer"
@@ -463,3 +469,22 @@ resources:
                x: { type: number }
                y: { type: number }
                z: { type: string }
+
+   test_item:
+      type: object
+      properties:
+         num: { type: number }
+         name: { type: string }
+
+      links: { self: { path: "$/test_items/{num}" } }
+
+   test_items:
+      type: array
+      items:
+         type: number
+         relations:
+            full:
+               resource: "#/resources/test_item"
+               vars: { num: "0" }
+
+      links: { self: { path: "$/test_items}" } }

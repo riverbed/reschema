@@ -2,7 +2,7 @@
 #
 # This software is licensed under the terms and conditions of the
 # MIT License set forth at:
-#   https://github.com/riverbed/flyscript-portal/blob/master/LICENSE ("License").
+#   https://github.com/riverbed/reschema/blob/master/LICENSE ("License").
 # This software is distributed "AS IS" as set forth in the License.
 
 
@@ -16,6 +16,21 @@ class ReschemaException(Exception):
 class UnsupportedSchema(ReschemaException):
     """ Schema uses an unsupported schema format. """
     pass
+
+
+class InvalidServiceId(ReschemaException):
+    """ No service defintion loaded for the given id. """
+    pass
+
+
+class DuplicateServiceId(ReschemaException):
+    """ Service defintion already registered for the requested id. """
+
+    def __init__(self, id_):
+        self.id_ = id_
+
+    def __str__(self):
+        return "Service definition already registered by id: %s" % self.id_
 
 
 class NoContext(ReschemaException):

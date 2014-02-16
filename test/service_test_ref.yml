@@ -1,0 +1,25 @@
+$schema: "http://support.riverbed.com/apis/service_def/2.1"
+id: "http://support.riverbed.com/apis/test.ref/1.0"
+provider: "riverbed"
+name: "test.ref"
+version: "1.0"
+title: "Test ref REST API"
+defaultAuthorization: "required"
+
+resources:
+   test_ref_types:
+      type: object
+      properties:
+         prop_boolean: { $ref: "/apis/test/1.0#/types/type_boolean" }
+         prop_number_limits: { $ref: "/apis/test/1.0#/types/type_number_limits" }
+
+      links: { self: { path: "$/test_ref_types" }  }
+
+   test_ref_resource:
+      type: number
+      relations:
+         item:
+            resource: "/apis/test/1.0#/resources/test_item"
+            vars: { id: "0" }
+
+      links: { self: { path: "$/test_ref_resource" }  }

@@ -1,13 +1,15 @@
-#!/usr/bin/env python
+# Copyright (c) 2013 Riverbed Technology, Inc.
+#
+# This software is licensed under the terms and conditions of the
+# MIT License set forth at:
+#   https://github.com/riverbed/reschema/blob/master/LICENSE ("License").
+# This software is distributed "AS IS" as set forth in the License.
 
 import os
+import unittest
 
-import reschema
 from reschema.exceptions import ReschemaException
-from test_reschema import TEST_SCHEMA_YAML
-
-TEST_SCHEMA_YAML_BAD = os.path.join(os.path.dirname(TEST_SCHEMA_YAML),
-                                    'catalog_bad_property.yml')
+from reschema import ServiceDef, ServiceDefCache
 
 """
 Exmaple script to demonstrate how marks can print out location
@@ -93,52 +95,20 @@ json_snippet_bad = """\
 }
 """
 
-print ''
-print 'Parsing bad YAML ...'
-print '-' * 80
-try:
-    r = reschema.ServiceDef()
-    r.parse_text(yaml_snippet_bad, format='yaml')
-except ReschemaException as e:
-    print e
+class TestMarkedLoad(unittest.TestCase):
 
-print ''
-print 'Parsing bad YAML from File ...'
-print '-' * 80
-try:
-    r = reschema.ServiceDef()
-    print "TEST_SCHEMA_YAML: %s" % TEST_SCHEMA_YAML
-    r.load(TEST_SCHEMA_YAML)
-except ReschemaException as e:
-    print e
+    def setUp(self):
+        pass
 
-print ''
-print 'Parsing bad JSON ...'
-print '-' * 80
-try:
-    r = reschema.ServiceDef()
-    r.parse_text(json_snippet_bad)
-except ReschemaException as e:
-    print e
+    def tearDown(self):
+        ServiceDefCache.clear()
 
-print ''
-print 'Validating good YAML with bad values ...'
-print '-' * 80
-try:
-    r = reschema.ServiceDef()
-    r.load(TEST_SCHEMA_YAML)
-    a = r.resources['test_string']
-    a.validate(42)
-except ReschemaException as e:
-    print e
+    def test_bad_yaml(self):
+        with self.assertRaises(ReschemaException):
+            r = ServiceDef()
+            r.parse_text(yaml_snippet_bad, format='yaml')
 
-#print ''
-#print 'Validating good JSON with bad values ...'
-#print '-' * 80
-#try:
-#    r = reschema.ServiceDef()
-#    r.load(TEST_SCHEMA_JSON)
-#    a = r.resources['test_string']
-#    a.validate(42)
-#except ReschemaException as e:
-#    print e
+    def test_bad_json(self):
+        with self.assertRaises(ReschemaException):
+            r = ServiceDef()
+            r.parse_text(json_snippet_bad)

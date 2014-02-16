@@ -2,7 +2,7 @@
 #
 # This software is licensed under the terms and conditions of the
 # MIT License set forth at:
-#   https://github.com/riverbed/flyscript-portal/blob/master/LICENSE ("License").
+#   https://github.com/riverbed/reschema/blob/master/LICENSE ("License").
 # This software is distributed "AS IS" as set forth in the License.
 
 import os
@@ -13,16 +13,16 @@ import pytest
 from yaml.error import MarkedYAMLError
 
 import reschema
-from reschema.exceptions import \
-     ValidationError, ParseError, MissingParameter, InvalidReference
+from reschema.exceptions import *
 from reschema.jsonschema import (Object, Integer, Number, String,
                                  Array, Multi, Schema)
-from reschema import yaml_loader, ServiceDef
+from reschema import yaml_loader, ServiceDef, ServiceDefCache
 
 logger = logging.getLogger(__name__)
 
 TEST_PATH = os.path.abspath(os.path.dirname(__file__))
-TEST_SCHEMA_YAML = os.path.join(TEST_PATH, 'test_schema.yml')
+SERVICE_DEF_TEST = os.path.join(TEST_PATH, 'service_test.yml')
+SERVICE_DEF_TEST_REF = os.path.join(TEST_PATH, 'service_test_ref.yml')
 
 PACKAGE_PATH = os.path.dirname(TEST_PATH)
 
@@ -37,7 +37,7 @@ class TestReschema(unittest.TestCase):
         pass
 
     def tearDown(self):
-        pass
+        ServiceDefCache.clear()
 
     def test_load_schema(self):
         r = ServiceDef()
@@ -124,28 +124,23 @@ class TestReschema(unittest.TestCase):
     def test_find_name_basic(self):
         r = ServiceDef()
         r.load(CATALOG_YAML)
-        a = r.find('author')
+        a = ServiceDef.find(r, '#/resources/author')
         self.assertEqual(a.fullid(True), '#/resources/author')
-        with self.assertRaises(KeyError):
-            r.find('no_type')
 
     def test_find_name_complex(self):
         r = ServiceDef()
         r.load(CATALOG_YAML)
-        c = r.find('/book/chapters')
+        c = ServiceDef.find(r, '#/resources/book/chapters')
         self.assertEqual(c.fullid(True), '#/resources/book/chapters')
         self.assertEqual(c._type, 'array')
         self.assertEqual(c.typestr, 'array of <object>')
-        c = r.find('/book/chapters/1')
+        c = ServiceDef.find(r, '#/resources/book/chapters/1')
         self.assertEqual(c.fullid(True), '#/resources/book/chapters/items')
         self.assertEqual(c._type, 'object')
-        c = r.find('/book/author_ids')
+        c = ServiceDef.find(r, '#/resources/book/author_ids')
         self.assertEqual(c._type, 'array')
-        c = r.find('/book/author_ids/1')
+        c = ServiceDef.find(r, '#/resources/book/author_ids/1')
         self.assertEqual(c._type, 'integer')
-
-        with self.assertRaises(KeyError):
-            r.find('no_type')
 
 
 class TestCatalog(unittest.TestCase):
@@ -156,6 +151,7 @@ class TestCatalog(unittest.TestCase):
 
     def tearDown(self):
         self.r = None
+        ServiceDefCache.clear()
 
     def test_string(self):
         s = self.r.resources['author'].props['name']
@@ -185,7 +181,8 @@ class TestCatalog(unittest.TestCase):
             n.validate(3.14)
 
     def test_reference(self):
-        ref = self.r.find('publisher').props['billing_address']
+        pub = ServiceDef.find(self.r, '#/resources/publisher')
+        ref = pub.props['billing_address']
         self.assertFalse(ref.is_simple())
         self.assertTrue(ref.is_ref())
         self.assertEqual(ref.typestr, 'address')
@@ -196,7 +193,7 @@ class TestCatalog(unittest.TestCase):
         self.assertEqual(link.resource, self.r.resources['authors'])
 
     def test_link_path(self):
-        pub = self.r.find('publisher')
+        pub = ServiceDef.find(self.r, '#/resources/publisher')
         link = pub.links['self']
         path = link.path
         self.assertEqual(str(path), '$/publishers/{id}')
@@ -204,7 +201,7 @@ class TestCatalog(unittest.TestCase):
                          '/api/catalog/1.0/publishers/12')
 
     def test_link_template_path(self):
-        book = self.r.find('book')
+        book = ServiceDef.find(self.r, '#/resources/book')
         chapters = book.props['chapters']
         items = chapters.items
         book_chapter = items.relations['full']
@@ -223,7 +220,7 @@ class TestCatalog(unittest.TestCase):
         self.assertIsInstance(repr(s), str)
 
     def test_object_xml(self):
-        book = self.r.find('book')
+        book = ServiceDef.find(self.r, '#/resources/book')
         p = {'id': 1,
              'title': '50 Shades of JSON',
              'publisher_id': 2,
@@ -234,7 +231,8 @@ class TestCatalog(unittest.TestCase):
                           ]}
         self.assertIsNone(book.validate(p))
         xml = book.toxml(p)
-        self.assertEqual(sorted(xml.keys()), [u'id', u'publisher_id', u'title'])
+        self.assertEqual(sorted(xml.keys()),
+                         [u'id', u'publisher_id', u'title'])
         xml_child = book.toxml(p, parent=xml)
         self.assertNotEqual(xml, xml_child)
 
@@ -299,6 +297,7 @@ class TestCatalogLinks(unittest.TestCase):
 
     def tearDown(self):
         self.r = None
+        ServiceDefCache.clear()
 
     def test_links(self):
         book = self.r.resources['book']
@@ -335,6 +334,9 @@ class TestCatalogLinks(unittest.TestCase):
 
 class TestSchemaBase(unittest.TestCase):
 
+    def tearDown(self):
+        ServiceDefCache.clear()
+
     def parse(self, string):
         d = yaml_loader.marked_load(string)
         s = ServiceDef()
@@ -351,7 +353,8 @@ class TestSchemaBase(unittest.TestCase):
             try:
                 schema.validate(a)
             except ValidationError, e:
-                self.fail("ValidationError: value should pass: %s, %s" % (a, e))
+                self.fail("ValidationError: value should pass: %s, %s" %
+                          (a, e))
 
             if toxml:
                 schema.toxml(a)
@@ -379,7 +382,7 @@ class TestJsonSchema(TestSchemaBase):
         self.servicedef.id = 'http://support.riverbed.com/apis/testschema/1.0'
 
     def tearDown(self):
-        pass
+        ServiceDefCache.clear()
 
     def test_exceptions(self):
         # cover exception string output
@@ -725,10 +728,11 @@ class TestSchema(TestSchemaBase):
 
     def setUp(self):
         self.r = reschema.ServiceDef()
-        self.r.load(TEST_SCHEMA_YAML)
+        self.r.load(SERVICE_DEF_TEST)
 
     def tearDown(self):
         self.r = None
+        ServiceDefCache.clear()
 
     def test_check_references(self):
         self.assertEqual(self.r.check_references(), [])
@@ -766,8 +770,8 @@ class TestSchema(TestSchemaBase):
         a2 = r['a2']
         self.assertEqual(a2.fullid(), '/test_anyof1/a2')
 
-        a2 = self.r.find('/test_anyof1/a2')
-        self.assertEqual(a2.fullid(), '/test_anyof1/a2')
+        a2 = ServiceDef.find(self.r, '#/resources/test_anyof1/a2')
+        self.assertEqual(a2.fullid(), '#/resources/test_anyof1/a2')
 
     @pytest.mark.xfail
     def test_anyof2(self):
@@ -797,7 +801,7 @@ class TestSchema(TestSchemaBase):
         a2 = r['a2']
         self.assertEqual(a2.fullid(), '/test_anyof2/a2')
 
-        a2 = self.r.find('/test_anyof2/a2')
+        a2 = ServiceDef.find(self.r, '/test_anyof2/a2')
         self.assertEqual(a2.fullid(), '/test_anyof2/a2')
 
     def test_anyof3(self):
@@ -821,7 +825,7 @@ class TestSchema(TestSchemaBase):
                                      {'a1': 2, 'a2': 29},
                                      ] )
 
-        a2 = self.r.find('/test_anyof3/a2')
+        a2 = ServiceDef.find(self.r, '#/resources/test_anyof3/a2')
         self.assertEqual(a2.fullid(True), '#/resources/test_anyof3/a2')
 
     @pytest.mark.xfail
@@ -905,19 +909,95 @@ class TestExpandId(unittest.TestCase):
         self.s = reschema.ServiceDef()
         self.s.id = 'http://support.riverbed.com/apis/testschema/1.0'
 
+    def tearDown(self):
+        ServiceDefCache.clear()
+
     def test_local_ref(self):
         self.assertEqual(
-            ServiceDef.expand_id("#/foo/bar", self.s),
+            ServiceDef.expand_id(self.s, "#/foo/bar"),
             self.s.id + "#/foo/bar")
 
     def test_provider_ref(self):
         self.assertEqual(
-            ServiceDef.expand_id("/apis/otherschema/2.0#/foo/bar", self.s),
+            ServiceDef.expand_id(self.s, "/apis/otherschema/2.0#/foo/bar"),
             "http://support.riverbed.com/apis/otherschema/2.0#/foo/bar")
 
     def test_full_ref(self):
         id_ = "http://support.riverbed.com/apis/otherschema/2.0#/foo/bar"
-        self.assertEqual(ServiceDef.expand_id(id_, self.s), id_)
+        self.assertEqual(ServiceDef.expand_id(self.s, id_), id_)
+
+
+class TestSchemaRef(TestSchemaBase):
+
+    def setUp(self):
+        self.s1 = ServiceDef()
+        self.s1.load(SERVICE_DEF_TEST)
+        self.s2 = ServiceDef()
+        self.s2.load(SERVICE_DEF_TEST_REF)
+
+    def tearDown(self):
+        ServiceDefCache.clear()
+
+    def test_ref_types(self):
+        r = ServiceDef.find(self.s2,'#/resources/test_ref_types')
+
+        (self.check_valid
+         (r,
+          valid = [ {'prop_boolean': False, 'prop_number_limits': 12},
+                    {'prop_boolean': True, 'prop_number_limits': 19}],
+
+          invalid = [ {'prop_boolean': 1, 'prop_number_limits': 12},
+                      {'prop_boolean': True, 'prop_number_limits': 22}]))
+
+
+    def test_ref_relations(self):
+        item = ServiceDef.find(self.s1, '#/resources/test_item')
+        ref_resource = ServiceDef.find(self.s2,
+                                       '#/resources/test_ref_resource')
+        ref_resource_item = ref_resource.relations['item'].resource
+
+        self.assertEqual(item, ref_resource_item)
+
+
+class TestLoadHook(TestSchemaBase):
+
+    service_map = {
+        'http://support.riverbed.com/apis/test/1.0': SERVICE_DEF_TEST,
+        'http://support.riverbed.com/apis/test.ref/1.0': SERVICE_DEF_TEST_REF
+        }
+
+    def load(self, id_):
+        if id_ in self.service_map:
+            s = ServiceDef()
+            s.load(self.service_map[id_])
+            return s
+        else:
+            raise KeyError("Invalid id: %s" % id_)
+
+    def setUp(self):
+        ServiceDefCache.add_load_hook (lambda id_: self.load(id_))
+
+    def tearDown(self):
+        ServiceDefCache.clear()
+
+    def test_load(self):
+        rid = ('http://support.riverbed.com/apis/test/1.0'
+               '#/types/type_boolean')
+        r = ServiceDef.find(None, rid)
+        self.assertEqual(r.fullid(), rid)
+
+        rid = ('http://support.riverbed.com/apis/test.ref/1.0'
+               '#/resources/test_ref_types')
+        r = ServiceDef.find(None, rid)
+        self.assertEqual(r.fullid(), rid)
+
+    def test_load_on_relation(self):
+        s = ServiceDefCache.lookup(
+            'http://support.riverbed.com/apis/test.ref/1.0')
+        r = ServiceDef.find(s, '/apis/test/1.0#/resources/test_boolean')
+        self.assertEqual(r.fullid(),
+                         ('http://support.riverbed.com/apis/test/1.0'
+                          '#/resources/test_boolean'))
 
 
 if __name__ == '__main__':

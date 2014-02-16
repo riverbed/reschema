@@ -502,7 +502,7 @@ class Ref(Schema):
         ref_id = parse_prop(None, input, '$ref', required=True)
         try:
             self._refschema_id = (reschema.ServiceDef
-                                  .expand_id(ref_id, self.servicedef))
+                                  .expand_id(self.servicedef, ref_id))
         except InvalidReference as e:
             raise ParseError(str(e), input)
 
@@ -962,7 +962,7 @@ class Relation(object):
         self._resource = None
         ref_id = parse_prop(None, input, 'resource', required=True)
         self._resource_id = (reschema.ServiceDef
-                             .expand_id(ref_id, schema.servicedef))
+                             .expand_id(schema.servicedef, ref_id))
 
         self.vars = parse_prop(self, input, 'vars')
 

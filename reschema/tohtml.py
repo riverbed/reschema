@@ -47,6 +47,7 @@ class ServiceDefToHtml(object):
     def __init__(self, servicedef, container, menu=None, options=None,
                  device="{device}", root="/{root}"):
         ServiceDefToHtml.servicedef = servicedef
+        self.servicedef = servicedef
         self.container = container
         self.menu = menu
         self.options = (options or Options())
