@@ -207,7 +207,8 @@ class Schema(object):
                                          self.fullid())
 
     @classmethod
-    def parse(cls, input, name=None, parent=None, servicedef=None, id_prefix=None):
+    def parse(cls, input, name=None, parent=None, servicedef=None,
+              id_prefix=None):
         """Parse a <json-schema> definition for an object.
 
         :param input: the definition to parse
@@ -251,7 +252,8 @@ class Schema(object):
                     name))
             raise ParseError(msg, typestr)
 
-        return cls(input, name, parent, servicedef=servicedef, id_prefix=id_prefix)
+        return cls(input, name, parent, servicedef=servicedef,
+                   id_prefix=id_prefix)
 
     @classmethod
     def find_by_id(cls, id):

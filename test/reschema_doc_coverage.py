@@ -2,8 +2,10 @@
 #
 # This software is licensed under the terms and conditions of the
 # MIT License set forth at:
-#   https://github.com/riverbed/flyscript-portal/blob/master/LICENSE ("License").
+#   https://github.com/riverbed/reschema/blob/master/LICENSE ("License").
 # This software is distributed "AS IS" as set forth in the License.
+
+from __future__ import print_function
 
 import os
 import coverage
@@ -32,7 +34,6 @@ for filename in [TEST_SCHEMA, CATALOG_SCHEMA]:
     if not os.path.exists(outdir):
         os.makedirs(outdir)
 
-
     base = os.path.splitext(os.path.basename(filename))[0]
 
     html = "%s/%s.html" % (outdir, base)
@@ -46,9 +47,9 @@ for filename in [TEST_SCHEMA, CATALOG_SCHEMA]:
                                            json=True, xml=True))
     r2h.process()
     htmldoc.write(html)
-    print "HTML output: ./%s" % html
+    print("HTML output: ./%s" % html)
 
 cov.stop()
 cov.html_report(directory=outdir)
 
-print "Report written: ./%s/index.html" % outdir
+print("Report written: ./%s/index.html" % outdir)

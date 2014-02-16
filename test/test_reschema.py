@@ -898,6 +898,7 @@ class TestSchema(TestSchemaBase):
                          valid=[None],
                          invalid=[{}, [], 0, '', ' '])
 
+
 class TestExpandId(unittest.TestCase):
 
     def setUp(self):

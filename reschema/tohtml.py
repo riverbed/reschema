@@ -65,12 +65,14 @@ class ServiceDefToHtml(object):
         self.menu.add_item("Types", href=types_div)
         type_menu = self.menu.add_submenu()
         for type_ in self.servicedef.types.values():
-            ResourceToHtml(type_, self.container, type_menu,
-                           self.servicepath, self.options).process(is_type=True)
+            rh = ResourceToHtml(type_, self.container, type_menu,
+                                self.servicepath, self.options)
+            rh.process(is_type=True)
 
 
 class ResourceToHtml(object):
-    def __init__(self, schema, container, menu=None, basepath="", options=None):
+    def __init__(self, schema, container, menu=None, basepath="",
+                 options=None):
         self.schema = schema
         self.menu = menu
         self.container = container
@@ -225,12 +227,16 @@ class ResourceToHtml(object):
                             description = "data"
                         else:
                             description = "the " + link.request.description
-                            p.settext("Provide a request body containing %s with content type " % description,
-                                      p.span(cls="content-attribute", text=link.request.content_type),
+                            p.settext(("Provide a request body containing %s "
+                                       "with content type ") % description,
+                                      p.span(cls="content-attribute",
+                                             text=link.request.content_type),
                                       ".")
                     else:
-                        p = div.p().text = "Provide a request body with the following structure:"
-                        self.schema_table(link.request, div, baseid + '-request')
+                        p = div.p().text = ("Provide a request body with the "
+                                            "following structure:")
+                        self.schema_table(link.request, div,
+                                          baseid + '-request')
 
                 elif httpmethod in ("PUT", "POST"):
                     div.span(cls="h5").text = "Request Body"
@@ -251,17 +257,22 @@ class ResourceToHtml(object):
                               " data object.")
                 elif type(schema) is reschema.jsonschema.Data:
                     p = div.p()
-                    p.settext("On success, the server returns a response body containing data with content type ",
-                              p.span(cls="content-attribute", text=schema.content_type),
+                    p.settext("On success, the server returns a response body "
+                              "containing data with content type ",
+                              p.span(cls="content-attribute",
+                                     text=schema.content_type),
                               ".")
                 else:
                     logger.debug(baseid+'-response')
                     logger.debug("\n" + schema.str_detailed() + "\n")
-                    p = div.p().text = "On success, the server returns a response body with the following structure:"
+                    p = div.p().text = ("On success, the server returns a "
+                                        "response body with the following "
+                                        "structure:")
                     self.schema_table(link.response, div, baseid + '-response')
 
             else:
-                div.p().text = "On success, the server does not provide any body in the responses."
+                div.p().text = ("On success, the server does not provide any "
+                                "body in the responses.")
 
             # XXXCJ - this code may still be needed, but not yet functional
             if None and link.examples is not None:
@@ -286,7 +297,8 @@ class SchemaSummaryJson(HTMLElement):
             example = schema.example
 
         if example is not None:
-            self.span().text = "\n\nExample:\n%s\n" % json.dumps(example, indent=2)
+            self.span().text = ("\n\nExample:\n%s\n" %
+                                json.dumps(example, indent=2))
 
     def process(self, parent, schema, indent=0, follow_refs=False):
         if isinstance(schema, reschema.jsonschema.Object):
@@ -387,7 +399,8 @@ class SchemaSummaryXML(HTMLElement):
             self.span().text = "\n\nExample:\n%s\n" % example_str
 
 
-    def process(self, parent, schema, indent=0, follow_refs=False, name=None, json=None, key=None):
+    def process(self, parent, schema, indent=0, follow_refs=False, name=None,
+                json=None, key=None):
         if schema.xmlSchema is not None:
             # XXX/demmer this is a big hack to support the fact that
             # one of the Shark REST handlers doesn't return
@@ -542,7 +555,8 @@ class PropTable(HTMLTable):
                              "paramtable-proptype",
                              "paramtable-description",
                              "paramtable-notes"])
-        self.row(["Property Name", "Type", "Description", "Notes"], header=True)
+        self.row(["Property Name", "Type", "Description", "Notes"],
+                 header=True)
 
         self.process(data)
 
@@ -600,7 +614,7 @@ class PropTable(HTMLTable):
         if ( (schema.parent is not None) and
              (isinstance(schema.parent, reschema.jsonschema.Object)) and
              ((schema.parent.required is None) or
-              (name not in schema.parent.required)) ):
+              (name not in schema.parent.required))):
             parts.append("Optional")
 
         if ( isinstance(schema, reschema.jsonschema.Number) or
@@ -620,14 +634,15 @@ class PropTable(HTMLTable):
             if (minimum is not None) and (maximum is not None):
                 parts.append("Range: %s to %s" % (minimum, maximum))
             elif (minimum is not None):
-                parts.append("Minimum %s"  % (minimum))
+                parts.append("Minimum %s" % (minimum))
             elif (maximum is not None):
                 parts.append("Maximum %s" % (maximum))
 
         if isinstance(schema, reschema.jsonschema.Array):
             if schema.minItems is not None and \
                    schema.maxItems is not None:
-                parts.append("%s-%s items" % (schema.minItems, schema.maxItems))
+                parts.append("%s-%s items" % (schema.minItems,
+                                              schema.maxItems))
             elif schema.minItems is not None:
                 parts.append("Minimum: %s items" % (schema.minItems))
             elif schema.maxItems is not None:

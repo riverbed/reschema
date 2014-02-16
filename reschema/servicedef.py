@@ -9,7 +9,6 @@
 import os
 import json
 import urlparse
-import re
 from cStringIO import StringIO
 from collections import OrderedDict
 
