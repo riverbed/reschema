@@ -20,13 +20,42 @@ import reschema.jsonschema as jsonschema
 from reschema.jsonschema import Schema
 from reschema.util import parse_prop
 from reschema import yaml_loader, json_loader
-from reschema.exceptions import *
-
+from reschema.exceptions import (ParseError, UnsupportedSchema,
+                                 InvalidReference, DuplicateServiceId,
+                                 InvalidServiceId, NoContext)
 
 __all__ = ['ServiceDef']
 
 
 logger = logging.getLogger(__name__)
+
+class ServiceDefLoadHook(object):
+    """ Interface for load hooks.
+
+    See ServiceDefCache.add_hook()
+
+    """
+    def find_by_id(self, id_):
+        """ Find a ServiceDef by id.
+
+        :param id_: the globally unique URI identifying a service
+            definition.
+        :return: a ServiceDef instance or None
+
+        """
+        raise NotImplemented()
+
+    def find_by_name(self, name, version, provider):
+        """ Find a ServiceDef by <name,version,provider> triplet.
+
+        :param name: the service name
+        :param version: the service version
+        :param provider: the provide of the service
+        :return: a ServiceDef instance or None
+
+        """
+        raise NotImplemented()
+
 
 class ServiceDefCache(object):
     """ Manager for ServiceDef instances.
@@ -50,17 +79,15 @@ class ServiceDefCache(object):
     def __init__(self):
         # Ensure a duplicate instance is not created
         assert self._instance is None
-        self.servicedefs = {}
+        self.by_id = {}
+        self.by_name = {}
 
     @classmethod
     def add_load_hook(cls, load_hook):
         """ Add a callable hook to load a schema by id.
 
-        :param hook: a callable hook
-
-        The `hook` parameter should be a callable that takes a
-        servicedef id as a parameter and either returns a ServiceDef
-        instance or None.
+        :param hook: an object that implements the ServiceDefLoadHook
+            interface
 
         Hooks are processed in order until the first hook
         returns a ServiceDef instance.
@@ -79,22 +106,32 @@ class ServiceDefCache(object):
     def clear(cls):
         """ Clear all known schemas. """
         logger.info("ServiceDefCache cleared")
-        cls.instance().servicedefs = {}
+        cls.instance().by_id = {}
+        cls.instance().by_name = {}
 
     @classmethod
-    def add(cls, id_, servicedef):
+    def add(cls, servicedef):
         """ Add a new ServiceDef instance known at the given id. """
         self = cls.instance()
-        if id_ in self.servicedefs:
-            if self.servicedefs[id_] != servicedef:
-                raise DuplicateServiceId(id_)
-        else:
-            logger.info("ServiceDefCache: registered new schema: %s" % (id_))
-            self.servicedefs[id_] = servicedef
+        logger.debug("%s add: %s" % (self, servicedef.id))
+        sid = servicedef.id
+        if sid in self.by_id:
+            if self.by_id[sid] != servicedef:
+                logger.debug("ids: %s" % (self.by_id.keys()))
+                raise DuplicateServiceId(sid)
+            return
+
+        self.by_id[sid] = servicedef
+
+        fullname = (servicedef.provider, servicedef.name, servicedef.version)
+        self.by_name[fullname] = servicedef
+
+        logger.info("ServiceDefCache: registered new schema: %s, %s" %
+                    (fullname, sid))
 
     @classmethod
-    def lookup(cls, id_):
-        """ Resolve an id_ to a servicedeif instance.
+    def lookup_by_id(cls, id_):
+        """ Resolve an id_ to a servicedef instance.
 
         If a service definition by this id is not yet in the cache, load
         hooks are invoked in order until one of them returns a instance.
@@ -104,22 +141,60 @@ class ServiceDefCache(object):
 
         """
         self = cls.instance()
-        if id_ not in self.servicedefs:
+
+        if id_ not in self.by_id:
             # Not found -- try loading via our hooks
             servicedef = None
             for hook in ServiceDefCache._load_hooks:
-                servicedef = hook(id_)
+                servicedef = hook.find_by_id(id_)
             if servicedef is None:
                 raise InvalidServiceId(
                     "Failed to load service definition: %s" % id_)
 
+            self.add(servicedef)
         else:
-            servicedef = self.servicedefs[id_]
+            servicedef = self.by_id[id_]
 
         return servicedef
 
+    @classmethod
+    def lookup_by_name(cls, name, version, provider='riverbed'):
+        """ Resolve <provider/name/version> triplet to a servicedef instance.
+
+        If a service definition by this full name is not yet in the
+        cache, load hooks are invoked in order until one of them
+        returns a instance.
+
+        :raises InvalidServiceId: No schema found for id and could not
+            be loaded
+
+        """
+        self = cls.instance()
+
+        fullname = (name, version, provider)
+        if fullname not in self.by_name:
+            # Not found -- try loading via our hooks
+            servicedef = None
+            for hook in ServiceDefCache._load_hooks:
+                servicedef = hook.find_by_name(name, version, provider)
+            if servicedef is None:
+                raise InvalidServiceName(
+                    "Failed to load service definition: %s/%s/%s" %
+                    fullname)
+
+            self.add(servicedef)
+        else:
+            servicedef = self.by_name[fullname]
+
+        return servicedef
 
 class ServiceDef(object):
+
+    @classmethod
+    def init_from_file(cls, filename):
+        servicedef = ServiceDef()
+        servicedef.load(filename)
+        return servicedef
 
     def load(self, filename):
         """Loads and parses a JSON or YAML schema.
@@ -227,7 +302,7 @@ class ServiceDef(object):
         parse_prop(self, obj, 'response_headers', None)
         parse_prop(self, obj, 'errors', None)
 
-        ServiceDefCache.add(self.id, self)
+        logger.debug("parsed %s, adding" % self.id)
 
     def check_references(self):
         """ Iterate through all schemas and check references.
@@ -357,7 +432,7 @@ class ServiceDef(object):
             # servicedef by id
             full_reference = cls.expand_id(servicedef, reference)
             reference_id = urlparse.urldefrag(full_reference)[0]
-            servicedef = ServiceDefCache.lookup(reference_id)
+            servicedef = ServiceDefCache.lookup_by_id(reference_id)
         elif servicedef is None:
             # relative references require a servicedef for context
             raise NoContext(reference)

@@ -13,7 +13,11 @@ import pytest
 from yaml.error import MarkedYAMLError
 
 import reschema
-from reschema.exceptions import *
+
+from reschema.exceptions import (UnsupportedSchema, ValidationError,
+                                 MissingParameter, ParseError,
+                                 InvalidReference)
+
 from reschema.jsonschema import (Object, Integer, Number, String,
                                  Array, Multi, Schema)
 from reschema import yaml_loader, ServiceDef, ServiceDefCache
@@ -961,24 +965,44 @@ class TestSchemaRef(TestSchemaBase):
 
 class TestLoadHook(TestSchemaBase):
 
-    service_map = {
-        'http://support.riverbed.com/apis/test/1.0': SERVICE_DEF_TEST,
-        'http://support.riverbed.com/apis/test.ref/1.0': SERVICE_DEF_TEST_REF
-        }
-
-    def load(self, id_):
-        if id_ in self.service_map:
-            s = ServiceDef()
-            s.load(self.service_map[id_])
-            return s
-        else:
-            raise KeyError("Invalid id: %s" % id_)
-
     def setUp(self):
-        ServiceDefCache.add_load_hook (lambda id_: self.load(id_))
+        class Hook(object):
+            service_map = {
+                'http://support.riverbed.com/apis/test/1.0':
+                SERVICE_DEF_TEST,
+
+                'http://support.riverbed.com/apis/test.ref/1.0':
+                SERVICE_DEF_TEST_REF
+                }
+
+            def find_by_id(self, id_):
+                if id_ in self.service_map:
+                    s = ServiceDef()
+                    s.load(self.service_map[id_])
+                    return s
+                else:
+                    raise KeyError("Invalid id: %s" % id_)
+
+            def find_by_name(self, name, version, provider):
+                assert(provider == 'riverbed')
+                sid = ('http://support.riverbed.com/apis/%s/%s' %
+                       (name, version))
+                return self.find_by_id(sid)
+
+        ServiceDefCache.add_load_hook(Hook())
 
     def tearDown(self):
         ServiceDefCache.clear()
+
+    def test_lookup_by_id(self):
+        sid = 'http://support.riverbed.com/apis/test.ref/1.0'
+        s = ServiceDefCache.lookup_by_id(sid)
+        self.assertEqual(s.id, sid)
+
+    def test_lookup_by_name(self):
+        sid = 'http://support.riverbed.com/apis/test.ref/1.0'
+        s = ServiceDefCache.lookup_by_name('test.ref', '1.0')
+        self.assertEqual(s.id, sid)
 
     def test_load(self):
         rid = ('http://support.riverbed.com/apis/test/1.0'
@@ -992,7 +1016,7 @@ class TestLoadHook(TestSchemaBase):
         self.assertEqual(r.fullid(), rid)
 
     def test_load_on_relation(self):
-        s = ServiceDefCache.lookup(
+        s = ServiceDefCache.lookup_by_id(
             'http://support.riverbed.com/apis/test.ref/1.0')
         r = ServiceDef.find(s, '/apis/test/1.0#/resources/test_boolean')
         self.assertEqual(r.fullid(),

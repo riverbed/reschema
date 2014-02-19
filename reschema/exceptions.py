@@ -23,6 +23,11 @@ class InvalidServiceId(ReschemaException):
     pass
 
 
+class InvalidServiceName(ReschemaException):
+    """ No service defintion loaded for the given name. """
+    pass
+
+
 class DuplicateServiceId(ReschemaException):
     """ Service defintion already registered for the requested id. """
 
@@ -40,7 +45,7 @@ class NoContext(ReschemaException):
         self.reference = reference
 
     def __str__(self):
-        return ("Relative reference connot be resolve without context: %s"
+        return ("Relative reference cannot be resolved without context: %s"
                 % self.reference)
 
 
