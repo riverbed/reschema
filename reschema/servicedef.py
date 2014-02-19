@@ -6,14 +6,12 @@
 # This software is distributed "AS IS" as set forth in the License.
 
 # System imports
-import os
-import json
 import urlparse
 from cStringIO import StringIO
 from collections import OrderedDict
 import logging
 
-from jsonpointer import resolve_pointer, JsonPointer
+from jsonpointer import JsonPointer
 
 # Local imports
 import reschema.jsonschema as jsonschema
@@ -22,8 +20,7 @@ from reschema.util import parse_prop
 from reschema import yaml_loader, json_loader
 from reschema.exceptions import (ParseError, UnsupportedSchema,
                                  InvalidReference, DuplicateServiceId,
-                                 InvalidServiceId, InvalidServiceName,
-                                 NoContext)
+                                 InvalidServiceId, InvalidServiceName)
 
 __all__ = ['ServiceDef']
 
@@ -45,18 +42,18 @@ class ServiceDefLoadHook(object):
         :return: a ServiceDef instance or None
 
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def find_by_name(self, name, version, provider):
         """ Find a ServiceDef by <name,version,provider> triplet.
 
         :param name: the service name
         :param version: the service version
-        :param provider: the provide of the service
+        :param provider: the provider of the service
         :return: a ServiceDef instance or None
 
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
 
 class ServiceDefCache(object):
@@ -66,26 +63,17 @@ class ServiceDefCache(object):
     instances by id as indicated in the 'id' property
     at the top level of the schema.
 
-    This class is expected to be used as a singleton via the
-    `instance()` class method.
-
     """
 
-    # The singleton instance
-    _instance = None
-
-    # List of hooks to call in order to load schemas for as
-    # yet unknown ids
-    _load_hooks = []
-
     def __init__(self):
-        # Ensure a duplicate instance is not created
-        assert self._instance is None
         self.by_id = {}
         self.by_name = {}
 
-    @classmethod
-    def add_load_hook(cls, load_hook):
+        # List of hooks to call in order to load schemas for as
+        # yet unknown ids
+        self._load_hooks = []
+
+    def add_load_hook(self, load_hook):
         """ Add a callable hook to load a schema by id.
 
         :param hook: an object that implements the ServiceDefLoadHook
@@ -95,26 +83,16 @@ class ServiceDefCache(object):
         returns a ServiceDef instance.
 
         """
-        cls._load_hooks.append(load_hook)
+        self._load_hooks.append(load_hook)
 
-    @classmethod
-    def instance(cls, *args, **kwargs):
-        """ Return the global ServiceDefCache instance. """
-        if cls._instance is None:
-            cls._instance = cls(*args, **kwargs)
-        return cls._instance
-
-    @classmethod
-    def clear(cls):
+    def clear(self):
         """ Clear all known schemas. """
         logger.info("ServiceDefCache cleared")
-        cls.instance().by_id = {}
-        cls.instance().by_name = {}
+        self.by_id = {}
+        self.by_name = {}
 
-    @classmethod
-    def add(cls, servicedef):
+    def add(self, servicedef):
         """ Add a new ServiceDef instance known at the given id. """
-        self = cls.instance()
         logger.debug("%s add: %s" % (self, servicedef.id))
         sid = servicedef.id
         if sid in self.by_id:
@@ -130,9 +108,9 @@ class ServiceDefCache(object):
 
         logger.info("ServiceDefCache: registered new schema: %s, %s" %
                     (fullname, sid))
+        servicedef.cache = self
 
-    @classmethod
-    def lookup_by_id(cls, id_):
+    def find_by_id(self, id_):
         """ Resolve an id_ to a servicedef instance.
 
         If a service definition by this id is not yet in the cache, load
@@ -142,12 +120,10 @@ class ServiceDefCache(object):
             be loaded
 
         """
-        self = cls.instance()
-
         if id_ not in self.by_id:
             # Not found -- try loading via our hooks
             servicedef = None
-            for hook in ServiceDefCache._load_hooks:
+            for hook in self._load_hooks:
                 servicedef = hook.find_by_id(id_)
             if servicedef is None:
                 raise InvalidServiceId(
@@ -159,25 +135,27 @@ class ServiceDefCache(object):
 
         return servicedef
 
-    @classmethod
-    def lookup_by_name(cls, name, version, provider='riverbed'):
+    def find_by_name(self, name, version, provider='riverbed'):
         """ Resolve <provider/name/version> triplet to a servicedef instance.
 
         If a service definition by this full name is not yet in the
         cache, load hooks are invoked in order until one of them
         returns a instance.
 
+        :param name: the service name
+        :param version: the service version
+        :param provider: the provider of the service
+        :return: a ServiceDef instance
+
         :raises InvalidServiceId: No schema found for id and could not
             be loaded
 
         """
-        self = cls.instance()
-
         fullname = (name, version, provider)
         if fullname not in self.by_name:
             # Not found -- try loading via our hooks
             servicedef = None
-            for hook in ServiceDefCache._load_hooks:
+            for hook in self._load_hooks:
                 servicedef = hook.find_by_name(name, version, provider)
             if servicedef is None:
                 raise InvalidServiceName(
@@ -190,11 +168,15 @@ class ServiceDefCache(object):
 
         return servicedef
 
+
 class ServiceDef(object):
 
+    def __init__(self, cache=None):
+        self.cache = None
+
     @classmethod
-    def init_from_file(cls, filename):
-        servicedef = ServiceDef()
+    def init_from_file(cls, filename, **kwargs):
+        servicedef = ServiceDef(**kwargs)
         servicedef.load(filename)
         return servicedef
 
@@ -216,8 +198,8 @@ class ServiceDef(object):
                 obj = yaml_loader.marked_load(f)
             else:
                 raise ValueError(
-                  "Unrecognized file extension, use '*.json' or '*.yaml': %s"
-                  % filename)
+                    "Unrecognized file extension, use '*.json' or '*.yaml': %s"
+                    % filename)
         self.parse(obj)
 
     def parse_text(self, text, format='json'):
@@ -296,8 +278,8 @@ class ServiceDef(object):
                                      resource, input_)
                 if sch.links['self'].path is None:
                     raise ParseError(
-                      "Resource '%s' 'self' link must define 'path'" %
-                      resource, input_)
+                        "Resource '%s' 'self' link must define 'path'" %
+                        resource, input_)
 
         parse_prop(self, obj, 'tasks', None)
         parse_prop(self, obj, 'request_headers', None)
@@ -353,14 +335,10 @@ class ServiceDef(object):
     def find_type(self, name):
         return self.types[name]
 
-    @classmethod
-    def expand_id(cls, servicedef, reference):
+    def expand_id(self, reference):
         """ Expand a reference using this servicedef as a relative base
 
         Returns a fully qualified reference based.
-
-        :param servicedef: a ServiceDef instance to use as context for
-           relative names, may be None for absolute references
 
         :param reference: string reference to resolve
 
@@ -373,9 +351,6 @@ class ServiceDef(object):
 
            * `#<fragment>` - reference is resolved against the same
              <server> and <path> as `servicedef`
-
-        :raises NoContext: `reference` is relative but `servicedef` is
-            not provided
 
         :raises InvalidReference: `reference` does not appear to
             be to the correct syntax
@@ -387,26 +362,18 @@ class ServiceDef(object):
             # to normalize it
             return parsed_reference.geturl()
 
-        if servicedef is None:
-            # relative references require a servicedef for context
-            raise NoContext(reference)
-
         if reference[0] not in ['/', '#']:
             raise InvalidReference("relative references should "
                                    "start with '#' or '/'",
                                    reference)
 
         # urljoin will take care of the rest
-        return urlparse.urljoin(servicedef.id, reference)
+        return urlparse.urljoin(self.id, reference)
 
-    @classmethod
-    def find(cls, servicedef, reference):
+    def find(self, reference):
         """ Resolve a reference using this servicedef as a relative base
 
         Returns a jsonschema.Schema instance
-
-        :param servicedef: a ServiceDef instance to use as context for
-           relative names, may be None for absolute references
 
         :param reference: string reference to resolve
 
@@ -420,9 +387,6 @@ class ServiceDef(object):
            * `#<fragment>` - reference is resolved against the same
              <server> and <path> as `servicedef`
 
-        :raises NoContext: `reference` is relative but `servicedef` is
-            not provided
-
         :raises InvalidReference: `reference` does not appear to
             be to the correct syntax
 
@@ -430,14 +394,13 @@ class ServiceDef(object):
 
         parsed_reference = urlparse.urlparse(reference)
         if parsed_reference.netloc or parsed_reference.path:
-            # More than just a fragment, expand the id and lookup the full
+            # More than just a fragment, expand the id and find the full
             # servicedef by id
-            full_reference = cls.expand_id(servicedef, reference)
+            full_reference = self.expand_id(reference)
             reference_id = urlparse.urldefrag(full_reference)[0]
-            servicedef = ServiceDefCache.lookup_by_id(reference_id)
-        elif servicedef is None:
-            # relative references require a servicedef for context
-            raise NoContext(reference)
+            servicedef = self.cache.find_by_id(reference_id)
+        else:
+            servicedef = self
 
         # Now that we have a servicedef, look to the fragment for:
         #   '/resource/<resource_name>/...'
@@ -450,7 +413,8 @@ class ServiceDef(object):
             schema = servicedef.find_type(p.parts[1])
 
         else:
-            raise InvalidReference("Expceted '/resources' or '/types'", reference)
+            raise InvalidReference("Expected '/resources' or '/types'",
+                                   reference)
 
         if len(p.parts) > 2:
             return schema.by_pointer('/' + '/'.join(p.parts[2:]))

@@ -41,7 +41,7 @@ class TestReschema(unittest.TestCase):
         pass
 
     def tearDown(self):
-        ServiceDefCache.clear()
+        pass
 
     def test_load_schema(self):
         r = ServiceDef()
@@ -155,7 +155,6 @@ class TestCatalog(unittest.TestCase):
 
     def tearDown(self):
         self.r = None
-        ServiceDefCache.clear()
 
     def test_string(self):
         s = self.r.resources['author'].props['name']
@@ -301,7 +300,6 @@ class TestCatalogLinks(unittest.TestCase):
 
     def tearDown(self):
         self.r = None
-        ServiceDefCache.clear()
 
     def test_links(self):
         book = self.r.resources['book']
@@ -337,9 +335,6 @@ class TestCatalogLinks(unittest.TestCase):
 
 
 class TestSchemaBase(unittest.TestCase):
-
-    def tearDown(self):
-        ServiceDefCache.clear()
 
     def parse(self, string):
         d = yaml_loader.marked_load(string)
@@ -384,9 +379,6 @@ class TestJsonSchema(TestSchemaBase):
     def setUp(self):
         self.servicedef = reschema.ServiceDef()
         self.servicedef.id = 'http://support.riverbed.com/apis/testschema/1.0'
-
-    def tearDown(self):
-        ServiceDefCache.clear()
 
     def test_exceptions(self):
         # cover exception string output
@@ -736,7 +728,6 @@ class TestSchema(TestSchemaBase):
 
     def tearDown(self):
         self.r = None
-        ServiceDefCache.clear()
 
     def test_check_references(self):
         self.assertEqual(self.r.check_references(), [])
@@ -913,22 +904,19 @@ class TestExpandId(unittest.TestCase):
         self.s = reschema.ServiceDef()
         self.s.id = 'http://support.riverbed.com/apis/testschema/1.0'
 
-    def tearDown(self):
-        ServiceDefCache.clear()
-
     def test_local_ref(self):
         self.assertEqual(
-            ServiceDef.expand_id(self.s, "#/foo/bar"),
+            self.s.expand_id("#/foo/bar"),
             self.s.id + "#/foo/bar")
 
     def test_provider_ref(self):
         self.assertEqual(
-            ServiceDef.expand_id(self.s, "/apis/otherschema/2.0#/foo/bar"),
+            self.s.expand_id("/apis/otherschema/2.0#/foo/bar"),
             "http://support.riverbed.com/apis/otherschema/2.0#/foo/bar")
 
     def test_full_ref(self):
         id_ = "http://support.riverbed.com/apis/otherschema/2.0#/foo/bar"
-        self.assertEqual(ServiceDef.expand_id(self.s, id_), id_)
+        self.assertEqual(self.s.expand_id(id_), id_)
 
 
 class TestSchemaRef(TestSchemaBase):
@@ -938,12 +926,12 @@ class TestSchemaRef(TestSchemaBase):
         self.s1.load(SERVICE_DEF_TEST)
         self.s2 = ServiceDef()
         self.s2.load(SERVICE_DEF_TEST_REF)
-
-    def tearDown(self):
-        ServiceDefCache.clear()
+        cache = ServiceDefCache()
+        cache.add(self.s1)
+        cache.add(self.s2)
 
     def test_ref_types(self):
-        r = ServiceDef.find(self.s2, '#/resources/test_ref_types')
+        r = self.s2.find('#/resources/test_ref_types')
 
         (self.check_valid
          (r,
@@ -954,9 +942,8 @@ class TestSchemaRef(TestSchemaBase):
                       {'prop_boolean': True, 'prop_number_limits': 22}]))
 
     def test_ref_relations(self):
-        item = ServiceDef.find(self.s1, '#/resources/test_item')
-        ref_resource = ServiceDef.find(self.s2,
-                                       '#/resources/test_ref_resource')
+        item = self.s1.find('#/resources/test_item')
+        ref_resource = self.s2.find('#/resources/test_ref_resource')
         ref_resource_item = ref_resource.relations['item'].resource
 
         self.assertEqual(item, ref_resource_item)
@@ -988,34 +975,37 @@ class TestLoadHook(TestSchemaBase):
                        (name, version))
                 return self.find_by_id(sid)
 
-        ServiceDefCache.add_load_hook(Hook())
+        self.cache = ServiceDefCache()
+        self.cache.add_load_hook(Hook())
 
     def tearDown(self):
-        ServiceDefCache.clear()
+        self.cache = None
 
-    def test_lookup_by_id(self):
+    def test_find_by_id(self):
         sid = 'http://support.riverbed.com/apis/test.ref/1.0'
-        s = ServiceDefCache.lookup_by_id(sid)
+        s = self.cache.find_by_id(sid)
         self.assertEqual(s.id, sid)
 
-    def test_lookup_by_name(self):
+    def test_find_by_name(self):
         sid = 'http://support.riverbed.com/apis/test.ref/1.0'
-        s = ServiceDefCache.lookup_by_name('test.ref', '1.0')
+        s = self.cache.find_by_name('test.ref', '1.0')
         self.assertEqual(s.id, sid)
 
     def test_load(self):
+        s = self.cache.find_by_id(
+            'http://support.riverbed.com/apis/test.ref/1.0')
         rid = ('http://support.riverbed.com/apis/test/1.0'
                '#/types/type_boolean')
-        r = ServiceDef.find(None, rid)
+        r = s.find(rid)
         self.assertEqual(r.fullid(), rid)
 
         rid = ('http://support.riverbed.com/apis/test.ref/1.0'
                '#/resources/test_ref_types')
-        r = ServiceDef.find(None, rid)
+        r = s.find(rid)
         self.assertEqual(r.fullid(), rid)
 
     def test_load_on_relation(self):
-        s = ServiceDefCache.lookup_by_id(
+        s = self.cache.find_by_id(
             'http://support.riverbed.com/apis/test.ref/1.0')
         r = ServiceDef.find(s, '/apis/test/1.0#/resources/test_boolean')
         self.assertEqual(r.fullid(),

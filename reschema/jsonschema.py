@@ -76,11 +76,10 @@ from collections import OrderedDict
 import uritemplate
 from jsonpointer import resolve_pointer, JsonPointer
 
-import reschema
 from reschema.util import parse_prop
-from reschema.reljsonpointer import resolve_rel_pointer, RelJsonPointer
+from reschema.reljsonpointer import resolve_rel_pointer
 from reschema.exceptions import \
-     ValidationError, MissingParameter, ParseError, InvalidReference
+    ValidationError, MissingParameter, ParseError, InvalidReference
 
 logger = logging.getLogger(__name__)
 
@@ -501,8 +500,7 @@ class Ref(Schema):
         self._refschema = None
         ref_id = parse_prop(None, input, '$ref', required=True)
         try:
-            self._refschema_id = (reschema.ServiceDef
-                                  .expand_id(self.servicedef, ref_id))
+            self._refschema_id = self.servicedef.expand_id(ref_id)
         except InvalidReference as e:
             raise ParseError(str(e), input)
 
@@ -839,8 +837,6 @@ class Object(Schema):
         else:
             elem = ET.Element(self.name)
 
-        subelems = OrderedDict()
-        inline_props = OrderedDict()
         for k in input:
             if k not in self.props:
                 if self.additional_props is False:
@@ -961,8 +957,7 @@ class Relation(object):
         # are defined
         self._resource = None
         ref_id = parse_prop(None, input, 'resource', required=True)
-        self._resource_id = (reschema.ServiceDef
-                             .expand_id(schema.servicedef, ref_id))
+        self._resource_id = schema.servicedef.expand_id(ref_id)
 
         self.vars = parse_prop(self, input, 'vars')
 

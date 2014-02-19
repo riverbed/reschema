@@ -98,12 +98,6 @@ json_snippet_bad = """\
 
 class TestMarkedLoad(unittest.TestCase):
 
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        ServiceDefCache.clear()
-
     def test_bad_yaml(self):
         with self.assertRaises(ReschemaException):
             r = ServiceDef()

@@ -59,6 +59,7 @@ class InvalidReference(ReschemaException):
     def __str__(self):
         return ("Invalid reference '%s': %s" % (self.reference, self.msg))
 
+
 #
 # jsonschema parsing errors
 #

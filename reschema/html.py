@@ -30,7 +30,7 @@ class Document(object):
         if self.printable:
             self.main = self.body.div(cls="main-printable")
         else:
-            self.main = self.body.div(cls="main");
+            self.main = self.body.div(cls="main")
 
         self.navbar = self.main.div(cls="navbar")
         if self.printable:
