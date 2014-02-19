@@ -52,6 +52,7 @@ def process_file(filename):
     logger.info("HTML output: ./%s" % html)
     return html
 
+
 class TestReschema(unittest.TestCase):
 
     def test_service(self):
@@ -62,6 +63,7 @@ class TestReschema(unittest.TestCase):
 
     def test_service_catalog(self):
         process_file(SERVICE_DEF_CATALOG)
+
 
 if __name__ == '__main__':
     for filename in [SERVICE_DEF_TEST, SERVICE_DEF_CATALOG]:

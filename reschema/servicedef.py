@@ -22,12 +22,14 @@ from reschema.util import parse_prop
 from reschema import yaml_loader, json_loader
 from reschema.exceptions import (ParseError, UnsupportedSchema,
                                  InvalidReference, DuplicateServiceId,
-                                 InvalidServiceId, NoContext)
+                                 InvalidServiceId, InvalidServiceName,
+                                 NoContext)
 
 __all__ = ['ServiceDef']
 
 
 logger = logging.getLogger(__name__)
+
 
 class ServiceDefLoadHook(object):
     """ Interface for load hooks.
@@ -448,7 +450,7 @@ class ServiceDef(object):
             schema = servicedef.find_type(p.parts[1])
 
         else:
-            raise KeyError("Invalid reference: %s" % fullname)
+            raise InvalidReference("Expceted '/resources' or '/types'", reference)
 
         if len(p.parts) > 2:
             return schema.by_pointer('/' + '/'.join(p.parts[2:]))

@@ -95,6 +95,7 @@ json_snippet_bad = """\
 }
 """
 
+
 class TestMarkedLoad(unittest.TestCase):
 
     def setUp(self):

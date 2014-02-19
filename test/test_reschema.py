@@ -14,7 +14,7 @@ from yaml.error import MarkedYAMLError
 
 import reschema
 
-from reschema.exceptions import (UnsupportedSchema, ValidationError,
+from reschema.exceptions import (ValidationError,
                                  MissingParameter, ParseError,
                                  InvalidReference)
 
@@ -943,7 +943,7 @@ class TestSchemaRef(TestSchemaBase):
         ServiceDefCache.clear()
 
     def test_ref_types(self):
-        r = ServiceDef.find(self.s2,'#/resources/test_ref_types')
+        r = ServiceDef.find(self.s2, '#/resources/test_ref_types')
 
         (self.check_valid
          (r,
@@ -952,7 +952,6 @@ class TestSchemaRef(TestSchemaBase):
 
           invalid = [ {'prop_boolean': 1, 'prop_number_limits': 12},
                       {'prop_boolean': True, 'prop_number_limits': 22}]))
-
 
     def test_ref_relations(self):
         item = ServiceDef.find(self.s1, '#/resources/test_item')
