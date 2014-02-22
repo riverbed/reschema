@@ -175,7 +175,7 @@ class ServiceDef(object):
         self.cache = None
 
     @classmethod
-    def init_from_file(cls, filename, **kwargs):
+    def create_from_file(cls, filename, **kwargs):
         servicedef = ServiceDef(**kwargs)
         servicedef.load(filename)
         return servicedef
@@ -260,7 +260,7 @@ class ServiceDef(object):
             for type_ in obj['types']:
                 self.types[type_] = Schema.parse(obj['types'][type_],
                                                  name=type_,
-                                                 id_prefix='/types',
+                                                 id='#/types/%s' % type_,
                                                  servicedef=self)
 
         self.resources = OrderedDict()
@@ -269,7 +269,7 @@ class ServiceDef(object):
                 input_ = obj['resources'][resource]
                 sch = Schema.parse(input_,
                                    name=resource,
-                                   id_prefix='/resources',
+                                   id='#/resources/%s' % resource,
                                    servicedef=self)
                 self.resources[resource] = sch
 

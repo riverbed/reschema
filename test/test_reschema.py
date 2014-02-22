@@ -118,8 +118,8 @@ class TestReschema(unittest.TestCase):
         a = r.resources['author']
         self.assertFalse(a.is_ref())
         self.assertFalse(a.is_simple())
-        self.assertIn('id', a.props)
-        self.assertIn('name', a.props)
+        self.assertIn('id', a.properties)
+        self.assertIn('name', a.properties)
         self.assertEqual(a.fullid(True), '#/resources/author')
         self.assertIsNone(a.parent)
         resources = [x for x in r.resource_iter()]
@@ -135,11 +135,13 @@ class TestReschema(unittest.TestCase):
         r = ServiceDef()
         r.load(CATALOG_YAML)
         c = ServiceDef.find(r, '#/resources/book/chapters')
-        self.assertEqual(c.fullid(True), '#/resources/book/chapters')
+        self.assertEqual(c.fullid(True),
+                         '#/resources/book/properties/chapters')
         self.assertEqual(c._type, 'array')
         self.assertEqual(c.typestr, 'array of <object>')
         c = ServiceDef.find(r, '#/resources/book/chapters/1')
-        self.assertEqual(c.fullid(True), '#/resources/book/chapters/items')
+        self.assertEqual(c.fullid(True),
+                         '#/resources/book/properties/chapters/items')
         self.assertEqual(c._type, 'object')
         c = ServiceDef.find(r, '#/resources/book/author_ids')
         self.assertEqual(c._type, 'array')
@@ -157,7 +159,7 @@ class TestCatalog(unittest.TestCase):
         self.r = None
 
     def test_string(self):
-        s = self.r.resources['author'].props['name']
+        s = self.r.resources['author'].properties['name']
         self.assertFalse(s.is_ref())
         self.assertTrue(s.is_simple())
 
@@ -169,7 +171,7 @@ class TestCatalog(unittest.TestCase):
             s.validate(42)
 
     def test_integer(self):
-        n = self.r.resources['author'].props['id']
+        n = self.r.resources['author'].properties['id']
         self.assertFalse(n.is_ref())
         self.assertTrue(n.is_simple())
 
@@ -185,7 +187,7 @@ class TestCatalog(unittest.TestCase):
 
     def test_reference(self):
         pub = ServiceDef.find(self.r, '#/resources/publisher')
-        ref = pub.props['billing_address']
+        ref = pub.properties['billing_address']
         self.assertFalse(ref.is_simple())
         self.assertTrue(ref.is_ref())
         self.assertEqual(ref.typestr, 'address')
@@ -205,7 +207,7 @@ class TestCatalog(unittest.TestCase):
 
     def test_link_template_path(self):
         book = ServiceDef.find(self.r, '#/resources/book')
-        chapters = book.props['chapters']
+        chapters = book.properties['chapters']
         items = chapters.items
         book_chapter = items.relations['full']
         data = {'book': book.example}
@@ -286,9 +288,8 @@ class TestCatalog(unittest.TestCase):
         # Unlike book, auther does not specify odditionalProperties
         author = self.r.resources['author']
         empty = Schema.parse({}, name='<prop>', parent=author)
-        self.assertEqual(author['randomjunk'].fullid(), empty.fullid())
-        self.assertEqual(author['randomjunk'], author.additional_props)
-        self.assertEqual(author.additional_props,
+        self.assertEqual(author['randomjunk'], author.additionalProperties)
+        self.assertEqual(author.additionalProperties,
                          author.children[-1])
 
 
@@ -749,8 +750,7 @@ class TestSchema(TestSchemaBase):
                                      { 'prop_array': [ 99, 98 ],
                                        'prop_string': 'foo' } ])
 
-    @pytest.mark.xfail
-    def test_anyof1(self):
+    def test_anyof1_validation(self):
         r = self.r.resources['test_anyof1']
         self.check_valid(r,
 
@@ -759,8 +759,13 @@ class TestSchema(TestSchemaBase):
 
                          invalid = [ {'a1': 3, 'a4': 4} ] )
 
-        a1 = r['a1']
-        self.assertEqual(a1.fullid(), '/test_anyof1/a1')
+    @pytest.mark.xfail
+    def test_anyof1_indexing(self):
+        r = self.r.resources['test_anyof1']
+
+        a1 = r.by_pointer('/anyOf/0/properties/a1')
+        self.assertEqual(a1.fullid(True),
+                         '#/test_anyof1/anyOf/0/properties/a1')
 
         a2 = r['a2']
         self.assertEqual(a2.fullid(), '/test_anyof1/a2')
@@ -768,8 +773,7 @@ class TestSchema(TestSchemaBase):
         a2 = ServiceDef.find(self.r, '#/resources/test_anyof1/a2')
         self.assertEqual(a2.fullid(), '#/resources/test_anyof1/a2')
 
-    @pytest.mark.xfail
-    def test_anyof2(self):
+    def test_anyof2_validation(self):
         r = self.r.resources['test_anyof2']
         self.check_valid(r,
 
@@ -790,6 +794,9 @@ class TestSchema(TestSchemaBase):
                                      {'a1': 2, 'a2': 29},
                                      ] )
 
+    @pytest.mark.xfail
+    def test_anyof2_indexing(self):
+        r = self.r.resources['test_anyof2']
         a1 = r['a1']
         self.assertEqual(a1.fullid(), '/test_anyof2/a1')
 
@@ -821,10 +828,10 @@ class TestSchema(TestSchemaBase):
                                      ] )
 
         a2 = ServiceDef.find(self.r, '#/resources/test_anyof3/a2')
-        self.assertEqual(a2.fullid(True), '#/resources/test_anyof3/a2')
+        self.assertEqual(a2.fullid(True),
+                         '#/resources/test_anyof3/properties/a2')
 
-    @pytest.mark.xfail
-    def test_allof(self):
+    def test_allof_validation(self):
         r = self.r.resources['test_allof']
         self.check_valid(r,
 
@@ -857,6 +864,9 @@ class TestSchema(TestSchemaBase):
                                       'a3': 'f3'},
                                      ])
 
+    @pytest.mark.xfail
+    def test_allof_indexing(self):
+        r = self.r.resources['test_allof']
         self.assertEqual(r.by_pointer('/a2/a21_string').fullid(True),
                          '#/resources/test_allof/a2/a21_string')
         self.assertEqual(r.by_pointer('/a2/a22_number').fullid(True),
@@ -963,8 +973,7 @@ class TestLoadHook(TestSchemaBase):
 
             def find_by_id(self, id_):
                 if id_ in self.service_map:
-                    s = ServiceDef()
-                    s.load(self.service_map[id_])
+                    s = ServiceDef.create_from_file(self.service_map[id_])
                     return s
                 else:
                     raise KeyError("Invalid id: %s" % id_)

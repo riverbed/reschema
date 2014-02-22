@@ -114,11 +114,11 @@ class Schema(object):
     # Counter used for assigning names/ids for anonymous types
     count = 1
 
-    # Map of all known schemas by fullid()
+    # Map of all known schemas by id
     schemas = {}
 
     def __init__(self, typestr, input, name=None,
-                 parent=None, servicedef=None, id_prefix=None):
+                 parent=None, servicedef=None, id=None):
         """Create a new Schema object of the given `typestr`.
 
         :param typestr: the <json-schema> type
@@ -141,7 +141,7 @@ class Schema(object):
         self._typestr = typestr
         self.parent = parent
         self.name = name
-        self.id_prefix = id_prefix
+        self.id = id
         self.children = []
 
         if servicedef is None:
@@ -157,8 +157,8 @@ class Schema(object):
         parse_prop(self, input, 'notes', '')
         parse_prop(self, input, 'example')
         parse_prop(self, input, 'readOnly',
-                   parent.readOnly if (parent and isinstance(parent, Schema))
-                                   else False)
+                   parent.readOnly if (parent and
+                                       isinstance(parent, Schema)) else False)
 
         parse_prop(self, input, 'xmlTag')
         parse_prop(self, input, 'xmlSchema')
@@ -168,33 +168,40 @@ class Schema(object):
         self.relations = OrderedDict()
         for key, value in parse_prop(None, input, 'relations', {},
                                      check_type=dict).iteritems():
-            #logger.debug("Schema %s: adding relation '%s'" % (str(self), key))
-            self.relations[key] = Relation(value, key, self)
+            self.relations[key] = Relation(value, key, self,
+                                           id=('%s/relations/%s' %
+                                               (self.id, key)))
 
         self.links = OrderedDict()
         for key, value in parse_prop(None, input, 'links', {},
                                      check_type=dict).iteritems():
-            #logger.debug("Schema %s: adding link '%s'" % (str(self), key))
-            self.links[key] = Link(value, key, self)
+            self.links[key] = Link(value, key, self,
+                                   id='%s/links/%s' % (self.id, key))
 
-        self._anyof = []
-        for subinput in parse_prop(None, input, 'anyOf', [], check_type=list):
-            s = Schema.parse(subinput, parent=self)
-            self._anyof.append(s)
+        self.anyOf = []
+        for i,subinput in enumerate(parse_prop(None, input, 'anyOf', [],
+                                               check_type=list)):
+            s = Schema.parse(subinput, parent=self,
+                             id='%s/anyOf/%d' % (self.id, i))
+            self.anyOf.append(s)
 
-        self._allof = []
-        for subinput in parse_prop(None, input, 'allOf', [], check_type=list):
-            s = Schema.parse(subinput, parent=self)
-            self._allof.append(s)
+        self.allOf = []
+        for i,subinput in enumerate(parse_prop(None, input, 'allOf', [],
+                                               check_type=list)):
+            s = Schema.parse(subinput, parent=self,
+                             id='%s/allOf/%d' % (self.id, i))
+            self.allOf.append(s)
 
-        self._oneof = []
-        for subinput in parse_prop(None, input, 'oneOf', [], check_type=list):
-            s = Schema.parse(subinput, parent=self)
-            self._oneof.append(s)
+        self.oneOf = []
+        for i,subinput in enumerate(parse_prop(None, input, 'oneOf', [],
+                                               check_type=list)):
+            s = Schema.parse(subinput, parent=self,
+                             id='%s/oneOf/%d' % (self.id, i))
+            self.oneOf.append(s)
 
         n = parse_prop(None, input, 'not', None)
         if n is not None:
-            self._not = Schema.parse(n, parent=self)
+            self._not = Schema.parse(n, parent=self, id='%s/not' % self.id)
         else:
             self._not = None
 
@@ -207,7 +214,7 @@ class Schema(object):
 
     @classmethod
     def parse(cls, input, name=None, parent=None, servicedef=None,
-              id_prefix=None):
+              id=None):
         """Parse a <json-schema> definition for an object.
 
         :param input: the definition to parse
@@ -251,8 +258,7 @@ class Schema(object):
                     name))
             raise ParseError(msg, typestr)
 
-        return cls(input, name, parent, servicedef=servicedef,
-                   id_prefix=id_prefix)
+        return cls(input, name, parent, servicedef=servicedef, id=id)
 
     @classmethod
     def find_by_id(cls, id):
@@ -322,14 +328,16 @@ class Schema(object):
             servicedef
 
         """
+        return '%s%s' % (('' if relative else self.servicedef.id), self.id)
+
         # TODO: Should this be cached?  Do we support changing it?
-        selfid = "%s/%s" % (self.id_prefix or '', self.name)
-        if self.parent:
-            if self.parent.is_ref() or self.parent.is_multi():
-                return self.parent.fullid(relative)
-            else:
-                return self.parent.fullid(relative) + selfid
-        return '%s#%s' % (('' if relative else self.servicedef.id), selfid)
+        #selfid = "%s/%s" % (self.id_prefix or '', self.name)
+        #if self.parent:
+        #    if self.parent.is_ref() or self.parent.is_multi():
+        #        return self.parent.fullid(relative)
+        #    else:
+        #        return self.parent.fullid(relative, True) + selfid
+        #return '%s#%s' % (('' if relative else self.servicedef.id), selfid)
 
     def str_simple(self):
         """Return a string representation of this element as a basic table."""
@@ -359,14 +367,14 @@ class Schema(object):
         return s
 
     def validate(self, input):
-        # Must validate every schema in the _allOf array
-        for s in self._allof:
+        # Must validate every schema in the allOf array
+        for s in self.allOf:
             s.validate(input)
 
-        # Must validate only one schema in the _oneOf array
-        if len(self._oneof) > 0:
+        # Must validate only one schema in the oneOf array
+        if len(self.oneOf) > 0:
             found = 0
-            for s in self._oneof:
+            for s in self.oneOf:
                 try:
                     s.validate(input)
                     found = found + 1
@@ -382,9 +390,9 @@ class Schema(object):
                   "%s: input matches more than one 'oneOf' schemas",
                   self.fullname(), self)
 
-        # Must validate at least one schema in the _anyOf array
-        if len(self._anyof) > 0:
-            for s in self._anyof:
+        # Must validate at least one schema in the anyOf array
+        if len(self.anyOf) > 0:
+            for s in self.anyOf:
                 try:
                     s.validate(input)
                 except ValidationError:
@@ -395,7 +403,7 @@ class Schema(object):
               "%s: input does not match any 'anyOf' schema" %
               self.fullname(), self)
 
-        # Must *not* validate the _not schema
+        # Must *not* validate the not schema
         if self._not is not None:
             try:
                 self._not.validate(input)
@@ -413,7 +421,7 @@ class Schema(object):
         return part
 
     def by_pointer(self, pointer):
-        """Index into a schema by breaking a jsonpointer into parts.
+        """Index into a schema by breaking a data-based jsonpointer into parts.
 
         Appling this method to data that does not validate against this
         schema produces undefined results.
@@ -472,7 +480,7 @@ class Multi(Schema):
 
     def __getitem__(self, name):
         # TODO: The previous implementation, in addition to ignoring the
-        #       _allof and _oneof lists, was highly order-dependent.
+        #       allOf and oneOf lists, was highly order-dependent.
         #       Factoring out by_pointer() somehow exposed this sufficiently
         #       to fail the unit tests (it is not clear how they were passing
         #       before), so for now call this not implemented and xfail
@@ -547,6 +555,10 @@ class Ref(Schema):
 
     def __getitem__(self, name):
         return self.refschema.__getitem__(name)
+
+    def by_pointer(self, pointer):
+        """Index into a schema by breaking a schema-based jsonpointer into parts."""
+        return self.refschema.by_pointer(pointer)
 
 _register_type(Ref)
 
@@ -768,12 +780,13 @@ class Object(Schema):
     _type = 'object'
     def __init__(self, input, name, parent, **kwargs):
         Schema.__init__(self, Object._type, input, name, parent, **kwargs)
-        self.props = OrderedDict()
+        self.properties = OrderedDict()
 
         for prop, value in parse_prop(None, input,
                                      'properties', {}).iteritems():
-            c = Schema.parse(value, prop, self)
-            self.props[prop] = c
+            c = Schema.parse(value, prop, self,
+                             id='%s/properties/%s' % (self.id, prop))
+            self.properties[prop] = c
             self.children.append(c)
 
         parse_prop(self, input, 'required')
@@ -783,22 +796,23 @@ class Object(Schema):
         if ap in (None, True):
             ap = {}
         if type(ap) is bool:
-            self.additional_props = ap
+            self.additionalProperties = ap
         else:
             ap_name = ap['label'] if ('label' in ap) else 'prop'
-            c = Schema.parse(ap, '<%s>' % ap_name, self)
-            self.additional_props = c
+            c = Schema.parse(ap, '<%s>' % ap_name, self,
+                             id='%s/additionalProperties' % (self.id))
+            self.additionalProperties = c
             self.children.append(c)
 
         _check_input(self.fullname(), input)
 
     def __getitem__(self, name):
-        if name in  self.props:
-            return self.props[name]
-        if self.additional_props is not False:
-            return self.additional_props
+        if name in  self.properties:
+            return self.properties[name]
+        if self.additionalProperties is not False:
+            return self.additionalProperties
         # Be lazy about generating the right kind of exception:
-        self.props[name]
+        self.properties[name]
 
     def is_simple(self):
         return False
@@ -809,13 +823,13 @@ class Object(Schema):
                                   (self.fullname(), type(input)), self)
 
         for k in input:
-            if k in self.props:
-                self.props[k].validate(input[k])
-            elif self.additional_props is False:
+            if k in self.properties:
+                self.properties[k].validate(input[k])
+            elif self.additionalProperties is False:
                 raise ValidationError("'%s' is not a valid property for %s" %
                                       (k, self.fullname()), self)
-            elif isinstance (self.additional_props, Schema):
-                self.additional_props.validate(input[k])
+            elif isinstance (self.additionalProperties, Schema):
+                self.additionalProperties.validate(input[k])
 
         if self.required is not None:
             for k in self.required:
@@ -838,11 +852,11 @@ class Object(Schema):
             elem = ET.Element(self.name)
 
         for k in input:
-            if k not in self.props:
-                if self.additional_props is False:
+            if k not in self.properties:
+                if self.additionalProperties is False:
                     raise ValueError('Invalid property: %s' % k)
 
-                subobj = copy.copy(self.additional_props)
+                subobj = copy.copy(self.additionalProperties)
                 keyname = subobj.xmlKeyName or 'key'
 
 
@@ -857,7 +871,7 @@ class Object(Schema):
                     elem.append(subelem)
 
             else:
-                prop = self.props[k]
+                prop = self.properties[k]
                 prop.toxml(input[k], elem)
 
         return elem
@@ -874,7 +888,8 @@ class Array(Schema):
             childname = items['label']
         else:
             childname = 'items'
-        self.items = Schema.parse(items, childname, self)
+        self.items = Schema.parse(items, childname, self,
+                                  id='%s/items' % self.id)
         self.children.append(self.items)
 
         parse_prop(self, input, 'minItems')
@@ -948,10 +963,11 @@ _register_type(Data)
 
 class Relation(object):
 
-    def __init__(self, input, name, schema):
+    def __init__(self, input, name, schema, id):
         self.name = name
         self.schema = schema
         self.vars = None
+        self.id = id
 
         # Lazy resolution because references may be used before they
         # are defined
@@ -996,7 +1012,8 @@ class Relation(object):
             servicedef
 
         """
-        return self.schema.fullid(relative) + '/relations/' + self.name
+        return '%s%s' % (('' if relative else self.schema.servicedef.id),
+                         self.id)
 
     def str_simple(self):
         return '%-30s %-20s\n' % (self.fullname(), '<relation>')
@@ -1028,10 +1045,11 @@ class Relation(object):
 
 class Link(object):
 
-    def __init__(self, input, name, schema):
+    def __init__(self, input, name, schema, id):
         self.name = name
         self.schema = schema
         self.servicedef = schema.servicedef
+        self.id = id
 
         parse_prop(self, input, 'description', '')
         parse_prop(self, input, 'notes', '')
@@ -1054,20 +1072,24 @@ class Link(object):
         self._request = None
         if 'request' in input:
             self._request = Schema.parse(parse_prop(None, input, 'request'),
-                                         parent=self, name='request')
+                                         parent=self, name='request',
+                                         id='%s/request' % self.id)
         elif name != 'self':
             # Must deepcopy because of how parse_prop() works later on.
             self._request = Schema.parse(copy.deepcopy(DEFAULT_REQ_RESP),
-                                         parent=self, name='request')
+                                         parent=self, name='request',
+                                         id='%s/request' % self.id)
 
         self._response = None
         if 'response' in input:
             self._response = Schema.parse(parse_prop(None, input, 'response'),
-                                          parent=self, name='response')
+                                          parent=self, name='response',
+                                         id='%s/response' % self.id)
         elif name != 'self':
             # Must deepcopy because of how parse_prop() works later on.
             self._response = Schema.parse(copy.deepcopy(DEFAULT_REQ_RESP),
-                                          parent=self, name='response')
+                                          parent=self, name='response',
+                                         id='%s/response' % self.id)
 
         if name == 'self':
             self._params = {}
@@ -1075,7 +1097,9 @@ class Link(object):
                 for key,value in parse_prop(None, input, 'params',
                                             {}, check_type=dict).iteritems():
                     self._params[key] = Schema.parse(value, parent=self,
-                                                            name=key)
+                                                     name=key,
+                                                     id=('%s/params/%s' %
+                                                         (self.id, key)))
 
         _check_input(self.fullname(), input)
 
@@ -1099,7 +1123,8 @@ class Link(object):
             servicedef
 
         """
-        return self.schema.fullid(relative) + '/links/' + self.name
+        return '%s%s' % (('' if relative else self.schema.servicedef.id),
+                         self.id)
 
     def str_simple(self):
         return '%-30s %-20s %s\n' % (self.fullname(), '<link>',

@@ -178,9 +178,9 @@ class ResourceToHtml(object):
                 # Handle link.request as parameters
                 if link.request is not None and \
                        type(link.request) != reschema.jsonschema.Null:
-                    props = link.request.props
-                    params = ["%s={%s}" % (param, props[param].typestr)
-                              for param in props.keys()]
+                    properties = link.request.properties
+                    params = ["%s={%s}" % (param, properties[param].typestr)
+                              for param in properties.keys()]
                     if len(params) != 0:
                         path += "?" + "&".join(params)
 
@@ -322,7 +322,7 @@ class SchemaSummaryJson(HTMLElement):
         logger.debug("process_object: obj: %s" % obj.fullname())
         parent.span().text = "{\n"
         last = None
-        for k in obj.props:
+        for k in obj.properties:
             if last is not None:
                 last.text = ",\n"
 
@@ -330,25 +330,25 @@ class SchemaSummaryJson(HTMLElement):
             parent.span(cls="servicedef-property").text = txt
 
             s = parent.span()
-            self.process(s, obj.props[k], indent+2)
+            self.process(s, obj.properties[k], indent+2)
             last = parent.span()
             last.text = '\n'
 
-        if obj.additional_props:
+        if obj.additionalProperties:
             if last is not None:
                 last.text = ",\n"
-            if obj.additional_props is True:
+            if obj.additionalProperties is True:
                 txt = '%*.*s%s' % (indent+2, indent+2, "", 'prop')
                 parent.span(cls="servicedef-type").text = txt
                 parent.span().text = ": "
                 parent.span(cls="servicedef-type").text = 'value'
             else:
                 txt = '%*.*s%s' % (indent+2, indent+2, "",
-                                   obj.additional_props.name)
+                                   obj.additionalProperties.name)
                 parent.span(cls="servicedef-type").text = txt
                 parent.span().text = ": "
                 s = parent.span()
-                self.process(s, obj.additional_props, indent+2)
+                self.process(s, obj.additionalProperties, indent+2)
 
             last = parent.span()
             last.text = '\n'
@@ -483,12 +483,12 @@ class SchemaSummaryXML(HTMLElement):
     def process_object(self, parent, obj, indent, name, key=None):
         parent.span().text = "%*s<" % (indent, "")
         parent.span(cls="xmlschema-element").text =  name
-        subelems = obj.additional_props
+        subelems = obj.additionalProperties
         first = True
         attr_indent = "\n%*s" % (indent + 2 + len(name), "")
 
-        for k in obj.props:
-            prop = obj.props[k]
+        for k in obj.properties:
+            prop = obj.properties[k]
             if not prop.is_simple():
                 subelems = True
                 continue
@@ -503,29 +503,29 @@ class SchemaSummaryXML(HTMLElement):
         else:
             parent.span().text = "/>\n"
 
-        for k in obj.props:
-            prop = obj.props[k]
+        for k in obj.properties:
+            prop = obj.properties[k]
             if prop.is_simple():
                 continue
             s = parent.span()
             self.process(s, prop, indent+2, name=k)
 
-        if obj.additional_props is True:
+        if obj.additionalProperties is True:
             pass
-        elif obj.additional_props:
+        elif obj.additionalProperties:
             s = parent.span()
 
-            subobj = copy.copy(obj.additional_props)
+            subobj = copy.copy(obj.additionalProperties)
             keyname = subobj.xmlKeyName or 'key'
             try:
-                subobj.props = OrderedDict()
+                subobj.properties = OrderedDict()
                 json = {'id':keyname, 'type':'string',
                         'description':'property name'}
-                subobj.props[keyname] = subobj.schema.parse(json,
+                subobj.properties[keyname] = subobj.schema.parse(json,
                                                             keyname,
                                                             subobj)
-                for k in obj.additional_props.props:
-                    subobj.props[k] = obj.additional_props.props[k]
+                for k in obj.additionalProperties.properties:
+                    subobj.properties[k] = obj.additionalProperties.properties[k]
             except:
                 pass
             self.process(s, subobj, indent+2, name=subobj.name, key=keyname)
@@ -686,7 +686,7 @@ class SchemaTable(PropTable):
         for child in schema.children:
             self.process(child)
         if isinstance(schema, reschema.jsonschema.Object):
-            if schema.additional_props is True:
+            if schema.additionalProperties is True:
                 tds = self.row(["", "", "", ""])
                 self.setname(tds[0], schema.fullname() + ".<prop>")
                 tds[1].span(cls="servicedef-type").text = "<value>"
