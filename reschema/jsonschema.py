@@ -178,22 +178,22 @@ class Schema(object):
             self.links[key] = Link(value, key, self,
                                    id='%s/links/%s' % (self.id, key))
 
-        self.anyOf = []
-        for i,subinput in enumerate(parse_prop(None, input, 'anyOf', [],
+        self.anyof = []
+        for i, subinput in enumerate(parse_prop(None, input, 'anyOf', [],
                                                check_type=list)):
             s = Schema.parse(subinput, parent=self,
                              id='%s/anyOf/%d' % (self.id, i))
-            self.anyOf.append(s)
+            self.anyof.append(s)
 
-        self.allOf = []
-        for i,subinput in enumerate(parse_prop(None, input, 'allOf', [],
+        self.allof = []
+        for i, subinput in enumerate(parse_prop(None, input, 'allOf', [],
                                                check_type=list)):
             s = Schema.parse(subinput, parent=self,
                              id='%s/allOf/%d' % (self.id, i))
-            self.allOf.append(s)
+            self.allof.append(s)
 
         self.oneOf = []
-        for i,subinput in enumerate(parse_prop(None, input, 'oneOf', [],
+        for i, subinput in enumerate(parse_prop(None, input, 'oneOf', [],
                                                check_type=list)):
             s = Schema.parse(subinput, parent=self,
                              id='%s/oneOf/%d' % (self.id, i))
@@ -201,9 +201,9 @@ class Schema(object):
 
         n = parse_prop(None, input, 'not', None)
         if n is not None:
-            self._not = Schema.parse(n, parent=self, id='%s/not' % self.id)
+            self.not_ = Schema.parse(n, parent=self, id='%s/not' % self.id)
         else:
-            self._not = None
+            self.not_ = None
 
         #print "Adding schema: %s - parent %s" % (self.fullid(), parent)
         self.schemas[self.fullid()] = self
@@ -368,7 +368,7 @@ class Schema(object):
 
     def validate(self, input):
         # Must validate every schema in the allOf array
-        for s in self.allOf:
+        for s in self.allof:
             s.validate(input)
 
         # Must validate only one schema in the oneOf array
@@ -391,8 +391,8 @@ class Schema(object):
                   self.fullname(), self)
 
         # Must validate at least one schema in the anyOf array
-        if len(self.anyOf) > 0:
-            for s in self.anyOf:
+        if len(self.anyof) > 0:
+            for s in self.anyof:
                 try:
                     s.validate(input)
                 except ValidationError:
@@ -404,9 +404,9 @@ class Schema(object):
               self.fullname(), self)
 
         # Must *not* validate the not schema
-        if self._not is not None:
+        if self.not_ is not None:
             try:
-                self._not.validate(input)
+                self.not_.validate(input)
                 valid = True
             except ValidationError:
                 valid = False
@@ -557,7 +557,7 @@ class Ref(Schema):
         return self.refschema.__getitem__(name)
 
     def by_pointer(self, pointer):
-        """Index into a schema by breaking a schema-based jsonpointer into parts."""
+        """Index into a schema by breaking a data-based jsonpointer into parts."""
         return self.refschema.by_pointer(pointer)
 
 _register_type(Ref)
@@ -796,21 +796,21 @@ class Object(Schema):
         if ap in (None, True):
             ap = {}
         if type(ap) is bool:
-            self.additionalProperties = ap
+            self.additional_properties = ap
         else:
             ap_name = ap['label'] if ('label' in ap) else 'prop'
             c = Schema.parse(ap, '<%s>' % ap_name, self,
                              id='%s/additionalProperties' % (self.id))
-            self.additionalProperties = c
+            self.additional_properties = c
             self.children.append(c)
 
         _check_input(self.fullname(), input)
 
     def __getitem__(self, name):
-        if name in  self.properties:
+        if name in self.properties:
             return self.properties[name]
-        if self.additionalProperties is not False:
-            return self.additionalProperties
+        if self.additional_properties is not False:
+            return self.additional_properties
         # Be lazy about generating the right kind of exception:
         self.properties[name]
 
@@ -825,11 +825,11 @@ class Object(Schema):
         for k in input:
             if k in self.properties:
                 self.properties[k].validate(input[k])
-            elif self.additionalProperties is False:
+            elif self.additional_properties is False:
                 raise ValidationError("'%s' is not a valid property for %s" %
                                       (k, self.fullname()), self)
-            elif isinstance (self.additionalProperties, Schema):
-                self.additionalProperties.validate(input[k])
+            elif isinstance(self.additional_properties, Schema):
+                self.additional_properties.validate(input[k])
 
         if self.required is not None:
             for k in self.required:
@@ -853,10 +853,10 @@ class Object(Schema):
 
         for k in input:
             if k not in self.properties:
-                if self.additionalProperties is False:
+                if self.additional_properties is False:
                     raise ValueError('Invalid property: %s' % k)
 
-                subobj = copy.copy(self.additionalProperties)
+                subobj = copy.copy(self.additional_properties)
                 keyname = subobj.xmlKeyName or 'key'
 
 
@@ -1084,12 +1084,12 @@ class Link(object):
         if 'response' in input:
             self._response = Schema.parse(parse_prop(None, input, 'response'),
                                           parent=self, name='response',
-                                         id='%s/response' % self.id)
+                                          id='%s/response' % self.id)
         elif name != 'self':
             # Must deepcopy because of how parse_prop() works later on.
             self._response = Schema.parse(copy.deepcopy(DEFAULT_REQ_RESP),
                                           parent=self, name='response',
-                                         id='%s/response' % self.id)
+                                          id='%s/response' % self.id)
 
         if name == 'self':
             self._params = {}

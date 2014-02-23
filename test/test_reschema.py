@@ -288,8 +288,8 @@ class TestCatalog(unittest.TestCase):
         # Unlike book, auther does not specify odditionalProperties
         author = self.r.resources['author']
         empty = Schema.parse({}, name='<prop>', parent=author)
-        self.assertEqual(author['randomjunk'], author.additionalProperties)
-        self.assertEqual(author.additionalProperties,
+        self.assertEqual(author['randomjunk'], author.additional_properties)
+        self.assertEqual(author.additional_properties,
                          author.children[-1])
 
 
