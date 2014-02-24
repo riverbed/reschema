@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 class ServiceDefLoadHook(object):
     """ Interface for load hooks.
 
-    See ServiceDefCache.add_hook()
+    See ServiceDefManager.add_hook()
 
     """
     def find_by_id(self, id_):
@@ -56,10 +56,10 @@ class ServiceDefLoadHook(object):
         raise NotImplementedError()
 
 
-class ServiceDefCache(object):
+class ServiceDefManager(object):
     """ Manager for ServiceDef instances.
 
-    A ServiceDefCache manages loading and finding ServiceDef
+    A ServiceDefManager manages loading and finding ServiceDef
     instances by id as indicated in the 'id' property
     at the top level of the schema.
 
@@ -87,7 +87,7 @@ class ServiceDefCache(object):
 
     def clear(self):
         """ Clear all known schemas. """
-        logger.info("ServiceDefCache cleared")
+        logger.info("ServiceDefManager cleared")
         self.by_id = {}
         self.by_name = {}
 
@@ -106,9 +106,9 @@ class ServiceDefCache(object):
         fullname = (servicedef.provider, servicedef.name, servicedef.version)
         self.by_name[fullname] = servicedef
 
-        logger.info("ServiceDefCache: registered new schema: %s, %s" %
+        logger.info("ServiceDefManager: registered new schema: %s, %s" %
                     (fullname, sid))
-        servicedef.cache = self
+        servicedef.manager = self
 
     def find_by_id(self, id_):
         """ Resolve an id_ to a servicedef instance.
@@ -171,8 +171,8 @@ class ServiceDefCache(object):
 
 class ServiceDef(object):
 
-    def __init__(self, cache=None):
-        self.cache = None
+    def __init__(self, manager=None):
+        self.manager = None
 
     @classmethod
     def create_from_file(cls, filename, **kwargs):
@@ -398,7 +398,7 @@ class ServiceDef(object):
             # servicedef by id
             full_reference = self.expand_id(reference)
             reference_id = urlparse.urldefrag(full_reference)[0]
-            servicedef = self.cache.find_by_id(reference_id)
+            servicedef = self.manager.find_by_id(reference_id)
         else:
             servicedef = self
 

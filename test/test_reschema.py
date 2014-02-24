@@ -20,7 +20,7 @@ from reschema.exceptions import (ValidationError,
 
 from reschema.jsonschema import (Object, Integer, Number, String,
                                  Array, Multi, Schema)
-from reschema import yaml_loader, ServiceDef, ServiceDefCache
+from reschema import yaml_loader, ServiceDef, ServiceDefManager
 
 logger = logging.getLogger(__name__)
 
@@ -936,9 +936,9 @@ class TestSchemaRef(TestSchemaBase):
         self.s1.load(SERVICE_DEF_TEST)
         self.s2 = ServiceDef()
         self.s2.load(SERVICE_DEF_TEST_REF)
-        cache = ServiceDefCache()
-        cache.add(self.s1)
-        cache.add(self.s2)
+        manager = ServiceDefManager()
+        manager.add(self.s1)
+        manager.add(self.s2)
 
     def test_ref_types(self):
         r = self.s2.find('#/resources/test_ref_types')
@@ -984,24 +984,24 @@ class TestLoadHook(TestSchemaBase):
                        (name, version))
                 return self.find_by_id(sid)
 
-        self.cache = ServiceDefCache()
-        self.cache.add_load_hook(Hook())
+        self.manager = ServiceDefManager()
+        self.manager.add_load_hook(Hook())
 
     def tearDown(self):
-        self.cache = None
+        self.manager = None
 
     def test_find_by_id(self):
         sid = 'http://support.riverbed.com/apis/test.ref/1.0'
-        s = self.cache.find_by_id(sid)
+        s = self.manager.find_by_id(sid)
         self.assertEqual(s.id, sid)
 
     def test_find_by_name(self):
         sid = 'http://support.riverbed.com/apis/test.ref/1.0'
-        s = self.cache.find_by_name('test.ref', '1.0')
+        s = self.manager.find_by_name('test.ref', '1.0')
         self.assertEqual(s.id, sid)
 
     def test_load(self):
-        s = self.cache.find_by_id(
+        s = self.manager.find_by_id(
             'http://support.riverbed.com/apis/test.ref/1.0')
         rid = ('http://support.riverbed.com/apis/test/1.0'
                '#/types/type_boolean')
@@ -1014,7 +1014,7 @@ class TestLoadHook(TestSchemaBase):
         self.assertEqual(r.fullid(), rid)
 
     def test_load_on_relation(self):
-        s = self.cache.find_by_id(
+        s = self.manager.find_by_id(
             'http://support.riverbed.com/apis/test.ref/1.0')
         r = ServiceDef.find(s, '/apis/test/1.0#/resources/test_boolean')
         self.assertEqual(r.fullid(),

@@ -5,5 +5,5 @@
 #   https://github.com/riverbed/reschema/blob/master/LICENSE ("License").
 # This software is distributed "AS IS" as set forth in the License.
 
-from servicedef import ServiceDef, ServiceDefCache
+from servicedef import ServiceDef, ServiceDefManager
 from jsonschema import Schema

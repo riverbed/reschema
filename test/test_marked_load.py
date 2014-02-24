@@ -9,7 +9,7 @@ import os
 import unittest
 
 from reschema.exceptions import ReschemaException
-from reschema import ServiceDef, ServiceDefCache
+from reschema import ServiceDef, ServiceDefManager
 
 """
 Exmaple script to demonstrate how marks can print out location

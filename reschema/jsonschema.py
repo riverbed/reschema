@@ -330,15 +330,6 @@ class Schema(object):
         """
         return '%s%s' % (('' if relative else self.servicedef.id), self.id)
 
-        # TODO: Should this be cached?  Do we support changing it?
-        #selfid = "%s/%s" % (self.id_prefix or '', self.name)
-        #if self.parent:
-        #    if self.parent.is_ref() or self.parent.is_multi():
-        #        return self.parent.fullid(relative)
-        #    else:
-        #        return self.parent.fullid(relative, True) + selfid
-        #return '%s#%s' % (('' if relative else self.servicedef.id), selfid)
-
     def str_simple(self):
         """Return a string representation of this element as a basic table."""
         s = '%-30s %-20s %s\n' % (self.fullname(),
