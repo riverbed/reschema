@@ -125,10 +125,11 @@ class ServiceDefManager(object):
             servicedef = None
             for hook in self._load_hooks:
                 servicedef = hook.find_by_id(id_)
+                if servicedef:
+                    break
             if servicedef is None:
                 raise InvalidServiceId(
                     "Failed to load service definition: %s" % id_)
-
             self.add(servicedef)
         else:
             servicedef = self.by_id[id_]
@@ -157,6 +158,8 @@ class ServiceDefManager(object):
             servicedef = None
             for hook in self._load_hooks:
                 servicedef = hook.find_by_name(name, version, provider)
+                if servicedef:
+                    break
             if servicedef is None:
                 raise InvalidServiceName(
                     "Failed to load service definition: %s/%s/%s" %
