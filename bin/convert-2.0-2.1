@@ -124,7 +124,10 @@ version = obj['version']
 
 if name != obj['name']:
     warn(("Service definition 'name' property does not match "
-          "servicePath: %s vs %s") % (obj['name'], obj['servicePath']))
+          "servicePath: %s vs %s (from %s)\n"
+          "The 'name' property should be lower case and match "
+          "the URI path on the server") %
+         (obj['name'], name, obj['servicePath']))
 
 # Rewind the input and process it line by line
 infile.seek(0)
