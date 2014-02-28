@@ -1024,6 +1024,38 @@ class TestLoadHook(TestSchemaBase):
                           '#/resources/test_boolean'))
 
 
+class TestServiceDef(unittest.TestCase):
+
+    SERVICE_DEF_TEMPLATE = """
+$schema: {schema_id}
+id: {id}
+provider: {provider}
+name: {name}
+version: {version}
+title: {title}
+"""
+
+    def create_service(self, **kwargs):
+        schema_vars = {
+            'schema_id': "'http://support.riverbed.com/apis/service_def/2.1'",
+            'id': "'http://support.riverbed.com/apis/test/1.0'",
+            'provider': "'riverbed'",
+            'name': "'test'",
+            'version': "'1.0'",
+            'title': "'Test REST API'"
+            }
+        schema_vars.update(kwargs)
+        text = self.SERVICE_DEF_TEMPLATE.format(**schema_vars)
+        servicedef = ServiceDef.create_from_text(text, format='yaml')
+        return servicedef
+
+    def test_good(self):
+        self.create_service()
+
+    def test_numeric_version(self):
+        with self.assertRaises(ParseError):
+            self.create_service(version=1.0)
+
 if __name__ == '__main__':
     logging.basicConfig(filename='test.log', level=logging.DEBUG)
     unittest.main()

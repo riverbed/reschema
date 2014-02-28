@@ -183,6 +183,12 @@ class ServiceDef(object):
         servicedef.load(filename)
         return servicedef
 
+    @classmethod
+    def create_from_text(cls, text, format='json', **kwargs):
+        servicedef = ServiceDef(**kwargs)
+        servicedef.parse_text(text, format=format)
+        return servicedef
+
     def load(self, filename):
         """Loads and parses a JSON or YAML schema.
 
@@ -242,7 +248,7 @@ class ServiceDef(object):
 
         parse_prop(self, obj, 'provider', required=True)
         parse_prop(self, obj, 'name', required=True)
-        parse_prop(self, obj, 'version', required=True)
+        parse_prop(self, obj, 'version', required=True, check_type=[str, unicode])
         parse_prop(self, obj, 'title', self.name)
         parse_prop(self, obj, 'status', '')
 
