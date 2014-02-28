@@ -999,6 +999,8 @@ class TestLoadHook(TestSchemaBase):
         sid = 'http://support.riverbed.com/apis/test.ref/1.0'
         s = self.manager.find_by_name('test.ref', '1.0')
         self.assertEqual(s.id, sid)
+        s2 = self.manager.find_by_name('test.ref', '1.0')
+        self.assertEqual(s2, s)
 
     def test_load(self):
         s = self.manager.find_by_id(
