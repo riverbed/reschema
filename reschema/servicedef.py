@@ -103,7 +103,7 @@ class ServiceDefManager(object):
 
         self.by_id[sid] = servicedef
 
-        fullname = (servicedef.provider, servicedef.name, servicedef.version)
+        fullname = (servicedef.name, servicedef.version, servicedef.provider)
         self.by_name[fullname] = servicedef
 
         logger.info("ServiceDefManager: registered new schema: %s, %s" %
