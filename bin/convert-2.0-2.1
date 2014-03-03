@@ -98,7 +98,8 @@ def parse_obj(obj):
 
         if k in ['example', 'relations', 'links']:
             continue
-        if isinstance(v, dict) and ('id' in v) and (k != 'properties'):
+        if isinstance(v, dict) and ('id' in v) and \
+               k not in ['properties', 'types', 'resources']:
             node = obj_key_strnode(v, 'id')
             id_lines.append(node.start_mark.line + 1)
         parse_obj(v)
@@ -110,6 +111,7 @@ empty_resource_re = re.compile("^(.*)resource: *$")
 resource_re = re.compile("^(.*)resource: *['\"]?([^ }'\"\\n]+)['\"]?(.*)$")
 ref_re = re.compile("^(.*)\$ref: *['\"]?([^ }'\"\\n]+)['\"]?(.*)$")
 id_re = re.compile("^( *)id: *(.*)$")
+comment_re = re.compile("^ *#")
 
 # Parse the service path to get the name and version
 m = re.match("/api/([^/]+)/(.*)$", obj['servicePath'])
@@ -157,7 +159,8 @@ def is_type(name):
         if o is None or p not in o:
             return False
 
-        if 'type' in o[p] and o[p]['type'] == 'object':
+        if 'type' in o[p] and o[p]['type'] == 'object' \
+               and 'properties' in o[p]:
             o = o[p]['properties']
         else:
             o = None
@@ -176,6 +179,11 @@ while True:
         line = fiter.next()
     except StopIteration:
         break
+
+    if comment_re.match(line):
+        outfile.write(line)
+        outfile.write('\n')
+        continue
 
     # Header changed from restScheamVersion to $schema
     if 'restSchemaVersion' in line:
