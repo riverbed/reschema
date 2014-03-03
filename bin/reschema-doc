@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 
-import os, os.path, sys, re, datetime
-import distutils.spawn, subprocess
+import os
+import os.path
+import sys
+import re
+import datetime
+import distutils.spawn
+import subprocess
 import logging
 
 logging.basicConfig(filename='reschema-doc.log', level=logging.DEBUG)
@@ -9,9 +14,9 @@ logging.basicConfig(filename='reschema-doc.log', level=logging.DEBUG)
 from optparse import OptionParser
 
 import reschema
-from reschema.html import *
+import reschema.html
 from reschema import ServiceDef
-from reschema.tohtml import ServiceDefToHtml, ResourceToHtml, Options
+from reschema.tohtml import ServiceDefToHtml, Options
 
 parser = OptionParser()
 parser.add_option('-f', '--file', dest='filename',
@@ -27,13 +32,15 @@ parser.add_option('--pdf', dest='pdf', default=False,
                   help="Generate PDF", action="store_true")
 
 parser.add_option('-r', '--root', dest='root', default=None,
-                  help='Root output filename, default is built from title, version, status', action="store")
+                  help='Root output filename, default is built from name, '
+                  'version, status', action="store")
 
 parser.add_option('-w', '--wkhtmltopdf', dest='wkhtmltopdf', default=None,
                   help='Path to wkhtmltopdf tool', action="store")
 
 parser.add_option('--copyright', dest='copyright', default=None,
-                  help='Company and years for copyright, eg "Riverbed Technology Inc. 2013"', action="store")
+                  help='Company and years for copyright, '
+                  'eg "Riverbed Technology Inc. 2013"', action="store")
 
 parser.add_option('--nojson', action="store_true", default=False,
                   help='Do not include JSON tabs')
@@ -44,7 +51,7 @@ parser.add_option('--noxml', action="store_true", default=False,
 parser.add_option('--device', dest='device', default='{device}',
                   help='Device hosting this service')
 
-parser.add_option('--root', dest='root', default='/api',
+parser.add_option('--apiroot', dest='apiroot', default='/api',
                   help='Root path for all resources')
 
 (options, args) = parser.parse_args()
@@ -67,9 +74,10 @@ title = "%s v%s %s" % (rs.title, rs.version, rs.status)
 if options.root:
     rootname = options.root
 else:
-    rootname = re.sub('[\. {}\[\]]', '_', title.strip())
+    rootname = "%s_v%s" % (rs.name, rs.version)
+    rootname = re.sub('[/\. {}\[\]]', '_', rootname)
 
-rootdir = os.path.dirname(options.filename)
+rootdir = os.path.dirname(os.path.abspath(options.filename))
 
 if options.outdir is None:
     outdir = rootdir
@@ -87,7 +95,7 @@ if options.html:
 
     htmldoc = reschema.html.Document(title, printable=False)
     r2h = ServiceDefToHtml(rs, htmldoc.content, htmldoc.menu,
-                           device=device, root=root,
+                           device=options.device, root=options.apiroot,
                            options=Options(printable=False,
                                            json=(not options.nojson),
                                            xml=(not options.noxml)))
@@ -103,7 +111,7 @@ if options.pdf:
 
     htmldoc = reschema.html.Document(title, printable=True)
     r2h = ServiceDefToHtml(rs, htmldoc.content, htmldoc.menu,
-                           device=device, root=root,
+                           device=options.device, root=options.apiroot,
                            options=Options(printable=True,
                                            json=(not options.nojson),
                                            xml=(not options.noxml)))
@@ -118,10 +126,12 @@ if options.pdf:
         wkhtmltopdf = distutils.spawn.find_executable("wkhtmltopdf")
         if not wkhtmltopdf:
             if not "WKHTMLTOPDF" in os.environ:
-                raise ValueError("Cannot find 'wkhtmltopdf' in path, use -w <path> or set WKHTMLTOPDF env variable")
+                raise ValueError(
+                    "Cannot find 'wkhtmltopdf' in path, "
+                    "use -w <path> or set WKHTMLTOPDF env variable")
             wkhtmltopdf = os.environ['WKHTMLTOPDF']
 
-    args = [ wkhtmltopdf, "--version" ]
+    args = [wkhtmltopdf, "--version"]
     lines = subprocess.check_output(args).split('\n')
     version = None
     for line in lines:
@@ -131,7 +141,8 @@ if options.pdf:
             break
 
     if version is None:
-        print "WARNING: Could not determine wkhtmltopdf version, assuming latest"
+        print ("WARNING: Could not determine wkhtmltopdf version, "
+               "assuming latest")
     else:
         print "wkhtmltopdf version %d" % version
 
@@ -140,34 +151,35 @@ if options.pdf:
         coverarg = "cover"
     else:
         tocarg = "--toc"
-        coverarg ="--cover"
+        coverarg = "--cover"
 
     # create a cover apge
     cover = outdir + "/" + rootname + "-cover.html"
-    cover_base = HTMLElement('html')
+    cover_base = reschema.html.HTMLElement('html')
     cover_body = cover_base.body()
     cover_body.h1().text = title
     if options.copyright:
         cover_body.p().text = u"Copyright \xa9 " + unicode(options.copyright)
-    cover_body.p().text = "Created %s" % datetime.datetime.now().strftime("%b %d, %Y at %I:%m %p")
+    created = datetime.datetime.now().strftime("%b %d, %Y at %I:%m %p")
+    cover_body.p().text = "Created %s" % created
 
     f = open(cover, "w")
-    f.write(ET.tostring(cover_base, method="html"))
+    f.write(reschema.html.ET.tostring(cover_base, method="html"))
     f.close()
 
     pdf = outdir + "/" + rootname + ".pdf"
     if os.path.exists(pdf):
         os.remove(pdf)
 
-    args = [ wkhtmltopdf,
-             '--title', title,
-             coverarg, cover,
-             tocarg, '--toc-header-text', 'Contents',
-             '--footer-center', '[page]',
-             phtml, pdf ]
+    args = [wkhtmltopdf,
+            '--title', title,
+            coverarg, cover,
+            tocarg, '--toc-header-text', 'Contents',
+            '--footer-center', '[page]',
+            phtml, pdf]
     print ' '.join(args)
     subprocess.check_call(args)
-    args = [ 'sed', '-i.bak', '-e', 's/#00//g', pdf]
+    args = ['sed', '-i.bak', '-e', 's/#00//g', pdf]
     subprocess.check_call(args)
     print "Wrote %s" % pdf
     os.remove(pdf + ".bak")
