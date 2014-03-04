@@ -40,7 +40,7 @@ parser.add_option('-w', '--wkhtmltopdf', dest='wkhtmltopdf', default=None,
 
 parser.add_option('--copyright', dest='copyright', default=None,
                   help='Company and years for copyright, '
-                  'eg "Riverbed Technology Inc. 2013"', action="store")
+                  'eg "Riverbed Technology Inc. 2014"', action="store")
 
 parser.add_option('--nojson', action="store_true", default=False,
                   help='Do not include JSON tabs')
