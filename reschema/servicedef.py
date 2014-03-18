@@ -18,7 +18,7 @@ import reschema.jsonschema as jsonschema
 from reschema.jsonschema import Schema
 from reschema.util import parse_prop
 from reschema import yaml_loader, json_loader
-from reschema.exceptions import (ParseError, UnsupportedSchema,
+from reschema.exceptions import (ParseError, UnsupportedSchema, NoManager,
                                  InvalidReference, DuplicateServiceId,
                                  InvalidServiceId, InvalidServiceName)
 
@@ -407,6 +407,8 @@ class ServiceDef(object):
             # servicedef by id
             full_reference = self.expand_id(reference)
             reference_id = urlparse.urldefrag(full_reference)[0]
+            if self.manager is None:
+                raise NoManager('Cannot resolve reference, ServiceDef has no manager')
             servicedef = self.manager.find_by_id(reference_id)
         else:
             servicedef = self

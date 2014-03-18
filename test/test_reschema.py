@@ -14,7 +14,7 @@ from yaml.error import MarkedYAMLError
 
 import reschema
 
-from reschema.exceptions import (ValidationError,
+from reschema.exceptions import (ValidationError, NoManager,
                                  MissingParameter, ParseError,
                                  InvalidReference)
 
@@ -450,7 +450,7 @@ class TestJsonSchema(TestSchemaBase):
                             "    id: { type: number }\n"
                             "    name: { type: string }\n"
                             "    billing_address: { $ref: '#/address' }\n")
-        with self.assertRaises(InvalidReference):
+        with self.assertRaises(NoManager):
             schema.validate({'id': 2,
                              'name': 'Frozzle',
                              'billing_address': "doesn't exist"})
@@ -1018,6 +1018,8 @@ class TestLoadHook(TestSchemaBase):
     def test_load_on_relation(self):
         s = self.manager.find_by_id(
             'http://support.riverbed.com/apis/test.ref/1.0')
+        r = s.resources['test_ref_types']
+        sb = r.by_pointer('/prop_boolean')
         r = ServiceDef.find(s, '/apis/test/1.0#/resources/test_boolean')
         self.assertEqual(r.fullid(),
                          ('http://support.riverbed.com/apis/test/1.0'

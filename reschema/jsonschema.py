@@ -510,6 +510,8 @@ class Ref(Schema):
         if self._refschema is None:
             sch = Schema.find_by_id(self._refschema_id)
             if sch is None:
+                sch = self.servicedef.find(self._refschema_id)
+            if sch is None:
                 raise InvalidReference(("%s $ref" % self.fullname()),
                                        self._refschema_id)
 

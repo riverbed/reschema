@@ -49,6 +49,17 @@ class NoContext(ReschemaException):
                 % self.reference)
 
 
+class NoManager(ReschemaException):
+    """ A partial or full reference was provided but no ServiceDefManager availalble. """
+
+    def __init__(self, reference):
+        self.reference = reference
+
+    def __str__(self):
+        return ("Reference cannot be resolved without a manager: %s"
+                % self.reference)
+
+
 class InvalidReference(ReschemaException):
     """ Invalid reference. """
 
