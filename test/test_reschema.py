@@ -16,7 +16,7 @@ import reschema
 
 from reschema.exceptions import (ValidationError, NoManager,
                                  MissingParameter, ParseError,
-                                 InvalidReference)
+                                 InvalidServiceId)
 
 from reschema.jsonschema import (Object, Integer, Number, String,
                                  Array, Multi, Schema)
@@ -339,7 +339,7 @@ class TestSchemaBase(unittest.TestCase):
 
     def parse(self, string):
         d = yaml_loader.marked_load(string)
-        s = ServiceDef()
+        s = ServiceDef(manager=ServiceDefManager())
         s.id = 'http://support.riverbed.com/apis/testschema/1.0'
         return Schema.parse(d, 'root', servicedef=s)
 
@@ -378,7 +378,7 @@ class TestSchemaBase(unittest.TestCase):
 class TestJsonSchema(TestSchemaBase):
 
     def setUp(self):
-        self.servicedef = reschema.ServiceDef()
+        self.servicedef = reschema.ServiceDef(manager=ServiceDefManager())
         self.servicedef.id = 'http://support.riverbed.com/apis/testschema/1.0'
 
     def test_exceptions(self):
@@ -450,6 +450,13 @@ class TestJsonSchema(TestSchemaBase):
                             "    id: { type: number }\n"
                             "    name: { type: string }\n"
                             "    billing_address: { $ref: '#/address' }\n")
+
+        with self.assertRaises(InvalidServiceId):
+            schema.validate({'id': 2,
+                             'name': 'Frozzle',
+                             'billing_address': "doesn't exist"})
+
+        schema.servicedef.manager = None
         with self.assertRaises(NoManager):
             schema.validate({'id': 2,
                              'name': 'Frozzle',
@@ -1019,7 +1026,12 @@ class TestLoadHook(TestSchemaBase):
         s = self.manager.find_by_id(
             'http://support.riverbed.com/apis/test.ref/1.0')
         r = s.resources['test_ref_types']
+
         sb = r.by_pointer('/prop_boolean')
+        self.assertEqual(sb.fullid(),
+                         ('http://support.riverbed.com/apis/test/1.0'
+                          '#/types/type_boolean'))
+
         r = ServiceDef.find(s, '/apis/test/1.0#/resources/test_boolean')
         self.assertEqual(r.fullid(),
                          ('http://support.riverbed.com/apis/test/1.0'

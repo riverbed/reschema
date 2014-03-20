@@ -50,7 +50,7 @@ class NoContext(ReschemaException):
 
 
 class NoManager(ReschemaException):
-    """ A partial or full reference was provided but no ServiceDefManager availalble. """
+    """ A partial/full reference was provided but no ServiceDefManager available. """
 
     def __init__(self, reference):
         self.reference = reference

@@ -175,7 +175,7 @@ class ServiceDefManager(object):
 class ServiceDef(object):
 
     def __init__(self, manager=None):
-        self.manager = None
+        self.manager = manager
 
     @classmethod
     def create_from_file(cls, filename, **kwargs):
@@ -408,7 +408,7 @@ class ServiceDef(object):
             full_reference = self.expand_id(reference)
             reference_id = urlparse.urldefrag(full_reference)[0]
             if self.manager is None:
-                raise NoManager('Cannot resolve reference, ServiceDef has no manager')
+                raise NoManager(reference)
             servicedef = self.manager.find_by_id(reference_id)
         else:
             servicedef = self
