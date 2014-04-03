@@ -202,8 +202,8 @@ class TestCatalog(unittest.TestCase):
         link = pub.links['self']
         path = link.path
         self.assertEqual(str(path), '$/publishers/{id}')
-        self.assertEqual(path.resolve('/api/catalog/1.0', {'id': 12}),
-                         '/api/catalog/1.0/publishers/12')
+        (resolved_path, values) = path.resolve({'id': 12})
+        return self.assertEqual(resolved_path, '$/publishers/12')
 
     def test_link_template_path(self):
         book = ServiceDef.find(self.r, '#/resources/book')
@@ -211,11 +211,10 @@ class TestCatalog(unittest.TestCase):
         items = chapters.items
         book_chapter = items.relations['full']
         data = {'book': book.example}
-        (uri, params) = book_chapter.resolve('/api/catalog/1.0', data,
-                                             '/book/chapters/1')
-        self.assertEqual(uri, '/api/catalog/1.0/books/100/chapters/2')
+        (uri, params, values) = book_chapter.resolve(data, '/book/chapters/1')
+        self.assertEqual(uri, '$/books/100/chapters/2')
         with self.assertRaises(MissingParameter):
-            book_chapter.resolve('/api/catalog/1.0', None)
+            book_chapter.resolve(None)
 
     def test_object(self):
         # skip validation, we are checking that elsewhere
@@ -311,28 +310,27 @@ class TestCatalogLinks(unittest.TestCase):
         author_id = book['author_ids'][0]
         logger.debug('author_id: %s' % author_id)
 
-        (uri, params) = (author_id
-                         .relations['full']
-                         .resolve('/api/catalog/1.0',
-                                  book_data, '/author_ids/0'))
+        (uri, params, values) = (author_id
+                                 .relations['full']
+                                 .resolve(book_data, '/author_ids/0'))
 
-        self.assertEqual(uri, '/api/catalog/1.0/authors/1')
+        self.assertEqual(uri, '$/authors/1')
 
-        (uri, params) = (author_id
-                         .relations['full']
-                         .resolve('/api/catalog/1.0', book_data,
-                                  '/author_ids/1'))
+        (uri, params, values) = (author_id
+                                 .relations['full']
+                                 .resolve(book_data, '/author_ids/1'))
 
-        self.assertEqual(uri, '/api/catalog/1.0/authors/5')
+        self.assertEqual(uri, '$/authors/5')
 
         author = self.r.resources['author']
         author_data = {'id': 1, 'name': 'John Q'}
         author.validate(author_data)
 
-        (uri, params) = (author
-                         .relations['books']
-                         .resolve('/api/catalog/1.0', author_data))
-        logger.debug('author.relations.books uri: %s %s' % (uri, params))
+        (uri, params, values) = (author
+                                 .relations['books']
+                                 .resolve(author_data))
+
+        logger.debug('author.relations.books uri: %s %s %s' % (uri, params, values))
 
 
 class TestSchemaBase(unittest.TestCase):
@@ -341,7 +339,7 @@ class TestSchemaBase(unittest.TestCase):
         d = yaml_loader.marked_load(string)
         s = ServiceDef(manager=ServiceDefManager())
         s.id = 'http://support.riverbed.com/apis/testschema/1.0'
-        return Schema.parse(d, 'root', servicedef=s)
+        return Schema.parse(d, 'root', servicedef=s, id='#/resources/foo')
 
     def check_valid(self, s, valid=None, invalid=None, toxml=False):
         if type(s) is str:

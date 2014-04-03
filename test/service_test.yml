@@ -476,7 +476,11 @@ resources:
          num: { type: number }
          name: { type: string }
 
-      links: { self: { path: "$/test_items/{num}" } }
+      links:
+         self: { path: "$/test_items/{num}" }
+         get:
+            method: GET
+            response: { $ref: '#/resources/test_item' }
 
    test_items:
       type: array

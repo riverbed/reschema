@@ -522,8 +522,15 @@ class Ref(Schema):
             #sch.parent.api = self.api
 
             self._refschema = sch
+            for link in sch.links:
+                if link not in self.links:
+                    self.links[link] = sch.links[link]
 
         return self._refschema
+
+    @property
+    def typestr(self):
+        return self.refschema.name
 
     def is_simple(self):
         return False
@@ -532,14 +539,6 @@ class Ref(Schema):
         """Return True if this schema is a reference."""
         return True
 
-    def is_multi(self):
-        """Return True if this schema is a mutli-instance."""
-        return False
-
-    @property
-    def typestr(self):
-        return self.refschema.name
-
     def validate(self, input):
         self.refschema.validate(input)
 
@@ -547,7 +546,12 @@ class Ref(Schema):
         return self.refschema.toxml(input, parent)
 
     def __getitem__(self, name):
+        if name in self.__dict__:
+            return self.__dict__[name]
         return self.refschema.__getitem__(name)
+
+    def __getattr__(self, name):
+        return getattr(self.refschema, name)
 
     def by_pointer(self, pointer):
         """Index into a schema by breaking a data-based jsonpointer into parts."""
@@ -988,11 +992,13 @@ class Relation(object):
     @property
     def resource(self):
         if self._resource is None:
-            self._resource = Schema.find_by_id(self._resource_id)
-            if self._resource is None:
+            sch = Schema.find_by_id(self._resource_id)
+            if sch is None:
+                sch = self.schema.servicedef.find(self._resource_id)
+            if sch is None:
                 raise InvalidReference(("%s resource" % self.fullname()),
                                        self._resource_id)
-
+            self._resource = sch
         return self._resource
 
     def fullname(self):
@@ -1011,7 +1017,16 @@ class Relation(object):
     def str_simple(self):
         return '%-30s %-20s\n' % (self.fullname(), '<relation>')
 
-    def resolve(self, servicepath, data, fragment=None, params=None):
+    def resolve(self, data, fragment=None, params=None):
+        """ Resolves this path against data and params.
+
+        Returns a tuple (path, values) where path is this path
+        template resolved against the passed `data` and
+        `params`.  The return `values` is the dictionary
+        of vars defined for the path and the resolved
+        values for these vars.
+
+        """
         target_self = self.resource.links['self']
         target_params = target_self._params
 
@@ -1025,7 +1040,7 @@ class Relation(object):
                 for var,relp in self.vars.iteritems():
                     vals[var] = resolve_rel_pointer(data, fragment or '', relp)
 
-        uri = target_self.path.resolve(servicepath, vals)
+        (uri, values) = target_self.path.resolve(vals)
 
         params = {}
         if target_params:
@@ -1034,7 +1049,7 @@ class Relation(object):
                     schema.validate(vals[var])
                     params[var] = vals[var]
 
-        return (uri, params)
+        return (uri, params, values)
 
 class Link(object):
 
@@ -1182,7 +1197,7 @@ class Path(object):
     def __str__(self):
         return self.template
 
-    def resolve(self, servicepath, data, pointer=None):
+    def resolve(self, data, pointer=None):
         """Resolve variables in template from `data` relative to `pointer`."""
         values = {}
         if data:
@@ -1212,7 +1227,4 @@ class Path(object):
 
         uri = uritemplate.expand(self.template, values)
 
-        if uri[0] == '$':
-            uri = servicepath + uri[1:]
-
-        return uri
+        return (uri, values)
