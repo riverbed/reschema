@@ -76,10 +76,12 @@ from collections import OrderedDict
 import uritemplate
 from jsonpointer import resolve_pointer, JsonPointer
 
-from reschema.util import parse_prop
+from reschema.util import parse_prop, check_type
 from reschema.reljsonpointer import resolve_rel_pointer
 from reschema.exceptions import \
     ValidationError, MissingParameter, ParseError, InvalidReference
+
+__all__ = ['Schema']
 
 logger = logging.getLogger(__name__)
 
@@ -87,11 +89,11 @@ DEFAULT_REQ_RESP = {'type': 'null'}
 
 # Map of 'json-schema' type to class that handles it
 type_map = {}
+
+
 def _register_type(cls):
     type_map[cls._type] = cls
 
-
-__all__ = ['Schema']
 
 def _check_input(name, input):
     """ Verify that input is empty, all keywords should have been parsed. """
@@ -104,8 +106,8 @@ def _check_input(name, input):
 
     badkeys = input.keys()
     if len(badkeys) > 0:
-        raise ParseError('%s: unrecognized properites in definition: %s' %
-                         (name, ','.join(badkeys)), input)
+        raise ParseError('%s: unrecognized property in definition: %s' %
+                         (name, ','.join(badkeys)), badkeys[0])
 
 
 class Schema(object):
@@ -152,13 +154,14 @@ class Schema(object):
 
         self.servicedef = servicedef
 
-        parse_prop(self, input, 'label', name)
-        parse_prop(self, input, 'description', '')
-        parse_prop(self, input, 'notes', '')
+        parse_prop(self, input, 'label', name, valid_type=[str, unicode])
+        parse_prop(self, input, 'description', '', valid_type=[str, unicode])
+        parse_prop(self, input, 'notes', '', valid_type=[str, unicode])
         parse_prop(self, input, 'example')
         parse_prop(self, input, 'readOnly',
                    parent.readOnly if (parent and
-                                       isinstance(parent, Schema)) else False)
+                                       isinstance(parent, Schema)) else False,
+                   valid_type=bool)
 
         parse_prop(self, input, 'xmlTag')
         parse_prop(self, input, 'xmlSchema')
@@ -167,34 +170,36 @@ class Schema(object):
 
         self.relations = OrderedDict()
         for key, value in parse_prop(None, input, 'relations', {},
-                                     check_type=dict).iteritems():
+                                     valid_type=dict).iteritems():
+            check_type(key, value, dict)
             self.relations[key] = Relation(value, key, self,
                                            id=('%s/relations/%s' %
                                                (self.id, key)))
 
         self.links = OrderedDict()
         for key, value in parse_prop(None, input, 'links', {},
-                                     check_type=dict).iteritems():
+                                     valid_type=dict).iteritems():
+            check_type(key, value, dict)
             self.links[key] = Link(value, key, self,
                                    id='%s/links/%s' % (self.id, key))
 
         self.anyof = []
         for i, subinput in enumerate(parse_prop(None, input, 'anyOf', [],
-                                               check_type=list)):
+                                                valid_type=list)):
             s = Schema.parse(subinput, parent=self,
                              id='%s/anyOf/%d' % (self.id, i))
             self.anyof.append(s)
 
         self.allof = []
         for i, subinput in enumerate(parse_prop(None, input, 'allOf', [],
-                                               check_type=list)):
+                                                valid_type=list)):
             s = Schema.parse(subinput, parent=self,
                              id='%s/allOf/%d' % (self.id, i))
             self.allof.append(s)
 
         self.oneOf = []
         for i, subinput in enumerate(parse_prop(None, input, 'oneOf', [],
-                                               check_type=list)):
+                                                valid_type=list)):
             s = Schema.parse(subinput, parent=self,
                              id='%s/oneOf/%d' % (self.id, i))
             self.oneOf.append(s)
@@ -232,13 +237,13 @@ class Schema(object):
         """
 
         if not isinstance(input, dict):
-            raise ParseError("Schema definition must be an object: %s%s" %
-                             ((parent.fullname() + '.') if parent else '',
-                              name),
-                             input)
+            raise ParseError(
+                "Schema definition must be an object: %s%s" %
+                ((parent.fullname() + '.') if parent else '', name),
+                input)
 
         if name is None:
-            name = parse_prop(None, input, 'label')
+            name = parse_prop(None, input, 'label', valid_type=[str, unicode])
             if name is None:
                 name = 'element%d' % cls.count
                 cls.count = cls.count + 1
@@ -248,7 +253,8 @@ class Schema(object):
         elif 'type' not in input:
             typestr = 'multi'
         else:
-            typestr = parse_prop(None, input, 'type', required=True)
+            typestr = parse_prop(None, input, 'type', required=True,
+                                 valid_type=[str, unicode])
 
         try:
             cls = type_map[typestr]
@@ -305,10 +311,10 @@ class Schema(object):
 
     def matches(self, other):
         """ Return True if other refers to the same schema based on 'self'. """
-        return ( ('self' in self.links) and
-                 ('self' in other.links) and
-                 (self.links['self'].path.template ==
-                  other.links['self'].path.template) )
+        return (('self' in self.links) and
+                ('self' in other.links) and
+                (self.links['self'].path.template ==
+                 other.links['self'].path.template))
 
     def fullname(self):
         """Return the full printable name using dotted notation."""
@@ -374,12 +380,12 @@ class Schema(object):
 
             if found == 0:
                 raise ValidationError(
-                  "%s: input does not match any 'oneOf' schema" %
-                  self.fullname(), self)
+                    "%s: input does not match any 'oneOf' schema" %
+                    self.fullname(), self)
             elif found > 1:
                 raise ValidationError(
-                  "%s: input matches more than one 'oneOf' schemas",
-                  self.fullname(), self)
+                    "%s: input matches more than one 'oneOf' schemas",
+                    self.fullname(), self)
 
         # Must validate at least one schema in the anyOf array
         if len(self.anyof) > 0:
@@ -391,8 +397,8 @@ class Schema(object):
                 return
 
             raise ValidationError(
-              "%s: input does not match any 'anyOf' schema" %
-              self.fullname(), self)
+                "%s: input does not match any 'anyOf' schema" %
+                self.fullname(), self)
 
         # Must *not* validate the not schema
         if self.not_ is not None:
@@ -404,8 +410,8 @@ class Schema(object):
 
             if valid:
                 raise ValidationError(
-                  "%s: input should not match 'not' schema" %
-                  self.fullname(), self)
+                    "%s: input should not match 'not' schema" %
+                    self.fullname(), self)
 
     def _pointer_part_to_index(self, part):
         # Subclasses can overried to type convert if needed.
@@ -439,8 +445,8 @@ class Schema(object):
             for i in range(uplevels):
                 if o.parent is None:
                     raise KeyError(
-                      ("%s cannot resolve '%s' as a relative JSON pointer, "
-                       "not enough uplevels") % (self.fullname(), pointer))
+                        ("%s cannot resolve '%s' as a relative JSON pointer, "
+                         "not enough uplevels") % (self.fullname(), pointer))
                 o = o.parent
 
             if len(p.parts) == 1 and p.parts[0] == '':
@@ -464,6 +470,7 @@ class Schema(object):
 
 class Multi(Schema):
     _type = 'multi'
+
     def __init__(self, input, name, parent, **kwargs):
         Schema.__init__(self, Multi._type, input, name, parent, **kwargs)
 
@@ -491,6 +498,7 @@ _register_type(Multi)
 
 class Ref(Schema):
     _type = '$ref'
+
     def __init__(self, input, name, parent, **kwargs):
         Schema.__init__(self, Ref._type, input, name, parent, **kwargs)
 
@@ -501,7 +509,7 @@ class Ref(Schema):
         try:
             self._refschema_id = self.servicedef.expand_id(ref_id)
         except InvalidReference as e:
-            raise ParseError(str(e), input)
+            raise ParseError(str(e), ref_id)
 
         _check_input(self.fullname(), input)
 
@@ -562,6 +570,7 @@ _register_type(Ref)
 
 class Null(Schema):
     _type = 'null'
+
     def __init__(self, input, name, parent, **kwargs):
         Schema.__init__(self, Null._type, input, name, parent, **kwargs)
 
@@ -578,6 +587,7 @@ _register_type(Null)
 
 class Boolean(Schema):
     _type = 'boolean'
+
     def __init__(self, input, name, parent, **kwargs):
         Schema.__init__(self, Boolean._type, input, name, parent, **kwargs)
         parse_prop(self, input, 'default')
@@ -595,10 +605,11 @@ _register_type(Boolean)
 
 class String(Schema):
     _type = 'string'
+
     def __init__(self, input, name, parent, **kwargs):
         Schema.__init__(self, String._type, input, name, parent, **kwargs)
-        parse_prop(self, input, 'minLength', check_type=int )
-        parse_prop(self, input, 'maxLength', check_type=int )
+        parse_prop(self, input, 'minLength', valid_type=int)
+        parse_prop(self, input, 'maxLength', valid_type=int)
         parse_prop(self, input, 'pattern')
         parse_prop(self, input, 'enum')
         parse_prop(self, input, 'default')
@@ -617,23 +628,23 @@ class String(Schema):
 
         if (self.minLength is not None) and len(input) < self.minLength:
             raise ValidationError(
-              "%s: input must be at least %d chars, got %d: %s" %
-              (self.fullname(), self.minLength, len(input), trunc), self)
+                "%s: input must be at least %d chars, got %d: %s" %
+                (self.fullname(), self.minLength, len(input), trunc), self)
 
         if (self.maxLength is not None) and len(input) > self.maxLength:
             raise ValidationError(
-              "%s: input must be no more than %d chars, got %d: %s" %
-              (self.fullname(), self.maxLength, len(input), trunc), self)
+                "%s: input must be no more than %d chars, got %d: %s" %
+                (self.fullname(), self.maxLength, len(input), trunc), self)
 
         if (self.pattern is not None) and (not re.match(self.pattern, input)):
             raise ValidationError(
-              "%s: input failed pattern match %s: %s" %
-              (self.fullname(), self.pattern, trunc), self)
+                "%s: input failed pattern match %s: %s" %
+                (self.fullname(), self.pattern, trunc), self)
 
         if (self.enum is not None) and (input not in self.enum):
             raise ValidationError(
-              "%s: input not a valid enumeration value: %s" %
-              (self.fullname(), trunc), self)
+                "%s: input not a valid enumeration value: %s" %
+                (self.fullname(), trunc), self)
         super(String, self).validate(input)
 
     def str_detailed(self):
@@ -661,14 +672,14 @@ class NumberOrInteger(Schema):
     def __init__(self, type, allowed_types, input, name, parent, **kwargs):
         Schema.__init__(self, type, input, name, parent, **kwargs)
         self.allowed_types = allowed_types
-        parse_prop(self, input, 'minimum', check_type=allowed_types)
-        parse_prop(self, input, 'maximum', check_type=allowed_types)
-        parse_prop(self, input, 'exclusiveMinimum', check_type=bool,
-                                                    default_value=False)
-        parse_prop(self, input, 'exclusiveMaximum', check_type=bool,
-                                                    default_value=False)
-        parse_prop(self, input, 'default', check_type=allowed_types)
-        parse_prop(self, input, 'enum', check_type=list)
+        parse_prop(self, input, 'minimum', valid_type=allowed_types)
+        parse_prop(self, input, 'maximum', valid_type=allowed_types)
+        parse_prop(self, input, 'exclusiveMinimum', valid_type=bool,
+                   default_value=False)
+        parse_prop(self, input, 'exclusiveMaximum', valid_type=bool,
+                   default_value=False)
+        parse_prop(self, input, 'default', valid_type=allowed_types)
+        parse_prop(self, input, 'enum', valid_type=list)
 
         _check_input(self.fullname(), input)
 
@@ -681,30 +692,30 @@ class NumberOrInteger(Schema):
             if self.exclusiveMinimum:
                 if not (input > self.minimum):
                     raise ValidationError(
-                      "%s: input must be > minimum %d, got %d" %
-                      (self.fullname(), self.minimum, input), self)
+                        "%s: input must be > minimum %d, got %d" %
+                        (self.fullname(), self.minimum, input), self)
             else:
                 if not (input >= self.minimum):
                     raise ValidationError(
-                      "%s: input must be >= minimum %d, got %d" %
-                      (self.fullname(), self.minimum, input), self)
+                        "%s: input must be >= minimum %d, got %d" %
+                        (self.fullname(), self.minimum, input), self)
 
         if self.maximum is not None:
             if self.exclusiveMaximum:
                 if not (input < self.maximum):
                     raise ValidationError(
-                      "%s: input must be < maximum %d, got %d" %
-                      (self.fullname(), self.maximum, input), self)
+                        "%s: input must be < maximum %d, got %d" %
+                        (self.fullname(), self.maximum, input), self)
             else:
                 if not (input <= self.maximum):
                     raise ValidationError(
-                      "%s: input must be <= maximum %d, got %d" %
-                      (self.fullname(), self.maximum, input), self)
+                        "%s: input must be <= maximum %d, got %d" %
+                        (self.fullname(), self.maximum, input), self)
 
         if (self.enum is not None) and (input not in self.enum):
             raise ValidationError(
-                      "%s: input not a valid enumeration value: %s" %
-                      (self.fullname(), input), self)
+                "%s: input not a valid enumeration value: %s" %
+                (self.fullname(), input), self)
         super(NumberOrInteger, self).validate(input)
 
     def str_detailed(self):
@@ -745,6 +756,7 @@ _register_type(Integer)
 
 class Timestamp(Schema):
     _type = 'timestamp'
+
     def __init__(self, input, name, parent, **kwargs):
         Schema.__init__(self, Timestamp._type, input, name, parent, **kwargs)
         _check_input(self.fullname(), input)
@@ -760,6 +772,7 @@ _register_type(Timestamp)
 
 class TimestampHP(Schema):
     _type = 'timestamp-hp'
+
     def __init__(self, input, name, parent, **kwargs):
         Schema.__init__(self, TimestampHP._type, input, name, parent, **kwargs)
         _check_input(self.fullname(), input)
@@ -775,12 +788,13 @@ _register_type(TimestampHP)
 
 class Object(Schema):
     _type = 'object'
+
     def __init__(self, input, name, parent, **kwargs):
         Schema.__init__(self, Object._type, input, name, parent, **kwargs)
         self.properties = OrderedDict()
 
-        for prop, value in parse_prop(None, input,
-                                     'properties', {}).iteritems():
+        for prop, value in parse_prop(None, input, 'properties', {},
+                                      valid_type=dict).iteritems():
             c = Schema.parse(value, prop, self,
                              id='%s/properties/%s' % (self.id, prop))
             self.properties[prop] = c
@@ -789,7 +803,7 @@ class Object(Schema):
         parse_prop(self, input, 'required')
 
         ap = parse_prop(None, input, 'additionalProperties',
-                        check_type=[dict, bool])
+                        valid_type=[dict, bool])
         if ap in (None, True):
             ap = {}
         if type(ap) is bool:
@@ -832,8 +846,8 @@ class Object(Schema):
             for k in self.required:
                 if k not in input:
                     raise ValidationError(
-                      "Missing required property '%s' for '%s'" %
-                      (k, self.fullname()), self)
+                        "Missing required property '%s' for '%s'" %
+                        (k, self.fullname()), self)
         super(Object, self).validate(input)
 
     def toxml(self, input, parent=None):
@@ -856,7 +870,6 @@ class Object(Schema):
                 subobj = copy.copy(self.additional_properties)
                 keyname = subobj.xmlKeyName or 'key'
 
-
                 if subobj.is_simple():
                     subelem = ET.SubElement(elem, subobj.name)
                     subelem.set(keyname, k)
@@ -877,6 +890,7 @@ _register_type(Object)
 
 class Array(Schema):
     _type = 'array'
+
     def __init__(self, input, name, parent, **kwargs):
         Schema.__init__(self, Array._type, input, name, parent, **kwargs)
 
@@ -940,6 +954,7 @@ _register_type(Array)
 
 class Data(Schema):
     _type = 'data'
+
     def __init__(self, input, name, parent, **kwargs):
         Schema.__init__(self, Data._type, input, name, parent, **kwargs)
 
@@ -1037,19 +1052,20 @@ class Relation(object):
 
         if data is not None:
             if self.vars is not None:
-                for var,relp in self.vars.iteritems():
+                for var, relp in self.vars.iteritems():
                     vals[var] = resolve_rel_pointer(data, fragment or '', relp)
 
         (uri, values) = target_self.path.resolve(vals)
 
         params = {}
         if target_params:
-            for var,schema in target_params.iteritems():
+            for var, schema in target_params.iteritems():
                 if var in vals:
                     schema.validate(vals[var])
                     params[var] = vals[var]
 
         return (uri, params, values)
+
 
 class Link(object):
 
@@ -1102,8 +1118,8 @@ class Link(object):
         if name == 'self':
             self._params = {}
             if 'params' in input:
-                for key,value in parse_prop(None, input, 'params',
-                                            {}, check_type=dict).iteritems():
+                for key, value in parse_prop(None, input, 'params',
+                                             {}, valid_type=dict).iteritems():
                     self._params[key] = Schema.parse(value, parent=self,
                                                      name=key,
                                                      id=('%s/params/%s' %
@@ -1140,14 +1156,14 @@ class Link(object):
 
     @property
     def request(self):
-        r =  self._request
+        r = self._request
         if type(r) is Ref:
             r = r.refschema
         return r
 
     @property
     def response(self):
-        r =  self._response
+        r = self._response
         if type(r) is Ref:
             r = r.refschema
         return r
@@ -1220,10 +1236,10 @@ class Path(object):
         have = set(values.keys())
         if not required.issubset(have):
             raise MissingParameter(
-              "Missing parameters for link '%s' path template '%s': %s" %
-              (self.link.name, self.template, [x for x in
-                                               required.difference(have)]),
-              self)
+                "Missing parameters for link '%s' path template '%s': %s" %
+                (self.link.name, self.template, [x for x in
+                                                 required.difference(have)]),
+                self)
 
         uri = uritemplate.expand(self.template, values)
 

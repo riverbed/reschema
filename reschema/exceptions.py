@@ -6,6 +6,9 @@
 # This software is distributed "AS IS" as set forth in the License.
 
 
+from .yaml_loader import obj_key_node
+
+
 #
 # General exception and base class
 #
@@ -76,13 +79,19 @@ class InvalidReference(ReschemaException):
 #
 class MarkedError(ReschemaException):
     """ Base exception class for marked schema objects. """
-    def __init__(self, message, obj):
+    def __init__(self, message, obj, parent_obj=None):
         super(MarkedError, self).__init__(message)
-        self.obj = obj
-        try:
+
+        if hasattr(obj, 'start_mark'):
+            self.obj = obj
             self.start_mark = obj.start_mark
             self.end_mark = obj.end_mark
-        except AttributeError:
+        elif (  parent_obj and (obj in parent_obj) and
+                hasattr(parent_obj, 'start_mark')):
+            self.obj = obj_key_node(parent_obj, obj)
+            self.start_mark = self.obj.start_mark
+            self.end_mark = self.obj.end_mark
+        else:
             self.start_mark = None
             self.end_mark = None
 

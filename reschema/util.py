@@ -10,8 +10,24 @@ import re
 from reschema.exceptions import ParseError
 
 
+def check_type(prop, val, valid_type, obj=None):
+    if type(valid_type) is not list:
+        valid_type = [valid_type]
+
+    valid = False
+    for t in valid_type:
+        if isinstance(val, t):
+            valid = True
+            break
+
+    if not valid:
+        msg = ("Value provided for '%s' must be %s, got %s" %
+               (prop, str(valid_type), type(val)))
+        raise ParseError(msg, prop, obj)
+
+
 def parse_prop(obj, srcobj, prop,
-               default_value=None, required=False, check_type=None):
+               default_value=None, required=False, valid_type=None):
     """Parse and remove a key from a dict and make it a property on an object.
 
     The property is removed from the source object, even if an exception
@@ -28,9 +44,9 @@ def parse_prop(obj, srcobj, prop,
                           but not required.  Ignored if `required` is True.
     :param required: Causes ParseError to be raised if `prop` is not in `obj`.
     :type required: boolean
-    :param check_type: verifies that the property value is an instance of at
+    :param valid_type: verifies that the property value is an instance of at
                        least one of the types passed in this parameter.
-    :type check_type: type or list of types
+    :type valid_type: type or list of types
 
     :raises reschema.exceptions.ParseError: if the type of the data
       is incorrect or if the property is required but missing.
@@ -39,21 +55,9 @@ def parse_prop(obj, srcobj, prop,
     """
     if prop in srcobj:
         val = srcobj[prop]
+        if valid_type:
+            check_type(prop, val, valid_type, srcobj)
         del srcobj[prop]
-        if check_type:
-            if type(check_type) is not list:
-                check_type = [check_type]
-
-            check = False
-            for t in check_type:
-                if isinstance(val, t):
-                    check=True
-                    break
-
-            if not check:
-                msg = ("Value provided for %s must be %s, got %s" %
-                       (prop, str(check_type), type(val)))
-                raise ParseError(msg, srcobj)
 
     elif required:
         raise ParseError("Missing required property '%s'" % prop, srcobj)

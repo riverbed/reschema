@@ -248,7 +248,8 @@ class ServiceDef(object):
 
         parse_prop(self, obj, 'provider', required=True)
         parse_prop(self, obj, 'name', required=True)
-        parse_prop(self, obj, 'version', required=True, check_type=[str, unicode])
+        parse_prop(self, obj, 'version', required=True,
+                   valid_type=[str, unicode])
         parse_prop(self, obj, 'title', self.name)
         parse_prop(self, obj, 'status', '')
 

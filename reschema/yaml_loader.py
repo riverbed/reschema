@@ -128,6 +128,11 @@ def marked_load(stream):
     return MarkedLoader(stream).get_single_data()
 
 
+def obj_key_node(obj, prop):
+    idx = obj.keys().index(prop)
+    return obj.keys()[idx]
+
+
 def test_marked_yaml():
     def loc(obj):
         return (obj.start_mark.line, obj.start_mark.column,
