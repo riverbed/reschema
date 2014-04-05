@@ -944,9 +944,28 @@ class TestSchemaRef(TestSchemaBase):
         manager = ServiceDefManager()
         manager.add(self.s1)
         manager.add(self.s2)
+        self.assertEqual(self.s1.check_references(), [])
+        self.assertEqual(self.s2.check_references(), [])
 
-    def test_ref_types(self):
-        r = self.s2.find('#/resources/test_ref_types')
+    def test_ref_type(self):
+        r1 = self.s2.find('#/resources/test_ref_type')
+        (self.check_valid
+         (r1,
+          valid = [{'val': 10}, {'val': 14}, {'val': 20}],
+          invalid = [{'val': 9}, {'val': 21}]))
+
+        r2 = r1.relations['full'].resource
+        (self.check_valid
+         (r2,
+          valid = [{'val': 10}, {'val': 14}, {'val': 20}],
+          invalid = [{'val': 9}, {'val': 21}]))
+
+        r3 = self.s2.find('#/resources/test_ref_type_full')
+
+        self.assertTrue(r3.matches(r2))
+
+    def test_ref_remote_types(self):
+        r = self.s2.find('#/resources/test_ref_remote_types')
 
         (self.check_valid
          (r,
@@ -958,7 +977,7 @@ class TestSchemaRef(TestSchemaBase):
 
     def test_ref_relations(self):
         item = self.s1.find('#/resources/test_item')
-        ref_resource = self.s2.find('#/resources/test_ref_resource')
+        ref_resource = self.s2.find('#/resources/test_ref_remote_resource')
         ref_resource_item = ref_resource.relations['item'].resource
 
         self.assertEqual(item, ref_resource_item)
@@ -1016,14 +1035,14 @@ class TestLoadHook(TestSchemaBase):
         self.assertEqual(r.fullid(), rid)
 
         rid = ('http://support.riverbed.com/apis/test.ref/1.0'
-               '#/resources/test_ref_types')
+               '#/resources/test_ref_remote_types')
         r = s.find(rid)
         self.assertEqual(r.fullid(), rid)
 
     def test_load_on_relation(self):
         s = self.manager.find_by_id(
             'http://support.riverbed.com/apis/test.ref/1.0')
-        r = s.resources['test_ref_types']
+        r = s.resources['test_ref_remote_types']
 
         sb = r.by_pointer('/prop_boolean')
         self.assertEqual(sb.fullid(),

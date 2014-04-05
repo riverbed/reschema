@@ -533,6 +533,9 @@ class Ref(Schema):
             for link in sch.links:
                 if link not in self.links:
                     self.links[link] = sch.links[link]
+            for relation in sch.relations:
+                if relation not in self.relations:
+                    self.relations[relation] = sch.relations[relation]
 
         return self._refschema
 
