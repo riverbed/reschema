@@ -186,27 +186,32 @@ class Schema(object):
         self.anyof = []
         for i, subinput in enumerate(parse_prop(None, input, 'anyOf', [],
                                                 valid_type=list)):
-            s = Schema.parse(subinput, parent=self,
+            s = Schema.parse(subinput, parent=self, name='anyOf[%d]' % i,
                              id='%s/anyOf/%d' % (self.id, i))
             self.anyof.append(s)
+            self.children.append(s)
 
         self.allof = []
         for i, subinput in enumerate(parse_prop(None, input, 'allOf', [],
                                                 valid_type=list)):
-            s = Schema.parse(subinput, parent=self,
+            s = Schema.parse(subinput, parent=self, name='allOf[%d]' % i,
                              id='%s/allOf/%d' % (self.id, i))
             self.allof.append(s)
+            self.children.append(s)
 
-        self.oneOf = []
+        self.oneof = []
         for i, subinput in enumerate(parse_prop(None, input, 'oneOf', [],
                                                 valid_type=list)):
-            s = Schema.parse(subinput, parent=self,
+            s = Schema.parse(subinput, parent=self, name='oneOf[%d]' % i,
                              id='%s/oneOf/%d' % (self.id, i))
-            self.oneOf.append(s)
+            self.oneof.append(s)
+            self.children.append(s)
 
         n = parse_prop(None, input, 'not', None)
         if n is not None:
-            self.not_ = Schema.parse(n, parent=self, id='%s/not' % self.id)
+            self.not_ = Schema.parse(n, parent=self, name='not',
+                                     id='%s/not' % self.id)
+            self.children.append(self.not_)
         else:
             self.not_ = None
 
@@ -369,9 +374,9 @@ class Schema(object):
             s.validate(input)
 
         # Must validate only one schema in the oneOf array
-        if len(self.oneOf) > 0:
+        if len(self.oneof) > 0:
             found = 0
-            for s in self.oneOf:
+            for s in self.oneof:
                 try:
                     s.validate(input)
                     found = found + 1
@@ -491,6 +496,8 @@ class Multi(Schema):
 
     @property
     def typestr(self):
+        if len(self.children) == 0:
+            return "any"
         return "multiple"
 
 _register_type(Multi)
@@ -938,7 +945,7 @@ class Array(Schema):
                                   (self.fullname(), type(input)), self)
 
         for o in input:
-            self.children[0].validate(o)
+            self.items.validate(o)
 
         super(Array, self).validate(input)
 

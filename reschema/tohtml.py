@@ -612,10 +612,19 @@ class PropTable(HTMLTable):
         if schema.readOnly:
             parts.append("Read-only")
 
+        if ( isinstance(schema, reschema.jsonschema.Object) and
+             schema.required is not None and
+             len(schema.required) > 0):
+            parts.append("Required properties: [%s]" %
+                         ', '.join(schema.required))
+
+
         if ( (schema.parent is not None) and
              (isinstance(schema.parent, reschema.jsonschema.Object)) and
              ((schema.parent.required is None) or
-              (name not in schema.parent.required))):
+              (name not in schema.parent.required)) and
+             (not (re.match("anyOf|allOf|oneOf|not", schema.name)))
+             ):
             parts.append("Optional")
 
         if ( isinstance(schema, reschema.jsonschema.Number) or
@@ -684,7 +693,10 @@ class SchemaTable(PropTable):
         self.makerow(schema, schema.fullname())
 
         for child in schema.children:
+            if re.match("anyOf|allOf|oneOf|not", child.name):
+                continue
             self.process(child)
+
         if isinstance(schema, reschema.jsonschema.Object):
             if schema.additional_properties is True:
                 tds = self.row(["", "", "", ""])
@@ -692,6 +704,11 @@ class SchemaTable(PropTable):
                 tds[1].span(cls="servicedef-type").text = "<value>"
                 tds[2].text = ("Additional properties may have "
                                "any property name and value")
+
+        for child in schema.children:
+            if not re.match("anyOf|allOf|oneOf|not", child.name):
+                continue
+            self.process(child)
 
 if __name__ == '__main__':
     from optparse import OptionParser
