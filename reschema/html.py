@@ -21,7 +21,8 @@ class Document(object):
         self.head.title().text = title
         self.head.script(type="text/javascript", text="$script")
         self.head.style(type="text/css", text="$css")
-        self.body = self.html.body()
+        self.body = self.html.body(onload="set_favicon()")
+
 
         self.header = self.body.div(cls="header")
         if self.printable:

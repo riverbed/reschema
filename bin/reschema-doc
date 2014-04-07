@@ -94,6 +94,14 @@ if options.html:
         os.remove(html)
 
     htmldoc = reschema.html.Document(title, printable=False)
+    a = htmldoc.header.a(href="http://www.riverbed.com", cls="headerimg")
+
+    htmldoc.header.span(cls="headerleft").text = title
+
+    htmldoc.header.span(cls="headerright").text = (
+        "Created %s" %
+        datetime.datetime.now().strftime("%b %d, %Y at %I:%M %p"))
+
     r2h = ServiceDefToHtml(rs, htmldoc.content, htmldoc.menu,
                            device=options.device, root=options.apiroot,
                            options=Options(printable=False,
