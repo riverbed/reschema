@@ -1,11 +1,32 @@
+# Copyright (c) 2014 Riverbed Technology, Inc.
+#
+# This software is licensed under the terms and conditions of the
+# MIT License set forth at:
+#   https://github.com/riverbed/sleepwalker/blob/master/LICENSE ("License").
+# This software is distributed "AS IS" as set forth in the License.
+
 from __future__ import unicode_literals, print_function, division
 import re
 from subprocess import Popen, PIPE
+import os
 
-"""This module contains code for interacting with git repositories. It will be
-used in the process of automatically publishing code from git repositories to
-the local PyPI server.
 """
+This module contains code for interacting with git repositories. It is
+used to determine an appropriate version number from either the local
+git repository tags or from a version file.
+"""
+
+def verify_repository():
+    """Raise an error if this source file is not in tracked by git."""
+
+    f = os.path.dirname(os.path.abspath(__file__))
+    process = Popen(['git', 'ls-files', f, '--error-unmatch'],
+                    stdout=PIPE, stderr=PIPE)
+    stdout, stderr = process.communicate()
+
+    if stderr:
+        # Not a git repo
+        raise EnvironmentError(stderr)
 
 
 def call_git_branch():
@@ -89,6 +110,7 @@ def get_version(v_file='RELEASE-VERSION'):
     """
 
     try:
+        verify_repository()
         git_info = parse_tag()
         branch = get_branch()
         assert branch == 'master'
