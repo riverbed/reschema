@@ -1,8 +1,7 @@
 include examples
 include README.rst
 include requirements.txt
-include version.txt
-exclude .gitignore 
+include RELEASE-VERSION
+exclude .gitignore
 include reschema/servicedef.css
 include reschema/servicedef.js
-
