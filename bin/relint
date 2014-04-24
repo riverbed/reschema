@@ -4,10 +4,12 @@
 
 from __future__ import print_function
 
+import sys
 import re
 import argparse
 
 import reschema
+import reschema.lint
 
 
 def start():
@@ -21,7 +23,7 @@ def start():
 
     args = parser.parse_args()
 
-    Validator.set_verbosity(args.verbose)
+    reschema.lint.Validator.set_verbosity(args.verbose)
 
     # Filenames
     if not args.filename:
