@@ -16,7 +16,7 @@ from jsonpointer import JsonPointer
 # Local imports
 import reschema.jsonschema as jsonschema
 from reschema.jsonschema import Schema
-from reschema.util import parse_prop
+from reschema.parser import Parser
 from reschema import yaml_loader, json_loader
 from reschema.exceptions import (ParseError, UnsupportedSchema, NoManager,
                                  InvalidReference, DuplicateServiceId,
@@ -235,47 +235,44 @@ class ServiceDef(object):
         """
         # Common properties
 
-        self.schema = parse_prop(None, obj, '$schema', required=True)
-        if self.schema != "http://support.riverbed.com/apis/service_def/2.1":
-            raise UnsupportedSchema("Unsupported schema format: %s" %
-                                    self.schema)
+        with Parser(obj, self, '<servicdef>') as parser:
+            parser.parse('$schema', required=True, save='schema')
+            if self.schema != "http://support.riverbed.com/apis/service_def/2.1":
+                raise UnsupportedSchema("Unsupported schema format: %s" %
+                                        self.schema)
 
-        parse_prop(self, obj, 'id', required=True)
-        parsed_id = urlparse.urlparse(self.id)
-        if not parsed_id.netloc:
-            raise ParseError("Service definition 'id' property must be a "
-                             "fully qualified URI: %s" % id)
+            parser.parse('id', required=True)
+            parsed_id = urlparse.urlparse(self.id)
+            if not parsed_id.netloc:
+                raise ParseError("Service definition 'id' property must be a "
+                                 "fully qualified URI: %s" % id)
 
-        parse_prop(self, obj, 'provider', required=True)
-        parse_prop(self, obj, 'name', required=True)
-        parse_prop(self, obj, 'version', required=True,
-                   valid_type=[str, unicode])
-        parse_prop(self, obj, 'title', self.name)
-        parse_prop(self, obj, 'status', '')
+            parser.parse('provider', required=True)
+            parser.parse('name', required=True)
+            parser.parse('version', required=True, types=[str, unicode])
+            parser.parse('title', self.name)
+            parser.parse('status', '')
 
-        # 'description' is a doc property, supporting either:
-        #    'description' : <string>
-        #    'description' : { 'file': <filename>, 'format': <format> }
-        #    'description' : { 'text': <string>, 'format': <format> }
-        # where 'format' is optional and defaults to 'md'
+            # 'description' is a doc property, supporting either:
+            #    'description' : <string>
+            #    'description' : { 'file': <filename>, 'format': <format> }
+            #    'description' : { 'text': <string>, 'format': <format> }
+            # where 'format' is optional and defaults to 'md'
 
-        parse_prop(self, obj, 'description',
-                   'Service Definition for ' + self.name)
+            parser.parse('description', 'Service Definition for ' + self.name)
 
-        parse_prop(self, obj, 'documentationLink', '')
-        parse_prop(self, obj, 'defaultAuthorization', None)
+            parser.parse('documentationLink', '')
+            parser.parse('defaultAuthorization')
 
-        self.types = OrderedDict()
-        if 'types' in obj:
-            for type_ in obj['types']:
+            self.types = OrderedDict()
+            for type_ in parser.parse('types', [], save=False):
                 self.types[type_] = Schema.parse(obj['types'][type_],
                                                  name=type_,
                                                  id='#/types/%s' % type_,
                                                  servicedef=self)
 
-        self.resources = OrderedDict()
-        if 'resources' in obj:
-            for resource in obj['resources']:
+            self.resources = OrderedDict()
+            for resource in parser.parse('resources', [], save=False):
                 input_ = obj['resources'][resource]
                 sch = Schema.parse(input_,
                                    name=resource,
@@ -291,13 +288,11 @@ class ServiceDef(object):
                         "Resource '%s' 'self' link must define 'path'" %
                         resource, input_)
 
-        parse_prop(self, obj, 'tasks', None)
-        parse_prop(self, obj, 'request_headers', None)
-        parse_prop(self, obj, 'response_headers', None)
-        parse_prop(self, obj, 'errors', None)
-        parse_prop(self, obj, 'tags', valid_type=dict, default_value={})
-
-        logger.debug("parsed %s, adding" % self.id)
+            parser.parse('tasks')
+            parser.parse('request_headers')
+            parser.parse('response_headers')
+            parser.parse('errors')
+            parser.parse('tags', {}, types=dict)
 
     def check_references(self):
         """ Iterate through all schemas and check references.

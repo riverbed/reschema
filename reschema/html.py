@@ -23,7 +23,6 @@ class Document(object):
         self.head.style(type="text/css", text="$css")
         self.body = self.html.body(onload="set_favicon()")
 
-
         self.header = self.body.div(cls="header")
         if self.printable:
             self.header.attrib['style'] = 'display: none'

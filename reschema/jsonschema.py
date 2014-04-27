@@ -76,7 +76,8 @@ from collections import OrderedDict
 import uritemplate
 from jsonpointer import resolve_pointer, JsonPointer
 
-from reschema.util import parse_prop, check_type
+from reschema.parser import Parser
+from reschema.util import check_type
 from reschema.reljsonpointer import resolve_rel_pointer
 from reschema.exceptions import \
     ValidationError, MissingParameter, ParseError, InvalidReference
@@ -95,21 +96,6 @@ def _register_type(cls):
     type_map[cls._type] = cls
 
 
-def _check_input(name, input):
-    """ Verify that input is empty, all keywords should have been parsed. """
-    if input is None:
-        return
-
-    if not isinstance(input, dict):
-        raise ParseError('%s: definition should be a dictionary, got: %s' %
-                         (name, type(input)), input)
-
-    badkeys = input.keys()
-    if len(badkeys) > 0:
-        raise ParseError('%s: unrecognized property in definition: %s' %
-                         (name, ','.join(badkeys)), badkeys[0])
-
-
 class Schema(object):
     """Base class for all JSON schema types."""
 
@@ -119,13 +105,13 @@ class Schema(object):
     # Map of all known schemas by id
     schemas = {}
 
-    def __init__(self, typestr, input, name=None,
+    def __init__(self, typestr, parser, name=None,
                  parent=None, servicedef=None, id=None):
         """Create a new Schema object of the given `typestr`.
 
         :param typestr: the <json-schema> type
 
-        :param input: the definition to parse
+        :param parser: the parser of input data
 
         :param parent: allows nesting of schemas, may be None
 
@@ -140,6 +126,7 @@ class Schema(object):
         :raises ParseError: if unexpected data or formats are
             encountered while parsing.
         """
+
         self._typestr = typestr
         self.parent = parent
         self.name = name
@@ -149,66 +136,75 @@ class Schema(object):
         if servicedef is None:
             if parent is None:
                 raise ValidationError(
-                    "Must specify 'servicedef' if parent is None", input)
+                    "Must specify 'servicedef' if parent is None",
+                    parser.input)
             servicedef = parent.servicedef
 
         self.servicedef = servicedef
 
-        parse_prop(self, input, 'label', name, valid_type=[str, unicode])
-        parse_prop(self, input, 'description', '', valid_type=[str, unicode])
-        parse_prop(self, input, 'notes', '', valid_type=[str, unicode])
-        parse_prop(self, input, 'example')
-        parse_prop(self, input, 'readOnly',
-                   parent.readOnly if (parent and
-                                       isinstance(parent, Schema)) else False,
-                   valid_type=bool)
-        parse_prop(self, input, 'tags', valid_type=dict, default_value={})
+        # Save the original input object that was parsed, other
+        # references may want this later
+        self.input = parser.input
 
-        parse_prop(self, input, 'xmlTag')
-        parse_prop(self, input, 'xmlSchema')
-        parse_prop(self, input, 'xmlExample')
-        parse_prop(self, input, 'xmlKeyName')
+        # Give the Parser better context for setting attributes and
+        # logging messages
+        parser.obj = self
+        parser.name = self.fullname()
+
+        parser.parse('label', name, types=[str, unicode])
+        parser.parse('description', '', types=[str, unicode])
+        parser.parse('notes', '', types=[str, unicode])
+        parser.parse('example')
+        readOnlyDef = (parent.readOnly
+                       if (parent and isinstance(parent, Schema))
+                       else False)
+        parser.parse('readOnly', readOnlyDef, types=bool)
+        parser.parse('tags', {}, types=dict)
+        parser.parse('xmlTag')
+        parser.parse('xmlSchema')
+        parser.parse('xmlExample')
+        parser.parse('xmlKeyName')
 
         self.relations = OrderedDict()
-        for key, value in parse_prop(None, input, 'relations', {},
-                                     valid_type=dict).iteritems():
+        for key, value in parser.parse('relations', {},
+                                       types=dict, save=False).iteritems():
             check_type(key, value, dict)
             self.relations[key] = Relation(value, key, self,
                                            id=('%s/relations/%s' %
                                                (self.id, key)))
 
         self.links = OrderedDict()
-        for key, value in parse_prop(None, input, 'links', {},
-                                     valid_type=dict).iteritems():
+        for key, value in parser.parse('links', {},
+                                       types=dict, save=False).iteritems():
             check_type(key, value, dict)
             self.links[key] = Link(value, key, self,
                                    id='%s/links/%s' % (self.id, key))
 
         self.anyof = []
-        for i, subinput in enumerate(parse_prop(None, input, 'anyOf', [],
-                                                valid_type=list)):
+        for i, subinput in enumerate(parser.parse('anyOf', [],
+                                                  types=list, save=False)):
             s = Schema.parse(subinput, parent=self, name='anyOf[%d]' % i,
                              id='%s/anyOf/%d' % (self.id, i))
             self.anyof.append(s)
             self.children.append(s)
 
         self.allof = []
-        for i, subinput in enumerate(parse_prop(None, input, 'allOf', [],
-                                                valid_type=list)):
+        for i, subinput in enumerate(parser.parse('allOf', [],
+                                                  types=list, save=False)):
             s = Schema.parse(subinput, parent=self, name='allOf[%d]' % i,
                              id='%s/allOf/%d' % (self.id, i))
             self.allof.append(s)
             self.children.append(s)
 
         self.oneof = []
-        for i, subinput in enumerate(parse_prop(None, input, 'oneOf', [],
-                                                valid_type=list)):
+        for i, subinput in enumerate(parser.parse('oneOf', [],
+                                                  types=list, save=False)):
             s = Schema.parse(subinput, parent=self, name='oneOf[%d]' % i,
                              id='%s/oneOf/%d' % (self.id, i))
             self.oneof.append(s)
             self.children.append(s)
 
-        n = parse_prop(None, input, 'not', None)
+        n = parser.parse('not', save=False)
         if n is not None:
             self.not_ = Schema.parse(n, parent=self, name='not',
                                      id='%s/not' % self.id)
@@ -228,8 +224,7 @@ class Schema(object):
               id=None):
         """Parse a <json-schema> definition for an object.
 
-        :param input: the definition to parse
-        :type input: dict
+        :param dict input: the definition to parse
 
         :param parent: allows nesting of schemas, may be None
 
@@ -248,29 +243,28 @@ class Schema(object):
                 ((parent.fullname() + '.') if parent else '', name),
                 input)
 
-        if name is None:
-            name = parse_prop(None, input, 'label', valid_type=[str, unicode])
+        with Parser(input, None, name) as parser:
             if name is None:
-                name = 'element%d' % cls.count
-                cls.count = cls.count + 1
+                name = parser.parse('label', types=[str, unicode], save=False)
+                if name is None:
+                    name = 'element%d' % cls.count
+                    cls.count = cls.count + 1
 
-        if '$ref' in input:
-            typestr = '$ref'
-        elif 'type' not in input:
-            typestr = 'multi'
-        else:
-            typestr = parse_prop(None, input, 'type', required=True,
-                                 valid_type=[str, unicode])
+            if '$ref' in input:
+                typestr = '$ref'
+            else:
+                typestr = parser.parse('type', 'multi',
+                                       types=[str, unicode], save=False)
 
-        try:
-            cls = type_map[typestr]
-        except KeyError:
-            msg = ('Unknown type: %s while parsing %s%s' %
-                   (typestr, (parent.fullname() + '.') if parent else '',
-                    name))
-            raise ParseError(msg, typestr)
+            try:
+                cls = type_map[typestr]
+            except KeyError:
+                msg = ('Unknown type: %s while parsing %s%s' %
+                       (typestr, (parent.fullname() + '.') if parent else '',
+                        name))
+                raise ParseError(msg, typestr)
 
-        return cls(input, name, parent, servicedef=servicedef, id=id)
+            return cls(parser, name, parent, servicedef=servicedef, id=id)
 
     @classmethod
     def find_by_id(cls, id):
@@ -477,10 +471,8 @@ class Schema(object):
 class Multi(Schema):
     _type = 'multi'
 
-    def __init__(self, input, name, parent, **kwargs):
-        Schema.__init__(self, Multi._type, input, name, parent, **kwargs)
-
-        _check_input(self.fullname(), input)
+    def __init__(self, parser, name, parent, **kwargs):
+        Schema.__init__(self, Multi._type, parser, name, parent, **kwargs)
 
     def __getitem__(self, name):
         # TODO: The previous implementation, in addition to ignoring the
@@ -507,19 +499,17 @@ _register_type(Multi)
 class Ref(Schema):
     _type = '$ref'
 
-    def __init__(self, input, name, parent, **kwargs):
-        Schema.__init__(self, Ref._type, input, name, parent, **kwargs)
+    def __init__(self, parser, name, parent, **kwargs):
+        Schema.__init__(self, Ref._type, parser, name, parent, **kwargs)
 
         # Lazy resolution because references may be used before they
         # are defined
         self._refschema = None
-        ref_id = parse_prop(None, input, '$ref', required=True)
+        ref_id = parser.parse('$ref', required=True, save=False)
         try:
             self._refschema_id = self.servicedef.expand_id(ref_id)
         except InvalidReference as e:
             raise ParseError(str(e), ref_id)
-
-        _check_input(self.fullname(), input)
 
     @property
     def refschema(self):
@@ -582,10 +572,8 @@ _register_type(Ref)
 class Null(Schema):
     _type = 'null'
 
-    def __init__(self, input, name, parent, **kwargs):
-        Schema.__init__(self, Null._type, input, name, parent, **kwargs)
-
-        _check_input(self.fullname(), input)
+    def __init__(self, parser, name, parent, **kwargs):
+        Schema.__init__(self, Null._type, parser, name, parent, **kwargs)
 
     def validate(self, input):
         if (input is not None):
@@ -599,11 +587,9 @@ _register_type(Null)
 class Boolean(Schema):
     _type = 'boolean'
 
-    def __init__(self, input, name, parent, **kwargs):
-        Schema.__init__(self, Boolean._type, input, name, parent, **kwargs)
-        parse_prop(self, input, 'default')
-
-        _check_input(self.fullname(), input)
+    def __init__(self, parser, name, parent, **kwargs):
+        Schema.__init__(self, Boolean._type, parser, name, parent, **kwargs)
+        parser.parse('default')
 
     def validate(self, input):
         if (type(input) is not bool):
@@ -617,15 +603,13 @@ _register_type(Boolean)
 class String(Schema):
     _type = 'string'
 
-    def __init__(self, input, name, parent, **kwargs):
-        Schema.__init__(self, String._type, input, name, parent, **kwargs)
-        parse_prop(self, input, 'minLength', valid_type=int)
-        parse_prop(self, input, 'maxLength', valid_type=int)
-        parse_prop(self, input, 'pattern')
-        parse_prop(self, input, 'enum')
-        parse_prop(self, input, 'default')
-
-        _check_input(self.fullname(), input)
+    def __init__(self, parser, name, parent, **kwargs):
+        Schema.__init__(self, String._type, parser, name, parent, **kwargs)
+        parser.parse('minLength', types=int)
+        parser.parse('maxLength', types=int)
+        parser.parse('pattern')
+        parser.parse('enum')
+        parser.parse('default')
 
     def validate(self, input):
         if len(str(input)) > 40:
@@ -680,19 +664,15 @@ _register_type(String)
 class NumberOrInteger(Schema):
     _type = 'number'
 
-    def __init__(self, type, allowed_types, input, name, parent, **kwargs):
-        Schema.__init__(self, type, input, name, parent, **kwargs)
+    def __init__(self, type, allowed_types, parser, name, parent, **kwargs):
+        Schema.__init__(self, type, parser, name, parent, **kwargs)
         self.allowed_types = allowed_types
-        parse_prop(self, input, 'minimum', valid_type=allowed_types)
-        parse_prop(self, input, 'maximum', valid_type=allowed_types)
-        parse_prop(self, input, 'exclusiveMinimum', valid_type=bool,
-                   default_value=False)
-        parse_prop(self, input, 'exclusiveMaximum', valid_type=bool,
-                   default_value=False)
-        parse_prop(self, input, 'default', valid_type=allowed_types)
-        parse_prop(self, input, 'enum', valid_type=list)
-
-        _check_input(self.fullname(), input)
+        parser.parse('minimum', types=allowed_types)
+        parser.parse('maximum', types=allowed_types)
+        parser.parse('exclusiveMinimum', False, types=bool)
+        parser.parse('exclusiveMaximum', False, types=bool)
+        parser.parse('default', types=allowed_types)
+        parser.parse('enum', types=list)
 
     def validate(self, input):
         if not any(isinstance(input, t) for t in self.allowed_types):
@@ -748,8 +728,8 @@ class NumberOrInteger(Schema):
 class Number(NumberOrInteger):
     _type = 'number'
 
-    def __init__(self, input, name, parent, **kwargs):
-        super(Number, self).__init__(self._type, (int, float, long), input,
+    def __init__(self, parser, name, parent, **kwargs):
+        super(Number, self).__init__(self._type, (int, float, long), parser,
                                      name, parent, **kwargs)
 
 _register_type(Number)
@@ -758,8 +738,8 @@ _register_type(Number)
 class Integer(NumberOrInteger):
     _type = 'integer'
 
-    def __init__(self, input, name, parent, **kwargs):
-        super(Integer, self).__init__(self._type, (int, long), input,
+    def __init__(self, parser, name, parent, **kwargs):
+        super(Integer, self).__init__(self._type, (int, long), parser,
                                       name, parent, **kwargs)
 
 _register_type(Integer)
@@ -768,9 +748,8 @@ _register_type(Integer)
 class Timestamp(Schema):
     _type = 'timestamp'
 
-    def __init__(self, input, name, parent, **kwargs):
-        Schema.__init__(self, Timestamp._type, input, name, parent, **kwargs)
-        _check_input(self.fullname(), input)
+    def __init__(self, parser, name, parent, **kwargs):
+        Schema.__init__(self, Timestamp._type, parser, name, parent, **kwargs)
 
     def validate(self, input):
         if not any(isinstance(input, t) for t in (int, float)):
@@ -784,9 +763,8 @@ _register_type(Timestamp)
 class TimestampHP(Schema):
     _type = 'timestamp-hp'
 
-    def __init__(self, input, name, parent, **kwargs):
-        Schema.__init__(self, TimestampHP._type, input, name, parent, **kwargs)
-        _check_input(self.fullname(), input)
+    def __init__(self, parser, name, parent, **kwargs):
+        Schema.__init__(self, TimestampHP._type, parser, name, parent, **kwargs)
 
     def validate(self, input):
         if not any(isinstance(input, t) for t in (int, float)):
@@ -800,21 +778,21 @@ _register_type(TimestampHP)
 class Object(Schema):
     _type = 'object'
 
-    def __init__(self, input, name, parent, **kwargs):
-        Schema.__init__(self, Object._type, input, name, parent, **kwargs)
+    def __init__(self, parser, name, parent, **kwargs):
+        Schema.__init__(self, Object._type, parser, name, parent, **kwargs)
         self.properties = OrderedDict()
 
-        for prop, value in parse_prop(None, input, 'properties', {},
-                                      valid_type=dict).iteritems():
+        for prop, value in parser.parse('properties', {},
+                                        types=dict, save=False).iteritems():
             c = Schema.parse(value, prop, self,
                              id='%s/properties/%s' % (self.id, prop))
             self.properties[prop] = c
             self.children.append(c)
 
-        parse_prop(self, input, 'required', valid_type=[list])
+        parser.parse('required', types=[list])
 
-        ap = parse_prop(None, input, 'additionalProperties',
-                        valid_type=[dict, bool])
+        ap = parser.parse('additionalProperties',
+                          types=[dict, bool], save=False)
         if ap in (None, True):
             ap = {}
         if type(ap) is bool:
@@ -825,8 +803,6 @@ class Object(Schema):
                              id='%s/additionalProperties' % (self.id))
             self.additional_properties = c
             self.children.append(c)
-
-        _check_input(self.fullname(), input)
 
     def __getitem__(self, name):
         if name in self.properties:
@@ -902,10 +878,10 @@ _register_type(Object)
 class Array(Schema):
     _type = 'array'
 
-    def __init__(self, input, name, parent, **kwargs):
-        Schema.__init__(self, Array._type, input, name, parent, **kwargs)
+    def __init__(self, parser, name, parent, **kwargs):
+        Schema.__init__(self, Array._type, parser, name, parent, **kwargs)
 
-        items = parse_prop(None, input, 'items', required=True)
+        items = parser.parse('items', required=True, save=False)
         if 'label' in items:
             childname = items['label']
         else:
@@ -914,10 +890,8 @@ class Array(Schema):
                                   id='%s/items' % self.id)
         self.children.append(self.items)
 
-        parse_prop(self, input, 'minItems')
-        parse_prop(self, input, 'maxItems')
-
-        _check_input(self.fullname(), input)
+        parser.parse('minItems')
+        parser.parse('maxItems')
 
     def is_simple(self):
         return False
@@ -966,13 +940,11 @@ _register_type(Array)
 class Data(Schema):
     _type = 'data'
 
-    def __init__(self, input, name, parent, **kwargs):
-        Schema.__init__(self, Data._type, input, name, parent, **kwargs)
+    def __init__(self, parser, name, parent, **kwargs):
+        Schema.__init__(self, Data._type, parser, name, parent, **kwargs)
 
-        parse_prop(self, input, 'content_type', required=True)
-        parse_prop(self, input, 'description')
-
-        _check_input(self.fullname(), input)
+        parser.parse('content_type', required=True)
+        parser.parse('description')
 
     def validate(self, input):
         # any value will pass, regardless of content_type set
@@ -992,16 +964,15 @@ class Relation(object):
         self.vars = None
         self.id = id
 
-        # Lazy resolution because references may be used before they
-        # are defined
-        self._resource = None
-        ref_id = parse_prop(None, input, 'resource', required=True)
-        self._resource_id = schema.servicedef.expand_id(ref_id)
+        with Parser(input, self, self.fullname()) as parser:
+            # Lazy resolution because references may be used before they
+            # are defined
+            self._resource = None
+            ref_id = parser.parse('resource', required=True, save=False)
+            self._resource_id = schema.servicedef.expand_id(ref_id)
 
-        self.vars = parse_prop(self, input, 'vars')
-        parse_prop(self, input, 'tags', valid_type=dict, default_value={})
-
-        _check_input(self.fullname(), input)
+            parser.parse('vars')
+            parser.parse('tags', {}, types=dict)
 
     def __str__(self):
         return self.resource.name
@@ -1087,58 +1058,54 @@ class Link(object):
         self.servicedef = schema.servicedef
         self.id = id
 
-        parse_prop(self, input, 'description', '')
-        parse_prop(self, input, 'notes', '')
-        parse_prop(self, input, 'example')
-        parse_prop(self, input, 'method')
-        parse_prop(self, input, 'authorization')
-        parse_prop(self, input, 'tags', valid_type=dict, default_value={})
+        with Parser(input, self, self.fullname()) as parser:
+            parser.parse('description', '')
+            parser.parse('notes', '')
+            parser.parse('example')
+            parser.parse('method')
+            parser.parse('authorization')
+            parser.parse('tags', {}, types=dict)
 
-        pathdef = parse_prop(None, input, 'path')
-        if pathdef is not None:
-            self.path = Path(self, pathdef)
-        elif self.method is not None:
-            if 'self' not in self.schema.links:
-                raise ParseError(("Link '%s' defined with no path and "
-                                  "schema has no 'self' link") %
-                                 str(self), input)
-            self.path = self.schema.links['self'].path
-        else:
-            self.path = None
+            pathdef = parser.parse('path', save=False)
+            if pathdef is not None:
+                self.path = Path(self, pathdef)
+            elif self.method is not None:
+                if 'self' not in self.schema.links:
+                    raise ParseError(("Link '%s' defined with no path and "
+                                      "schema has no 'self' link") %
+                                     str(self), parser.input)
+                self.path = self.schema.links['self'].path
+            else:
+                self.path = None
 
-        self._request = None
-        if 'request' in input:
-            self._request = Schema.parse(parse_prop(None, input, 'request'),
-                                         parent=self, name='request',
-                                         id='%s/request' % self.id)
-        elif name != 'self':
-            # Must deepcopy because of how parse_prop() works later on.
-            self._request = Schema.parse(copy.deepcopy(DEFAULT_REQ_RESP),
-                                         parent=self, name='request',
-                                         id='%s/request' % self.id)
+            self._request = parser.parse('request', save=False)
+            if self._request:
+                self._request = Schema.parse(self._request,
+                                             parent=self, name='request',
+                                             id='%s/request' % self.id)
+            elif name != 'self':
+                self._request = Schema.parse(DEFAULT_REQ_RESP,
+                                             parent=self, name='request',
+                                             id='%s/request' % self.id)
 
-        self._response = None
-        if 'response' in input:
-            self._response = Schema.parse(parse_prop(None, input, 'response'),
-                                          parent=self, name='response',
-                                          id='%s/response' % self.id)
-        elif name != 'self':
-            # Must deepcopy because of how parse_prop() works later on.
-            self._response = Schema.parse(copy.deepcopy(DEFAULT_REQ_RESP),
-                                          parent=self, name='response',
-                                          id='%s/response' % self.id)
+            self._response = parser.parse('response', save=False)
+            if self._response:
+                self._response = Schema.parse(self._response,
+                                              parent=self, name='response',
+                                              id='%s/response' % self.id)
+            elif name != 'self':
+                self._response = Schema.parse(DEFAULT_REQ_RESP,
+                                              parent=self, name='response',
+                                              id='%s/response' % self.id)
 
-        if name == 'self':
-            self._params = {}
-            if 'params' in input:
-                for key, value in parse_prop(None, input, 'params',
-                                             {}, valid_type=dict).iteritems():
+            if name == 'self':
+                self._params = {}
+                params = parser.parse('params', {}, save=False)
+                for key, value in params.iteritems():
                     self._params[key] = Schema.parse(value, parent=self,
                                                      name=key,
                                                      id=('%s/params/%s' %
                                                          (self.id, key)))
-
-        _check_input(self.fullname(), input)
 
     def __repr__(self):
         return "<jsonschema.%s '%s'>" % (self.__class__.__name__,

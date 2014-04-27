@@ -26,50 +26,6 @@ def check_type(prop, val, valid_type, obj=None):
         raise ParseError(msg, prop, obj)
 
 
-def parse_prop(obj, srcobj, prop,
-               default_value=None, required=False, valid_type=None):
-    """Parse and remove a key from a dict and make it a property on an object.
-
-    The property is removed from the source object, even if an exception
-    is raised during parsing.
-
-    :param obj: A Python object instance on which properties will be created.
-                This can be None, in which case it is ignored.
-    :type obj: object instance
-    :param srcobj: The dict in which the object may be found.
-    :type srcobj: dict
-    :param prop: The dictionary key name of the property.
-    :type prop: string
-    :param default_value: A value to use if the property is missing
-                          but not required.  Ignored if `required` is True.
-    :param required: Causes ParseError to be raised if `prop` is not in `obj`.
-    :type required: boolean
-    :param valid_type: verifies that the property value is an instance of at
-                       least one of the types passed in this parameter.
-    :type valid_type: type or list of types
-
-    :raises reschema.exceptions.ParseError: if the type of the data
-      is incorrect or if the property is required but missing.
-
-    :return: The parsed value.
-    """
-    if prop in srcobj:
-        val = srcobj[prop]
-        if valid_type:
-            check_type(prop, val, valid_type, srcobj)
-        del srcobj[prop]
-
-    elif required:
-        raise ParseError("Missing required property '%s'" % prop, srcobj)
-    else:
-        val = default_value
-
-    if obj is not None:
-        setattr(obj, prop, val)
-
-    return val
-
-
 def a_or_an(s):
     if s[0] in ('a', 'e', 'i', 'o', 'u'):
         return "an"
