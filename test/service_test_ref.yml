@@ -24,17 +24,21 @@ types:
 
 resources:
    test_ref_type:
-      $ref: '#/types/type_obj_number_limits'
-      links:
-         self: { path: '$/test_ref_type'}
-      relations:
-         full:
-            resource: '#/resources/test_ref_type_full'
+      $merge:
+         source: { $ref: '#/types/type_obj_number_limits' }
+         with:
+            links:
+               self: { path: '$/test_ref_type'}
+            relations:
+               full:
+                  resource: '#/resources/test_ref_type_full'
 
    test_ref_type_full:
-      $ref: '#/types/type_obj_number_limits'
-      links:
-         self: { path: '$/test_ref_type_full'}
+      $merge:
+         source: { $ref: '#/types/type_obj_number_limits' }
+         with:
+            links:
+               self: { path: '$/test_ref_type_full'}
 
    test_ref_remote_types:
       type: object

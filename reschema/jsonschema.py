@@ -76,6 +76,7 @@ from collections import OrderedDict
 import uritemplate
 from jsonpointer import resolve_pointer, JsonPointer
 
+from reschema.jsonmergepatch import json_merge_patch
 from reschema.parser import Parser
 from reschema.util import check_type
 from reschema.reljsonpointer import resolve_rel_pointer
@@ -151,66 +152,67 @@ class Schema(object):
         parser.obj = self
         parser.name = self.fullname()
 
-        parser.parse('label', name, types=[str, unicode])
-        parser.parse('description', '', types=[str, unicode])
-        parser.parse('notes', '', types=[str, unicode])
-        parser.parse('example')
-        readOnlyDef = (parent.readOnly
-                       if (parent and isinstance(parent, Schema))
-                       else False)
-        parser.parse('readOnly', readOnlyDef, types=bool)
-        parser.parse('tags', {}, types=dict)
-        parser.parse('xmlTag')
-        parser.parse('xmlSchema')
-        parser.parse('xmlExample')
-        parser.parse('xmlKeyName')
+        if not self.is_ref():
+            parser.parse('label', name, types=[str, unicode])
+            parser.parse('description', '', types=[str, unicode])
+            parser.parse('notes', '', types=[str, unicode])
+            parser.parse('example')
+            readOnlyDef = (parent.readOnly
+                           if (parent and isinstance(parent, Schema))
+                           else False)
+            parser.parse('readOnly', readOnlyDef, types=bool)
+            parser.parse('tags', {}, types=dict)
+            parser.parse('xmlTag')
+            parser.parse('xmlSchema')
+            parser.parse('xmlExample')
+            parser.parse('xmlKeyName')
 
-        self.relations = OrderedDict()
-        for key, value in parser.parse('relations', {},
-                                       types=dict, save=False).iteritems():
-            check_type(key, value, dict)
-            self.relations[key] = Relation(value, key, self,
-                                           id=('%s/relations/%s' %
-                                               (self.id, key)))
+            self.relations = OrderedDict()
+            for key, value in parser.parse('relations', {},
+                                           types=dict, save=False).iteritems():
+                check_type(key, value, dict)
+                self.relations[key] = Relation(value, key, self,
+                                               id=('%s/relations/%s' %
+                                                   (self.id, key)))
 
-        self.links = OrderedDict()
-        for key, value in parser.parse('links', {},
-                                       types=dict, save=False).iteritems():
-            check_type(key, value, dict)
-            self.links[key] = Link(value, key, self,
-                                   id='%s/links/%s' % (self.id, key))
+            self.links = OrderedDict()
+            for key, value in parser.parse('links', {},
+                                           types=dict, save=False).iteritems():
+                check_type(key, value, dict)
+                self.links[key] = Link(value, key, self,
+                                       id='%s/links/%s' % (self.id, key))
 
-        self.anyof = []
-        for i, subinput in enumerate(parser.parse('anyOf', [],
-                                                  types=list, save=False)):
-            s = Schema.parse(subinput, parent=self, name='anyOf[%d]' % i,
-                             id='%s/anyOf/%d' % (self.id, i))
-            self.anyof.append(s)
-            self.children.append(s)
+            self.anyof = []
+            for i, subinput in enumerate(parser.parse('anyOf', [],
+                                                      types=list, save=False)):
+                s = Schema.parse(subinput, parent=self, name='anyOf[%d]' % i,
+                                 id='%s/anyOf/%d' % (self.id, i))
+                self.anyof.append(s)
+                self.children.append(s)
 
-        self.allof = []
-        for i, subinput in enumerate(parser.parse('allOf', [],
-                                                  types=list, save=False)):
-            s = Schema.parse(subinput, parent=self, name='allOf[%d]' % i,
-                             id='%s/allOf/%d' % (self.id, i))
-            self.allof.append(s)
-            self.children.append(s)
+            self.allof = []
+            for i, subinput in enumerate(parser.parse('allOf', [],
+                                                      types=list, save=False)):
+                s = Schema.parse(subinput, parent=self, name='allOf[%d]' % i,
+                                 id='%s/allOf/%d' % (self.id, i))
+                self.allof.append(s)
+                self.children.append(s)
 
-        self.oneof = []
-        for i, subinput in enumerate(parser.parse('oneOf', [],
-                                                  types=list, save=False)):
-            s = Schema.parse(subinput, parent=self, name='oneOf[%d]' % i,
-                             id='%s/oneOf/%d' % (self.id, i))
-            self.oneof.append(s)
-            self.children.append(s)
+            self.oneof = []
+            for i, subinput in enumerate(parser.parse('oneOf', [],
+                                                      types=list, save=False)):
+                s = Schema.parse(subinput, parent=self, name='oneOf[%d]' % i,
+                                 id='%s/oneOf/%d' % (self.id, i))
+                self.oneof.append(s)
+                self.children.append(s)
 
-        n = parser.parse('not', save=False)
-        if n is not None:
-            self.not_ = Schema.parse(n, parent=self, name='not',
-                                     id='%s/not' % self.id)
-            self.children.append(self.not_)
-        else:
-            self.not_ = None
+            n = parser.parse('not', save=False)
+            if n is not None:
+                self.not_ = Schema.parse(n, parent=self, name='not',
+                                         id='%s/not' % self.id)
+                self.children.append(self.not_)
+            else:
+                self.not_ = None
 
         #print "Adding schema: %s - parent %s" % (self.fullid(), parent)
         self.schemas[self.fullid()] = self
@@ -252,6 +254,8 @@ class Schema(object):
 
             if '$ref' in input:
                 typestr = '$ref'
+            elif '$merge' in input:
+                typestr = '$merge'
             else:
                 typestr = parser.parse('type', 'multi',
                                        types=[str, unicode], save=False)
@@ -496,7 +500,41 @@ class Multi(Schema):
 _register_type(Multi)
 
 
-class Ref(Schema):
+class DynamicSchema(Schema):
+
+    def __init__(self, type, parser, name, parent, **kwargs):
+        Schema.__init__(self, type, parser, name, parent, **kwargs)
+
+    @property
+    def typestr(self):
+        return self.refschema.name
+
+    def is_simple(self):
+        return False
+
+    def is_ref(self):
+        """Return True if this schema is a reference."""
+        return True
+
+    def validate(self, input):
+        self.refschema.validate(input)
+
+    def toxml(self, input, parent=None):
+        return self.refschema.toxml(input, parent)
+
+    def __getitem__(self, name):
+        if name in self.__dict__:
+            return self.__dict__[name]
+        return self.refschema.__getitem__(name)
+
+    def __getattr__(self, name):
+        return getattr(self.refschema, name)
+
+    def by_pointer(self, pointer):
+        """Index into a schema by breaking a data-based jsonpointer into parts."""
+        return self.refschema.by_pointer(pointer)
+
+class Ref(DynamicSchema):
     _type = '$ref'
 
     def __init__(self, parser, name, parent, **kwargs):
@@ -506,6 +544,9 @@ class Ref(Schema):
         # are defined
         self._refschema = None
         ref_id = parser.parse('$ref', required=True, save=False)
+        if len(parser.input.keys()) != 1:
+            raise ParseError("$ref object may not have any other properties",
+                             parser.input)
         try:
             self._refschema_id = self.servicedef.expand_id(ref_id)
         except InvalidReference as e:
@@ -567,6 +608,35 @@ class Ref(Schema):
         return self.refschema.by_pointer(pointer)
 
 _register_type(Ref)
+
+
+class Merge(DynamicSchema):
+    _type = '$merge'
+
+    def __init__(self, parser, name, parent, **kwargs):
+        DynamicSchema.__init__(self, Merge._type, parser, name, parent, **kwargs)
+
+        # Lazy resolution because references may be used before they
+        # are defined
+        merge = parser.parse('$merge', required=True, save=False)
+        with Parser(merge, self, name) as merge_parser:
+            merge_parser.parse('source', save='_mergesource', required=True)
+            merge_parser.parse('with', save='_mergewith', required=True)
+
+        self._refschema = None
+
+    @property
+    def refschema(self):
+        if self._refschema is None:
+            merged = json_merge_patch(self.servicedef,
+                                      self._mergesource, self._mergewith)
+
+            self._refschema = Schema.parse(merged, self.name,
+                                           servicedef=self.servicedef)
+
+        return self._refschema
+
+_register_type(Merge)
 
 
 class Null(Schema):

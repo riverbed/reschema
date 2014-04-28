@@ -1078,6 +1078,43 @@ class TestExpandId(unittest.TestCase):
         self.assertEqual(self.s.expand_id(id_), id_)
 
 
+class TestSchemaMerge(TestSchemaBase):
+
+    def setUp(self):
+        self.s = ServiceDef()
+        self.s.load(SERVICE_DEF_TEST)
+        manager = ServiceDefManager()
+        manager.add(self.s)
+
+    def test_merge(self):
+        r = self.s.find('#/resources/test_merge')
+        (self.check_valid
+         (r,
+          valid = [{'val': 10}, {'val': 14}, {'val': 20}],
+          invalid = [{'val': 9}, {'val': 21}]))
+
+    def test_merge_simple_ref(self):
+        r = self.s.find('#/resources/test_merge_simple_ref')
+        (self.check_valid
+         (r,
+          valid = [{'p1': 10}, {'p1': 14}, {'p1': 20}],
+          invalid = [{'p1': 9}, {'p1': 21}]))
+
+    def test_merge_double_ref(self):
+        r = self.s.find('#/resources/test_merge_double_ref')
+        (self.check_valid
+         (r,
+          valid = [{'p2': 10}, {'p2': 14}, {'p2': 20}],
+          invalid = [{'p2': 9}, {'p2': 21}]))
+
+    def test_merge_merge(self):
+        r = self.s.find('#/resources/test_merge_merge')
+        (self.check_valid
+         (r,
+          valid = [ {'val': 15}, {'val': 20}],
+          invalid = [{'val': 9}, {'val': 10}, {'val': 14},{'val': 21}]))
+
+
 class TestSchemaRef(TestSchemaBase):
 
     def setUp(self):

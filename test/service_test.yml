@@ -492,3 +492,46 @@ resources:
                vars: { num: "0" }
 
       links: { self: { path: "$/test_items}" } }
+
+   test_merge:
+      $merge:
+         source:
+            type: object
+            properties:
+               val: { type: integer }
+         with:
+            links: { self: { path: "$/test_merge" } }
+            properties:
+               val:
+                  minimum: 10
+                  maximum: 20
+
+   test_merge_simple_ref:
+      $merge:
+         source: { $ref: "#/types/type_object" }
+         with:
+            links: { self: { path: "$/test_merge_simple_ref" } }
+            properties:
+               p1:
+                  minimum: 10
+                  maximum: 20
+
+   test_merge_double_ref:
+      $merge:
+         source: { $ref: "#/types/type_object_with_refs" }
+         with:
+            links: { self: { path: "$/test_merge_double_ref" } }
+            properties:
+               p2:
+                  minimum: 10
+                  maximum: 20
+
+   test_merge_merge:
+      $merge:
+         source: { $ref: "#/resources/test_merge" }
+         with:
+            links: { self: { path: "$/test_merge_merge" } }
+            properties:
+               val:
+                  minimum: 15
+                  maximum: 20
