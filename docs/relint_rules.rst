@@ -14,13 +14,13 @@ General schema issues / naming conventions (001)
     * Relation names
     * Values of an enum for a string field
 
-  * **C0002**: The name of a type should not end in ``type``
+  * **C0002**: The name of a type should not start or end with ``type``
 
-  * **C0003**: The name of a resource should not end in ``resource``
+  * **C0003**: The name of a resource should not start or end with ``resource``
 
-  * **C0004**: The name of a link should not end in ``link``
+  * **C0004**: The name of a link should not start or end with ``link``
 
-  * **C0005**: A resource, type, link, or relation name must be at least 3 characters long and contain a vowel (eg, pick a better name)
+  * **C0005**: A resource, type, link, or relation name must be at least 2 characters long (eg, pick a better name)
 
   * **C0006**: A description field must start with a capital letter
 
@@ -107,3 +107,5 @@ Resources (300)
 ---------------
 
   * **C0300**: A resource must have a valid description field
+  * **C0301**: Collection resource should be an object
+  * **C0302**: Collection resource object should have an 'items' property
