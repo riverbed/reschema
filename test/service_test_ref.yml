@@ -47,7 +47,15 @@ resources:
          prop_number_limits:
             $ref: "/apis/test/1.0#/types/type_number_limits"
 
-      links: { self: { path: "$/test_ref_remote_types" }  }
+      links:
+         self: { path: "$/test_ref_remote_types" }
+         somelink:
+            path: "$/test_ref_remote_types/somelink"
+            method: POST
+            request: { type: boolean }
+            response:
+               $ref: "/apis/test/1.0#/types/type_number_limits"
+
 
    test_ref_remote_resource:
       type: number

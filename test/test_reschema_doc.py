@@ -29,28 +29,17 @@ import reschema
 from reschema.html import *
 from reschema import ServiceDef
 from reschema.tohtml import ServiceDefToHtml, Options
+from reschema.doc import ReschemaDoc, ReschemaDocException
 
 
 def process_file(filename):
-    rs = ServiceDef()
-    rs.load(filename)
-
-    title = "%s v%s %s" % (rs.title, rs.version, rs.status)
-
-    base = os.path.splitext(os.path.basename(filename))[0]
-    html = "%s/%s.html" % (outdir, base)
-    if os.path.exists(html):
-        os.remove(html)
-
-    htmldoc = reschema.html.Document(title, printable=False)
-    r2h = ServiceDefToHtml(rs, htmldoc.content, htmldoc.menu,
-                           root='/api',
-                           options=Options(printable=False,
-                                           json=True, xml=True))
-    r2h.process()
-    htmldoc.write(html)
-    logger.info("HTML output: ./%s" % html)
-    return html
+    r = ReschemaDoc()
+    r.parse_args(['-f', filename,
+                  '--outdir', outdir,
+                  '--html',
+                  ])
+    r.run()
+    return
 
 
 class TestReschema(unittest.TestCase):
@@ -66,6 +55,7 @@ class TestReschema(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    for filename in [SERVICE_DEF_TEST, SERVICE_DEF_CATALOG]:
+    for filename in [SERVICE_DEF_TEST,
+                     SERVICE_DEF_TEST_REF,
+                     SERVICE_DEF_CATALOG]:
         html = process_file(filename)
-        print ("HTML output: ./%s" % html)

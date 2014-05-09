@@ -13,33 +13,80 @@ import yaml
 import markdown
 from collections import OrderedDict
 import xml.dom.minidom, xml.etree.ElementTree as ET
-
+import urlparse
 import jsonpointer
-import logging
 
+import logging
 logger = logging.getLogger(__name__)
 
 import reschema
 from reschema.html import HTMLElement, HTMLTable, Document as HTMLDoc, TabBar
 from reschema.jsonschema import Schema
 from reschema.util import a_or_an, str_to_id as html_str_to_id
+from reschema.exceptions import NoManager
 
 
 class Options(object):
-    def __init__(self, printable=False, json=True, xml=True):
+    def __init__(self, printable=False, json=True, xml=True,
+                 apiroot="/{root}", docroot='.'):
         self.printable = printable
         self.json = json
         self.xml = xml
+        self.apiroot = apiroot
+        self.docroot = docroot
 
 
-def _build_schema_href(schema):
-    if schema.name in ServiceDefToHtml.servicedef.resources:
-        h = "#resource"
-    else:
-        h = "#type"
+class RefSchemaProxy(object):
 
-    return h + '-' + html_str_to_id(schema.fullid())
+    def __init__(self, schema, options=None):
+        self.schema = schema
+        self.options = options
 
+        try:
+            self.refschema = schema.refschema
+            self.passthrough = True
+            self.name = schema.refschema.name
+            self.typestr = schema.refschema.typestr
+            self.href = '#' + html_str_to_id(schema.refschema.fullid(True))
+        except NoManager:
+            self.passthrough = False
+            self.name = schema._refschema_id.split('/')[-1]
+            self.typestr = '<ref>'
+            self.descritpion = schema._refschema_id
+
+            # refschema_id is something like:
+            #   http://support.riverbed.com/apis/test/1.0#/types/type_number_limits
+            #
+            # Drop the netloc and api root and replace with a relative path ref
+            # based on the current schema id
+            parsed_id = urlparse.urlparse(schema._refschema_id)
+
+            # Fall back to just using an href of the schema id for the following cases:
+            #  - not a riverbed service
+            #  - no match to '/apis'
+            #  - looking for printable format
+            m = re.match("/apis/(.*)$", parsed_id.path)
+            if parsed_id.netloc != 'support.riverbed.com' or not m or self.options.printable:
+                self.href = schema._refschema_id
+            else:
+                # Look at the servidedef id of the current service and figure
+                # out how many levels up to recurse
+                parsed_parent_id = urlparse.urlparse(schema.servicedef.id)
+                m_parent = re.match("/apis/(.*)$", parsed_parent_id.path)
+                relpath_count = len(m_parent.group(1).split('/'))
+                relpath = '/'.join(['..' for i in range(relpath_count)])
+
+                frag_id = html_str_to_id(parsed_id.fragment)
+                self.href = '%s/%s/service.html#%s' % (relpath, m.group(1), frag_id)
+
+    def __getattr__(self, name):
+        if name in self.__dict__:
+            return self.__dict__[name]
+
+        if self.__dict__['passthrough']:
+            return getattr(self.refschema, name)
+        else:
+            return None
 
 class ServiceDefToHtml(object):
     servicedef = None
@@ -115,8 +162,7 @@ class ResourceToHtml(object):
         logger.debug("Processing resource: %s" % self.schema.fullname())
         menu = self.menu
         schema = self.schema
-        baseid = ('type-' if is_type
-                          else 'resource-') + html_str_to_id(schema.fullid())
+        baseid = html_str_to_id(schema.fullid(True))
 
         div = self.container.div(id=baseid)
         menu.add_item(schema.name, href=div)
@@ -142,15 +188,17 @@ class ResourceToHtml(object):
         tabbar = TabBar(container, baseid+'-tabbar',
                         printable=self.options.printable)
         if self.options.json:
-            tabbar.add_tab("JSON", baseid+'-json', SchemaSummaryJson(schema))
+            tabbar.add_tab("JSON", baseid+'-json',
+                           SchemaSummaryJson(schema, self.options))
         if self.options.xml:
-            tabbar.add_tab("XML", baseid+'-xml', SchemaSummaryXML(schema))
+            tabbar.add_tab("XML", baseid+'-xml',
+                           SchemaSummaryXML(schema, self.options))
         #tabbar.add_tab("JSON Schema", "jsonschema",
         #               HTMLElement("pre",
         #                            text=json.dumps(self.schema_raw,
         #                           indent=2)))
         tabbar.finish()
-        container.append(SchemaTable(schema))
+        container.append(SchemaTable(schema, self.options))
 
     def process_methods(self, container, containerid, submenu):
         schema = self.schema
@@ -215,12 +263,13 @@ class ResourceToHtml(object):
                     # a ref, as link.request is auto-resolved thru refs
                     if type(link._request) is reschema.jsonschema.Ref:
                         p = div.p()
+
+                        schema = RefSchemaProxy(link._request, self.options)
                         p.settext("Provide ",
-                                  a_or_an(link.request.name),
+                                  a_or_an(schema.name),
                                   " ",
-                                  p.a(cls="jsonschema-type",
-                                      href=_build_schema_href(link.request),
-                                      text=link.request.name),
+                                  p.a(cls="jsonschema-type", href=schema.href,
+                                      text=schema.name),
                                   " data object." )
                     elif type(link.request) is reschema.jsonschema.Data:
                         p = div.p()
@@ -244,17 +293,18 @@ class ResourceToHtml(object):
                     div.p().text = "Do not provide a request body."
 
             div.span(cls="h5").text = "Response Body"
-            schema = link.response
+            # Need to look at the raw link._response to see if it's
+            # a ref, as link.response is auto-resolved thru refs
+            schema = link._response
             if schema is not None and \
                    type(schema) is not reschema.jsonschema.Null:
-                if type(link._response) is reschema.jsonschema.Ref:
+                if type(schema) is reschema.jsonschema.Ref:
                     p = div.p()
+                    schema = RefSchemaProxy(link._response, self.options)
                     p.settext("Returns ",
                               a_or_an(schema.name),
                               " ",
-                              p.a(cls="jsonschema-type",
-                                  href=_build_schema_href(schema),
-                                  text=schema.name),
+                              p.a(cls="jsonschema-type", href=schema.href, text=schema.name),
                               " data object.")
                 elif type(schema) is reschema.jsonschema.Data:
                     p = div.p()
@@ -288,8 +338,9 @@ class ResourceToHtml(object):
 
 
 class SchemaSummaryJson(HTMLElement):
-    def __init__(self, schema):
+    def __init__(self, schema, options):
         HTMLElement.__init__(self, "pre", cls="servicedef")
+        self.options = options
         self.process(self, schema, 0)
 
         if isinstance(schema, reschema.jsonschema.Ref):
@@ -301,7 +352,7 @@ class SchemaSummaryJson(HTMLElement):
             self.span().text = ("\n\nExample:\n%s\n" %
                                 json.dumps(example, indent=2))
 
-    def process(self, parent, schema, indent=0, follow_refs=False):
+    def process(self, parent, schema, indent=0):
         if isinstance(schema, reschema.jsonschema.Object):
             self.process_object(parent, schema, indent)
 
@@ -309,12 +360,9 @@ class SchemaSummaryJson(HTMLElement):
             self.process_array(parent, schema, indent)
 
         elif isinstance(schema, reschema.jsonschema.Ref):
-            if follow_refs:
-                self.process(parent, schema.refschema, indent)
-            else:
-                href=_build_schema_href(schema.refschema)
-                parent.a(cls="servicedef-type", href=href,
-                         text=schema.refschema.name)
+            schema = RefSchemaProxy(schema, self.options)
+            parent.a(cls="servicedef-type", href=schema.href, text=schema.name)
+
         else:
             parent.span(cls="servicedef-type").text = schema.typestr
 
@@ -359,9 +407,9 @@ class SchemaSummaryJson(HTMLElement):
         item = array.children[0]
         if isinstance(item, reschema.jsonschema.Ref):
             s = parent.span()
+            schema = RefSchemaProxy(item, self.options)
             s.settext("[ ", s.a(cls="servicedef-type",
-                                href=_build_schema_href(item.refschema),
-                                 text=item.refschema.name),
+                                href=schema.href, text=schema.name),
                        " ]")
 
         else:
@@ -371,8 +419,9 @@ class SchemaSummaryJson(HTMLElement):
 
 
 class SchemaSummaryXML(HTMLElement):
-    def __init__(self, schema):
+    def __init__(self, schema, options):
         HTMLElement.__init__(self, "pre", cls="servicedef")
+        self.options = options
         self.text = self.process(self, schema, 0)
 
         if type(schema) is reschema.jsonschema.Ref:
@@ -400,9 +449,10 @@ class SchemaSummaryXML(HTMLElement):
             self.span().text = "\n\nExample:\n%s\n" % example_str
 
 
-    def process(self, parent, schema, indent=0, follow_refs=False, name=None,
+    def process(self, parent, schema, indent=0, name=None,
                 json=None, key=None):
-        if schema.xmlSchema is not None:
+        if (not isinstance(schema, reschema.jsonschema.Ref) and
+                schema.xmlSchema is not None):
             # XXX/demmer this is a big hack to support the fact that
             # one of the Shark REST handlers doesn't return
             # GL5-compliant output. The JSON is properly described by
@@ -448,23 +498,18 @@ class SchemaSummaryXML(HTMLElement):
             self.process_array(parent, schema, indent, name, key=key)
 
         elif isinstance(schema, reschema.jsonschema.Ref):
-            if follow_refs:
-                self.process(parent, schema.refschema, indent, name, key=key)
+            schema = RefSchemaProxy(schema, self.options)
+            if not name:
+                name = schema.name
+            if key:
+                parent.span(cls="xmlschema-element").text = (
+                  "%*s<%s key=string>" % (indent, "", name))
             else:
-                dtype = schema.refschema.name
-                if not name:
-                    name = dtype
-                if key:
-                    parent.span(cls="xmlschema-element").text = (
-                      "%*s<%s key=string>" % (indent, "", name))
-                else:
-                    parent.span(cls="xmlschema-element").text = (
-                      "%*s<%s>" % (indent, "", name))
+                parent.span(cls="xmlschema-element").text = (
+                  "%*s<%s>" % (indent, "", name))
 
-                parent.a(cls="xmlschema-type",
-                         href=_build_schema_href(schema.refschema),
-                         text="%s" % dtype)
-                parent.span(cls="xmlschema-element").text = "</%s>\n" % (name)
+            parent.a(cls="xmlschema-type", href=schema.href, text=name)
+            parent.span(cls="xmlschema-element").text = "</%s>\n" % (name)
 
         else:
             if key:
@@ -547,7 +592,8 @@ class SchemaSummaryXML(HTMLElement):
 
 
 class PropTable(HTMLTable):
-    def __init__(self, data):
+    def __init__(self, data, options):
+        self.options = options
         HTMLTable.__init__(self, cls="paramtable")
 
         logger.debug("PropTable")
@@ -597,10 +643,8 @@ class PropTable(HTMLTable):
         self.setname(tds[0], name)
 
         if isinstance(schema, reschema.jsonschema.Ref):
-            dtype = schema.typestr
-            tds[1].a(cls="servicedef-type",
-                     href=_build_schema_href(schema.refschema),
-                     text="<" + schema.refschema.name + ">")
+            schema = RefSchemaProxy(schema, self.options)
+            tds[1].a(cls="servicedef-type", href=schema.href, text="<" + schema.name + ">")
         else:
             tds[1].span(cls="servicedef-type", text="<" + schema.typestr + ">")
 
@@ -670,7 +714,7 @@ class PropTable(HTMLTable):
         if hasattr(schema, 'pattern') and schema.pattern is not None:
             parts.append("Pattern: '" + schema.pattern + "'")
 
-        if schema.notes != "":
+        if hasattr(schema, 'notes') and schema.notes is not None:
             parts.append(schema.notes)
 
         desctd.settext('; '.join(parts))
@@ -686,8 +730,8 @@ class ParamTable(PropTable):
 
 
 class SchemaTable(PropTable):
-    def __init__(self, schema):
-        PropTable.__init__(self, schema)
+    def __init__(self, schema, options):
+        PropTable.__init__(self, schema, options)
 
     def process(self, schema):
         self.makerow(schema, schema.fullname())
