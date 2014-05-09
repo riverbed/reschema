@@ -1150,11 +1150,12 @@ class TestSchemaRef(TestSchemaBase):
 
         (self.check_valid
          (r,
-          valid = [ {'prop_boolean': False, 'prop_number_limits': 12},
+          valid = [ {'prop_boolean': True, 'prop_number_limits': 12},
                     {'prop_boolean': True, 'prop_number_limits': 19}],
 
           invalid = [ {'prop_boolean': 1, 'prop_number_limits': 12},
-                      {'prop_boolean': True, 'prop_number_limits': 22}]))
+                      {'prop_boolean': True, 'prop_number_limits': 22},
+                      {'prop_boolean': False, 'prop_number_limits': 19}]))
 
     def test_ref_relations(self):
         item = self.s1.find('#/resources/test_item')

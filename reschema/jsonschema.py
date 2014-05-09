@@ -534,6 +534,7 @@ class DynamicSchema(Schema):
         """Index into a schema by breaking a data-based jsonpointer into parts."""
         return self.refschema.by_pointer(pointer)
 
+
 class Ref(DynamicSchema):
     _type = '$ref'
 
@@ -660,11 +661,17 @@ class Boolean(Schema):
     def __init__(self, parser, name, parent, **kwargs):
         Schema.__init__(self, Boolean._type, parser, name, parent, **kwargs)
         parser.parse('default')
+        parser.parse('enum')
 
     def validate(self, input):
         if (type(input) is not bool):
             raise ValidationError("%s should be a boolean, got '%s'" %
                                   (self.fullname(), type(input)), self)
+        if (self.enum is not None) and (input not in self.enum):
+            raise ValidationError(
+                "%s: input not a valid enumeration value: %s" %
+                (self.fullname(), input), self)
+
         super(Boolean, self).validate(input)
 
 _register_type(Boolean)

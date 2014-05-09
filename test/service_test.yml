@@ -11,6 +11,7 @@ types:
       type: boolean
       description: "Type boolean"
       default: True
+      enum: [ True ]
 
    type_number:
       type: number
