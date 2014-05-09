@@ -18,6 +18,7 @@ import copy
 from reschema.parser import Parser
 from reschema.exceptions import ParseError
 
+
 def resolve_refs(servicedef, obj):
     """Resolve $ref and $merge in obj, using servicedef for remote references."""
 
@@ -25,20 +26,21 @@ def resolve_refs(servicedef, obj):
     while True:
         if '$merge' in obj:
             with Parser(obj['$merge'], None, 'resolve_refs') as merge_parser:
-                merge_source = merge_parser.parse('source', save=False, required=True)
-                merge_with = merge_parser.parse('with', save=False, required=True)
+                merge_source = merge_parser.parse('source', save=False,
+                                                  required=True)
+                merge_with = merge_parser.parse('with', save=False,
+                                                required=True)
 
-            obj = json_merge_patch(servicedef,
-                                   obj['$merge']['source'],
-                                   obj['$merge']['with'])
+            obj = json_merge_patch(servicedef, merge_source, merge_with)
+
             # json_merge_patch always returns a new object, so
             # no copy needed
             need_copy = False
 
         elif '$ref' in obj:
             if len(obj.keys()) != 1:
-                raise ParseError("$ref object may not have any other properties",
-                                 obj)
+                raise ParseError(
+                    "$ref object may not have any other properties", obj)
 
             sch = servicedef.find(obj['$ref'])
             obj = sch.input
