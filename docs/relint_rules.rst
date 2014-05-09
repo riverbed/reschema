@@ -22,11 +22,9 @@ General schema issues / naming conventions (001)
 
   * **C0005**: A resource, type, link, or relation name must be at least 2 characters long (eg, pick a better name)
 
-  * **C0006**: A description field must start with a capital letter
+  * **C0006**: The service definition must have a valid description field, starting with a capital letter
 
-  * **C0007**: The service definition must have a valid description field
-
-  * **C0008**: The indentation should be 4 spaces
+  * **C0007**: The indentation should be 4 spaces
 
 -------
 
@@ -62,21 +60,21 @@ Links (100)
 
   * **W0103**: A ``set`` link response must be null or the representation of the resource it belongs to
 
-  * **W0101**: A ``delete`` link cannot have a request body
+  * **W0104**: A ``delete`` link cannot have a request body
 
-  * **W0102**: A ``delete`` link cannot have a response body
+  * **W0105**: A ``delete`` link cannot have a response body
 
-  * **W0103**: A ``create`` link must have a request body
+  * **W0106**: A ``create`` link must have a request body
 
-  * **W0104**: A ``create`` link request must not be the same as the resource it belongs to
+  * **W0107**: A ``create`` link request must not be the same as the resource it belongs to
 
-  * **W0105**: A ``create`` link response must not be the same as the resource it belongs to
+  * **W0108**: A ``create`` link response must not be the same as the resource it belongs to
 
-  * **W0106**: A ``self`` link must be self-describing; the path template should be fulfilled by the representation returned via ``get``
+  * **W0109**: A ``self`` link must be self-describing; the path template should be fulfilled by the representation returned via ``get``
 
-  * **W0107**: The link cannot be resolved; the URI parameters require client input
+  * **W0110**: The link cannot be resolved; the URI parameters require client input
 
-  * **W0108**: The relation cannot be followed; the URI template for the target resource requires client input
+  * **W0111**: The relation cannot be followed; the URI template for the target resource requires client input
 
 -------
 
@@ -107,5 +105,5 @@ Resources (300)
 ---------------
 
   * **C0300**: A resource must have a valid description field
-  * **C0301**: Collection resource should be an object
+  * **C0301**: A resource should be an object
   * **C0302**: Collection resource object should have an 'items' property
