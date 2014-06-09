@@ -262,7 +262,6 @@ def link_std_has_no_description(link):
 def link_non_std_has_description(link):
     if link.name not in Validator.STD_LINKS:
         check_valid_description(link.description, link.id, required=True)
-        raise ValidationFail("non standard '{0}' link must have a description")
 
 
 @Validator.link('W0100')
