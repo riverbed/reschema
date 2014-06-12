@@ -748,7 +748,7 @@ class Number(NumberOrInteger):
     _type = 'number'
 
     def __init__(self, input, name, parent, **kwargs):
-        super(Number, self).__init__(self._type, (int, float), input,
+        super(Number, self).__init__(self._type, (int, float, long), input,
                                      name, parent, **kwargs)
 
 _register_type(Number)
@@ -758,7 +758,7 @@ class Integer(NumberOrInteger):
     _type = 'integer'
 
     def __init__(self, input, name, parent, **kwargs):
-        super(Integer, self).__init__(self._type, (int,), input,
+        super(Integer, self).__init__(self._type, (int, long), input,
                                       name, parent, **kwargs)
 
 _register_type(Integer)

@@ -555,6 +555,10 @@ class TestJsonSchema(TestSchemaBase):
         self.assertIsInstance(schema.str_detailed(), basestring)
 
     def test_number(self):
+        self.check_valid("type: number\n",
+                         valid=[0, 1, 1.0, long(1), -1, -1.0, long(-1)],
+                         invalid=['hi'])
+
         self.check_valid("type: number\n"
                          "minimum: 2\n"
                          "maximum: 100\n",
@@ -588,6 +592,10 @@ class TestJsonSchema(TestSchemaBase):
         self.assertIsInstance(schema.str_detailed(), basestring)
 
     def test_integer(self):
+        self.check_valid("type: integer\n",
+                         valid=[0, 1, long(1), -1, long(-1)],
+                         invalid=[1.0, float(1), -1.0, float(-1), 'hi'])
+
         self.check_valid("type: integer\n"
                          "minimum: 2\n"
                          "maximum: 100\n",
