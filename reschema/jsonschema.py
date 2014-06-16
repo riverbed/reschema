@@ -810,7 +810,7 @@ class Object(Schema):
             self.properties[prop] = c
             self.children.append(c)
 
-        parse_prop(self, input, 'required')
+        parse_prop(self, input, 'required', valid_type=[list])
 
         ap = parse_prop(None, input, 'additionalProperties',
                         valid_type=[dict, bool])

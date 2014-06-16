@@ -646,6 +646,14 @@ class TestJsonSchema(TestSchemaBase):
                          )
 
     def test_object_simple(self):
+        # required field not a list
+        self.check_bad_schema("type: object\n"
+                              "required: foo\n"
+                              "properties:\n"
+                              "  foo: { type: number }\n"
+                              "  bar: { type: number }\n",
+                              ParseError)
+
         self.check_valid("type: object\n"
                          "properties:\n"
                          "   foo: { type: number }\n"
