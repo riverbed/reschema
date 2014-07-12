@@ -144,13 +144,15 @@ class Schema(object):
         self.servicedef = servicedef
 
         # Save the original input object that was parsed, other
-        # references may want this later
+        # references may want this later.
+        #
+        # If used elsewhere, it *must* be considered read only.
+        # Make a copy if the input needs to be changed
         self.input = parser.input
 
-        # Give the Parser better context for setting attributes and
-        # logging messages
-        parser.obj = self
-        parser.name = self.fullname()
+        # Give the Parser context now that this object is created
+        # for setting attributes and logging messages
+        parser.set_context(self.fullname(), self)
 
         if not self.is_ref():
             parser.parse('label', name, types=[str, unicode])
@@ -245,7 +247,7 @@ class Schema(object):
                 ((parent.fullname() + '.') if parent else '', name),
                 input)
 
-        with Parser(input, None, name) as parser:
+        with Parser(input, name) as parser:
             if name is None:
                 name = parser.parse('label', types=[str, unicode], save=False)
                 if name is None:
@@ -1041,7 +1043,7 @@ class Relation(object):
         self.vars = None
         self.id = id
 
-        with Parser(input, self, self.fullname()) as parser:
+        with Parser(input, self.fullname(), self) as parser:
             # Lazy resolution because references may be used before they
             # are defined
             self._resource = None
@@ -1135,7 +1137,7 @@ class Link(object):
         self.servicedef = schema.servicedef
         self.id = id
 
-        with Parser(input, self, self.fullname()) as parser:
+        with Parser(input, self.fullname(), self) as parser:
             parser.parse('description', '')
             parser.parse('notes', '')
             parser.parse('example')

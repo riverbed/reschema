@@ -4,7 +4,17 @@ from reschema.util import check_type
 
 class Parser(object):
     """ Input object parser. """
-    def __init__(self, input, obj, name):
+    def __init__(self, input, name, obj=None):
+        """Create a parser object.
+
+        :param dict input: input to parser
+        :param name: name for logging / error
+        :param obj: object on which to set attributes
+
+        If obj is None, it may be set later with set_context(), but
+        obj may not be altered once set.
+
+        """
         if not isinstance(input, dict):
             raise ParseError('%s: definition should be a dictionary, got: %s' %
                              (name, type(input)), input)
@@ -23,8 +33,22 @@ class Parser(object):
             self.check_input()
             return True
 
+    def set_context(self, name, obj):
+        """Set the object to modify when parsing.
+
+        :param name: name for logging / error
+        :param obj: object on which to set attributes
+
+        """
+        if self.obj is not None:
+            raise ParseError('Cannot change object context, '
+                             'only set if it was None', input)
+
+        self.obj = obj
+        self.name = name
+
     def parse(self, prop, default_value=None, required=False,
-              types=None, save=True):
+              types=None, save=True, save_as=None):
         """Parse a key from the input dict.
 
         :param string prop: Property name to extract
@@ -40,8 +64,10 @@ class Parser(object):
             parameter.
 
         :param save: If true, save the property to this parsers
-            object, if false, don't save.  Otherwise use save value as
-            the property name to save as
+            object, if false, don't save (value is returned)
+
+        :param str save_as: the property name to save as, defaults
+            to ``prop``
 
         :raises reschema.exceptions.ParseError: if the type of the
             data is incorrect or if the property is required but
@@ -62,11 +88,12 @@ class Parser(object):
         else:
             val = default_value
 
-        if save is not False and self.obj is not None:
-            if save is True:
-                setattr(self.obj, prop, val)
-            else:
-                setattr(self.obj, save, val)
+        if save:
+            if not self.obj:
+                raise ParseError(
+                    'Cannot save prop %s, no obj set' % prop, self.input)
+
+            setattr(self.obj, save_as or prop, val)
 
         return val
 
