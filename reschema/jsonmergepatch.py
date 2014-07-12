@@ -25,7 +25,7 @@ def resolve_refs(servicedef, obj):
     need_copy = True
     while True:
         if '$merge' in obj:
-            with Parser(obj['$merge'], None, 'resolve_refs') as merge_parser:
+            with Parser(obj['$merge'], 'resolve_refs') as merge_parser:
                 merge_source = merge_parser.parse('source', save=False,
                                                   required=True)
                 merge_with = merge_parser.parse('with', save=False,

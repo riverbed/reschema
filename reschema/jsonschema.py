@@ -622,9 +622,9 @@ class Merge(DynamicSchema):
         # Lazy resolution because references may be used before they
         # are defined
         merge = parser.parse('$merge', required=True, save=False)
-        with Parser(merge, self, name) as merge_parser:
-            merge_parser.parse('source', save='_mergesource', required=True)
-            merge_parser.parse('with', save='_mergewith', required=True)
+        with Parser(merge, name, self) as merge_parser:
+            merge_parser.parse('source', save_as='_mergesource', required=True)
+            merge_parser.parse('with', save_as='_mergewith', required=True)
 
         self._refschema = None
 
