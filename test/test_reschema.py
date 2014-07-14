@@ -742,6 +742,134 @@ class TestJsonSchema(TestSchemaBase):
         link = schema.links['self']
         self.assertIsInstance(repr(link), str)
 
+    def test_empty_tags(self):
+        """
+        Verify tags member is added even if not specified in schema
+        """
+
+        # Base Schema-derived types
+        schemas = ["type: integer",
+                   "type: number",
+                   "type: boolean",
+                   "type: string",
+                   "type: 'null'",
+                   "type: timestamp",
+                   "type: timestamp-hp",
+
+                   ("type: array\n"
+                    "items: { type: number }"),
+
+                   ("type: object\n"
+                    "properties:\n"
+                    "   foo: { type: string }")]
+
+        for schema in schemas:
+            parsed = self.parse(schema)
+            self.assertEquals(parsed.tags, {})
+
+        # Links and relations
+        schema = self.parse("type: integer\n"
+                            "links:\n"
+                            "   self: { path: $/foo }\n"
+                            "relations:\n"
+                            "   foo:\n"
+                            "      resource: /foo")
+
+        self.assertEquals(schema.links['self'].tags, {})
+        self.assertEquals(schema.relations['foo'].tags, {})
+
+        # Typeless schema fragment
+        schema = self.parse("oneOf:\n"
+                            "- type: integer\n"
+                            "- type: 'null'")
+        self.assertEquals(schema.tags, {})
+
+    def test_tags(self):
+        """
+        Verify tags behavior
+        """
+
+        # tag-not-a-dict: Schema-derived types, links, and relations
+        self.check_bad_schema("type: integer\n"
+                              "tags: hi\n",
+                              ParseError)
+
+        self.check_bad_schema("type: integer\n"
+                              "tags: [ hi ]\n",
+                              ParseError)
+
+        self.check_bad_schema("type: integer\n"
+                              "links:\n"
+                              "  self:\n"
+                              "    path: /foo\n"
+                              "    tags: [ hi ]",
+                              ParseError)
+
+        self.check_bad_schema("type: integer\n"
+                              "relations:\n"
+                              "  foo:\n"
+                              "    resource: /foo\n"
+                              "    tags: [ hi ]",
+                              ParseError)
+
+        # Base Schema-derived types
+        schemas = [("type: integer\n"
+                    "tags: { hi: ~, quit: bye }"),
+
+                   ("type: number\n"
+                    "tags: { hi: ~, quit: bye }"),
+
+                   ("type: boolean\n"
+                    "tags: { hi: ~, quit: bye }"),
+
+                   ("type: string\n"
+                    "tags: { hi: ~, quit: bye }"),
+
+                   ("type: 'null'\n"
+                    "tags: { hi: ~, quit: bye }"),
+
+                   ("type: timestamp\n"
+                    "tags: { hi: ~, quit: bye }"),
+
+                   ("type: timestamp-hp\n"
+                    "tags: { hi: ~, quit: bye }"),
+
+                   ("type: array\n"
+                    "tags: { hi: ~, quit: bye }\n"
+                    "items:\n"
+                    "    type: number"),
+
+                   ("type: object\n"
+                    "tags: { hi: ~, quit: bye }\n"
+                    "properties:\n"
+                    "   foo: { type: string }")]
+
+        for schema in schemas:
+            parsed = self.parse(schema)
+            self.assertEquals(parsed.tags, {'hi': None, 'quit': 'bye'})
+
+        # Links and relations
+        schema = self.parse("type: integer\n"
+                            "links:\n"
+                            "   self:\n"
+                            "      path: $/foo\n"
+                            "      tags: { linktag: ~ }\n"
+                            "relations:\n"
+                            "   foo:\n"
+                            "      resource: /foo\n"
+                            "      tags: { relationtag: ~ }")
+
+        self.assertEquals(schema.links['self'].tags, {'linktag': None})
+        self.assertEquals(schema.relations['foo'].tags, {'relationtag': None})
+
+        # Schema fragment that uses oneOf/etc to define itself as allowing
+        # multiple types
+        schema = self.parse("oneOf:\n"
+                            "- type: integer\n"
+                            "- type: 'null'\n"
+                            "tags: { This is my tag: ~ }")
+        self.assertEquals(schema.tags, {'This is my tag': None})
+
 class TestSchema(TestSchemaBase):
 
     def setUp(self):
@@ -1080,6 +1208,7 @@ provider: {provider}
 name: {name}
 version: {version}
 title: {title}
+tags: {tags}
 """
 
     def create_service(self, **kwargs):
@@ -1089,7 +1218,8 @@ title: {title}
             'provider': "'riverbed'",
             'name': "'test'",
             'version': "'1.0'",
-            'title': "'Test REST API'"
+            'title': "'Test REST API'",
+            'tags': {}
             }
         schema_vars.update(kwargs)
         text = self.SERVICE_DEF_TEMPLATE.format(**schema_vars)
@@ -1102,6 +1232,17 @@ title: {title}
     def test_numeric_version(self):
         with self.assertRaises(ParseError):
             self.create_service(version=1.0)
+
+    def test_service_tags(self):
+        """
+        Verify top-level tag behavior
+        """
+
+        service_def = self.create_service()
+        self.assertEquals(service_def.tags, {})
+
+        service_def = self.create_service(tags='{hi: ~, quit: bye}')
+        self.assertEquals(service_def.tags, {'hi': None, 'quit': 'bye'})
 
 if __name__ == '__main__':
     logging.basicConfig(filename='test.log', level=logging.DEBUG)

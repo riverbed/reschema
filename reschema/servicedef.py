@@ -295,6 +295,7 @@ class ServiceDef(object):
         parse_prop(self, obj, 'request_headers', None)
         parse_prop(self, obj, 'response_headers', None)
         parse_prop(self, obj, 'errors', None)
+        parse_prop(self, obj, 'tags', valid_type=dict, default_value={})
 
         logger.debug("parsed %s, adding" % self.id)
 

@@ -162,6 +162,7 @@ class Schema(object):
                    parent.readOnly if (parent and
                                        isinstance(parent, Schema)) else False,
                    valid_type=bool)
+        parse_prop(self, input, 'tags', valid_type=dict, default_value={})
 
         parse_prop(self, input, 'xmlTag')
         parse_prop(self, input, 'xmlSchema')
@@ -998,6 +999,7 @@ class Relation(object):
         self._resource_id = schema.servicedef.expand_id(ref_id)
 
         self.vars = parse_prop(self, input, 'vars')
+        parse_prop(self, input, 'tags', valid_type=dict, default_value={})
 
         _check_input(self.fullname(), input)
 
@@ -1090,6 +1092,7 @@ class Link(object):
         parse_prop(self, input, 'example')
         parse_prop(self, input, 'method')
         parse_prop(self, input, 'authorization')
+        parse_prop(self, input, 'tags', valid_type=dict, default_value={})
 
         pathdef = parse_prop(None, input, 'path')
         if pathdef is not None:
