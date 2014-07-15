@@ -237,7 +237,7 @@ class ServiceDef(object):
 
         with Parser(obj, '<servicdef>', self) as parser:
             parser.parse('$schema', required=True, save_as='schema')
-            if self.schema != "http://support.riverbed.com/apis/service_def/2.1":
+            if self.schema != "http://support.riverbed.com/apis/service_def/2.2":
                 raise UnsupportedSchema("Unsupported schema format: %s" %
                                         self.schema)
 

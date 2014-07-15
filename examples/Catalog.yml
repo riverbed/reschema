@@ -1,4 +1,4 @@
-$schema: "http://support.riverbed.com/apis/service_def/2.1"
+$schema: "http://support.riverbed.com/apis/service_def/2.2"
 id: "http://support.riverbed.com/apis/catalog/1.0"
 provider: "riverbed"
 name: "catalog"

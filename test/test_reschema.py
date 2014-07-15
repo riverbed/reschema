@@ -1251,7 +1251,7 @@ tags: {tags}
 
     def create_service(self, **kwargs):
         schema_vars = {
-            'schema_id': "'http://support.riverbed.com/apis/service_def/2.1'",
+            'schema_id': "'http://support.riverbed.com/apis/service_def/2.2'",
             'id': "'http://support.riverbed.com/apis/test/1.0'",
             'provider': "'riverbed'",
             'name': "'test'",
