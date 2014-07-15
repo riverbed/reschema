@@ -536,3 +536,11 @@ resources:
                val:
                   minimum: 15
                   maximum: 20
+
+   test_self_after_get:
+      type: boolean
+      links:
+         # Verify that the get method path resolution works
+         # when self is defined after get
+         get: { method: GET }
+         self: { path: "$/test_self_after_get" }

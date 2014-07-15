@@ -178,8 +178,11 @@ class Schema(object):
                                                    (self.id, key)))
 
             self.links = OrderedDict()
-            for key, value in parser.parse('links', {},
-                                           types=dict, save=False).iteritems():
+            links = parser.parse('links', {}, types=dict, save=False)
+            links_keys = Link.order_link_keys(links.keys())
+
+            for key in links_keys:
+                value = links[key]
                 check_type(key, value, dict)
                 self.links[key] = Link(value, key, self,
                                        id='%s/links/%s' % (self.id, key))
@@ -1189,6 +1192,17 @@ class Link(object):
     def __repr__(self):
         return "<jsonschema.%s '%s'>" % (self.__class__.__name__,
                                          self.fullid())
+
+    @classmethod
+    def order_link_keys(self, keys):
+        # Make sure to process 'self' first, other links may rely
+        # on 'self.path'
+        if 'self' in keys:
+            new_keys = ['self']
+            keys.remove('self')
+            new_keys.extend(keys)
+            return new_keys
+        return keys
 
     def is_ref(self):
         return False
