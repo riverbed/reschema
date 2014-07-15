@@ -757,7 +757,8 @@ class NumberOrInteger(Schema):
         parser.parse('enum', types=list)
 
     def validate(self, input):
-        if not any(isinstance(input, t) for t in self.allowed_types):
+        if (  not any(isinstance(input, t) for t in self.allowed_types) or
+              isinstance(input, bool)):
             raise ValidationError("%s should be a number, got '%s'" %
                                   (self.fullname(), type(input)), self)
 

@@ -557,7 +557,7 @@ class TestJsonSchema(TestSchemaBase):
     def test_number(self):
         self.check_valid("type: number\n",
                          valid=[0, 1, 1.0, long(1), -1, -1.0, long(-1)],
-                         invalid=['hi'])
+                         invalid=['hi', True, False])
 
         self.check_valid("type: number\n"
                          "minimum: 2\n"
