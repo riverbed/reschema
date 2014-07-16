@@ -1,0 +1,41 @@
+$schema: "http://support.riverbed.com/apis/service_def/2.1"
+id: "http://support.riverbed.com/apis/test/1.0"
+provider: "riverbed"
+name: "test"
+version: "1.0"
+title: "Test REST API"
+defaultAuthorization: "required"
+
+types:
+    foo:
+        type: integer
+
+    type1:
+        $ref: '#/types/foo'
+
+    type2:
+        $ref: '#/types/foo'
+        description: val
+
+    type3:
+        $ref: '#/types/foo'
+        # This is an important reference
+        type: object
+        description: val {braced}
+        properties:
+           key1:
+               $ref: '#/types/foo'
+               minimum: 10
+               maximum: 20
+           key2: { type: integer }
+        additionalProperties: False
+
+    type4:
+        # This is an important reference
+        # This is an important reference
+        $ref: '#/types/foo'
+        # Added two keys
+        description: >
+            value 1.1
+            value 1.2
+        # And thats all

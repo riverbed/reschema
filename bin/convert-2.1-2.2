@@ -1,0 +1,249 @@
+#!/usr/bin/env python
+
+# Copyright (c) 2013-2014 Riverbed Technology, Inc.
+#
+# This software is licensed under the terms and conditions of the
+# MIT License set forth at:
+#   https://github.com/riverbed/reschema/blob/master/LICENSE ("License").
+# This software is distributed "AS IS" as set forth in the License.
+
+import os
+import re
+import sys
+import logging
+import tempfile
+from collections import namedtuple
+from optparse import OptionParser
+
+from reschema.yaml_loader import marked_load, obj_key_node
+from yaml.parser import ParserError
+
+# Count of warnings found
+warnings = 0
+
+
+def warn(msg):
+    global warnings
+    warnings = warnings + 1
+    logger.warn(msg)
+    sys.stderr.write("WARNING: %s\n" % msg)
+
+#
+# Command line options
+#
+parser = OptionParser()
+parser.add_option('-f', dest='filename', action="store",
+                  help='ServiceDef v2.1 file to process')
+
+parser.add_option('-o', dest='outfilename', default=None, action="store",
+                  help='Output filename defaults to <filename>-v2.2.yml')
+
+(options, args) = parser.parse_args()
+
+#
+# Filenames
+#
+if not options.filename:
+    print("Input filename is required")
+    parser.print_usage()
+    sys.exit(1)
+
+(base, ext) = os.path.splitext(options.filename)
+
+if not options.outfilename:
+    outfilename = "%s-v2.2%s" % (base, ext)
+else:
+    outfilename = options.outfilename
+
+logfilename = "%s.log" % outfilename
+
+# Set up logging
+logging.basicConfig(filename=logfilename, level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+RefLine = namedtuple('RefLine', ['start', 'ref', 'end', 'target'])
+spaces_re = re.compile("^( *)[^ ]")
+
+
+def test_one_liner(kv_line):
+    """Test if a kv_line can be represented as one line safely."""
+    o1 = marked_load("with:\n  %s" % kv_line.lstrip())
+    try:
+        o2 = marked_load("with: { %s }" % kv_line.lstrip())
+        return o1, o2, (o1['with'] == o2['with'])
+    except ParserError:
+        return None, None
+
+
+class FIter(object):
+    """Iterate lines in a file tracking line numbers."""
+    def __init__(self, file):
+        self._iter = iter(file)
+        self.lineno = 0
+
+    def next(self):
+        line = self._iter.next()
+        self.lineno = self.lineno + 1
+        return line.rstrip()
+
+
+class Processor(object):
+    """Process an service definition."""
+
+    def __init__(self, infilename, outfilename):
+
+        cur_infilename = infilename
+
+        # Need to make multiple process() passes to handle nested $ref instances
+        # This is not necessarily the most efficient approach, but it a lot
+        # simpler in code.
+        done = False
+        while True:
+            outfile = tempfile.NamedTemporaryFile(delete=False)
+            done = self.process(cur_infilename, outfile)
+
+            outfile.close()
+            if done:
+                break
+            cur_infilename = outfile.name
+
+        os.rename(outfile.name, outfilename)
+
+
+    def process(self, infilename, outfile):
+        # Convert the input file to yaml to glean a few
+        # key pieces of information
+        infile = open(infilename, 'r')
+        logger.info("Processing file: %s" % infilename)
+
+        obj = marked_load(infile)
+
+        # Walk the entire service defintion and look for
+        # uses of '$ref' which need to be converted to '$merge'
+        # This is every '$ref' instance that has another property
+        # at the same level:
+        #
+        #   foo:
+        #       $ref: <something>
+        #       <prop1>: <value1>
+        #       <prop2>: <value2>
+        #
+        #   foo:
+        #       $merge:
+        #           source: { $ref: <something> }
+        #           with:
+        #               <prop1>: <value1>
+        #               <prop2>: <value2>
+        #
+
+        # Collect the line numbers of all $ref instances found
+        self.ref_lines = []
+        self.parse_obj(obj)
+
+        # Rewind the input and process it line by line
+        infile.seek(0)
+
+        fiter = FIter(infile)
+        refiter = iter(self.ref_lines)
+
+        try:
+            curref = refiter.next()
+            done = False
+        except StopIteration:
+            curref = None
+            done = True
+
+        while True:
+            try:
+                line = fiter.next()
+            except StopIteration:
+                break
+
+            if curref and fiter.lineno == curref.start:
+                logger.info("%s:%d: Updated $ref to $merge" %
+                            (options.filename, fiter.lineno))
+                m = spaces_re.match(line)
+                indent = len(m.group(1))
+                outfile.write("%*s$merge:\n" % (indent, ''))
+                outfile.write("%*ssource: { $ref: '%s' }\n" %
+                              (indent+4, '', curref.target))
+                lines = []
+
+                trailing_blank = False
+                while True:
+                    if fiter.lineno != curref.ref and line.strip():
+                        lines.append(line)
+                    if not line.strip():
+                        trailing_blank = True
+                    if fiter.lineno == curref.end:
+                        break
+                    line = fiter.next()
+
+                logger.info("lines[0/%d]: %s" % (len(lines), lines[0]))
+                if len(lines) == 1 and test_one_liner(lines[0]):
+                    line = lines[0].lstrip()
+                    outfile.write("%*swith: { %s }\n" %
+                                  (indent+4, '', line))
+                else:
+                    outfile.write("%*swith:\n" % (indent+4, ''))
+                    for line in lines:
+                        outfile.write("%*s%s\n" % (8, '', line))
+
+                if trailing_blank:
+                    outfile.write("\n")
+
+                try:
+                    curref = refiter.next()
+                except StopIteration:
+                    curref = None
+                continue
+
+            # Version changed from 2.1 to 2.2
+            if "http://support.riverbed.com/apis/service_def/2.1" in line:
+                outfile.write("$schema: 'http://support.riverbed.com"
+                              "/apis/service_def/2.2'\n")
+                logger.info("%s:%d: Updated $schema version from 2.1 to 2.2" %
+                            (options.filename, fiter.lineno))
+                continue
+
+            outfile.write(line)
+            outfile.write('\n')
+
+        infile.close()
+        outfile.close()
+
+        return done
+
+    def parse_obj(self, obj):
+        if isinstance(obj, dict):
+            if ('$ref' in obj):
+                if len(obj.keys()) > 1:
+                    ref = obj_key_node(obj, '$ref')
+                    refline = ref.start_mark.line + 1
+                    pstart, pend  = (obj.start_mark.line+1, obj.end_mark.line)
+                    self.ref_lines.append(RefLine(pstart, refline, pend, obj['$ref']))
+                else:
+                    # Good $ref line, do move along
+                    return
+            else:
+                # No $ref, but there may be an embedded $ref
+                for v in obj.values():
+                    self.parse_obj(v)
+        elif isinstance(obj, list):
+            for v in obj:
+                self.parse_obj(v)
+
+p = Processor(options.filename, outfilename)
+
+sys.stderr.write("\nInput:  %s\n" % options.filename)
+sys.stderr.write("Output: %s\n" % outfilename)
+sys.stderr.write("Log:    %s\n" % logfilename)
+if warnings > 0:
+    sys.stderr.write("\nFile did not convert cleanly, see output file "
+                     "and log for details.\n\n")
+    sys.exit(1)
+else:
+    sys.stderr.write("\nSuccessfully converted the file to version 2.1.  "
+                     "Please verify the results.\n\n")
+
+sys.exit(0)
