@@ -547,7 +547,7 @@ def resource_has_valid_description(resource):
 @Validator.resource('C0301')
 def resource_type_is_object(resource):
     # NOTE: relint does not load referenced files yet.
-    if resource.isRef():
+    if resource.is_ref():
         print("Referenced schema not validated: '{0}'".format(
               resource.refschema.fullid()))
         return
