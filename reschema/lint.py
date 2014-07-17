@@ -12,14 +12,152 @@ class ValidationFail(Exception):
     pass
 
 
-class Rule(object):
+class RuleDisabled(Exception):
+    """
+    Rule is disabled due to a relint-disable tag
+    """
+    pass
+
+
+class RuleBase(object):
+    """
+    Base class for a rule validator.  Exists mainly to isolate the validation
+    callback from the code which checks for relint-disable tags in the
+    servicedef.
+    """
+
     def __init__(self, rule_id, rule_func):
+        """
+        :param rule_id: Rule's Id, for disabling/reporting purposes
+        :param rule_func: Rule validation callback
+        """
+
         self.rule_id = rule_id
-        self.rule_func = rule_func
+        self._rule_func = rule_func
+
+
+class ServicedefRule(RuleBase):
+    """
+    Wrapper for a rule validating the top-level servicedef information
+    """
+
+    def __call__(self, sdef):
+        """
+        Run the rule
+
+        :param sdef: servicedef to verify
+        :type sdef: reschema.servicedef.ServiceDef
+        """
+
+        if self.rule_id in sdef.tags.get('relint-disable', []):
+            raise RuleDisabled
+
+        self._rule_func(sdef)
+
+
+class TypeRule(RuleBase):
+    """
+    Wrapper for a rule validating a type definition
+    """
+
+    def __call__(self, typedef):
+        """
+        Run the rule
+
+        :param typedef: typedef to verify
+        :type typedef: reschema.jsonschema.Schema or derived
+        """
+
+        # Grab the disabled rules from the typedef and the servicedef
+        disabled = (typedef.tags.get('relint-disable', []) +
+                    typedef.servicedef.tags.get('relint-disable', []))
+
+        if self.rule_id in disabled:
+            raise RuleDisabled
+
+        self._rule_func(typedef)
+
+
+class ResourceRule(RuleBase):
+    """
+    Wrapper for a rule validating a resource
+    """
+
+    def __call__(self, resource):
+        """
+        Run the rule
+
+        :param resource: resource to verify
+        :type resource: reschema.jsonschema.Schema or derived
+        """
+
+        # Grab the disabled rules from the typedef and the servicedef
+        disabled = (resource.tags.get('relint-disable', []) +
+                    resource.servicedef.tags.get('relint-disable', []))
+
+        if self.rule_id in disabled:
+            raise RuleDisabled
+
+        self._rule_func(resource)
+
+
+class LinkRule(RuleBase):
+    """
+    Wrapper for a rule validating a link
+    """
+
+    def __call__(self, link):
+        """
+        Run the rule
+
+        :param typedef: typedef to verify
+        :type typedef: reschema.jsonschema.Link
+        """
+
+        # Grab the disabled rules from the link, resource, and the servicedef
+        disabled = (link.tags.get('relint-disable', []) +
+                    link.schema.tags.get('relint-disable', []) +
+                    link.servicedef.tags.get('relint-disable', []))
+
+        if self.rule_id in disabled:
+            raise RuleDisabled
+
+        self._rule_func(link)
+
+
+class Result(object):
+    """ Helper to hold the result of a rule execution """
+
+    PASSED = 0
+    FAILED = 1
+    DISABLED = 2
+
+    def __init__(self, rule_id, obj_id, status, message=''):
+        """
+        :param rule_id: Rule that executed
+        :param obj_id: Object checked (in json-pointer format)
+        :param status: PASSED/FAILED/DISABLED
+        :param message: Optional additional information
+        """
+
+        self.rule_id = rule_id
+        self.obj_id = obj_id
+        self.status = status
+        self.message = message
+
+    def __str__(self):
+        status = ['PASS', 'FAIL', 'DIS '][self.status]
+
+        return '{0}: [{1}] - \'{2}\' {3}'.format(status, self.rule_id,
+                                                 self.obj_id, self.message)
 
 
 class Validator(object):
-    SCHEMA_RULES = []
+    """
+    Class which collects rules and executes them, tracking pass/fail/etc
+    """
+
+    SERVICEDEF_RULES = []
     TYPE_RULES = []
     RESOURCE_RULES = []
     LINK_RULES = []
@@ -29,83 +167,135 @@ class Validator(object):
 
     @classmethod
     def servicedef(cls, rule_id):
+        """ Registers a rule which operates on the servicedef """
         def wrapper(rule_func):
-            cls.SCHEMA_RULES.append(Rule(rule_id, rule_func))
-            return rule_func
+            rule = ServicedefRule(rule_id, rule_func)
+            cls.SERVICEDEF_RULES.append(rule)
+
+            return rule
         return wrapper
 
     @classmethod
     def typedef(cls, rule_id):
+        """ Registers a rule which operates on a type """
         def wrapper(rule_func):
-            cls.TYPE_RULES.append(Rule(rule_id, rule_func))
-            return rule_func
+            rule = TypeRule(rule_id, rule_func)
+            cls.TYPE_RULES.append(rule)
+
+            return rule
         return wrapper
 
     @classmethod
     def resource(cls, rule_id):
+        """ Registers a rule which operates on a resource """
         def wrapper(rule_func):
-            cls.RESOURCE_RULES.append(Rule(rule_id, rule_func))
-            return rule_func
+            rule = ResourceRule(rule_id, rule_func)
+            cls.RESOURCE_RULES.append(rule)
+
+            return rule
         return wrapper
 
     @classmethod
     def link(cls, rule_id):
+        """ Registers a rule which operates on a link """
         def wrapper(rule_func):
-            cls.LINK_RULES.append(Rule(rule_id, rule_func))
-            return rule_func
+            rule = LinkRule(rule_id, rule_func)
+            cls.LINK_RULES.append(rule)
+
+            return rule
         return wrapper
 
     @classmethod
     def set_verbosity(cls, level):
         cls.VERBOSITY = level
 
-    @classmethod
-    def run_rules(cls, rules, obj):
-        failures = 0
+    def run(self, sdef):
+        """
+        Run validation against the servicedef.
+        :param sdef: service definition to run against
+        :type sdef: reschema.servicedef.ServiceDef
+
+        :return: A list of Result objects
+        """
+
+        results = []
+
+        print('Checking top-level schema correctness')
+        results.extend(self._run_rules(Validator.SERVICEDEF_RULES, sdef))
+
+        print('Checking types')
+        for typedef in sdef.type_iter():
+            results.extend(self._run_rules(Validator.TYPE_RULES, typedef))
+
+        print('Checking resources')
+        for resource in sdef.resource_iter():
+            results.extend(self._run_rules(Validator.RESOURCE_RULES, resource))
+
+            if self.VERBOSITY > 1:
+                print('Checking links for \'{}\''.format(resource.name))
+
+            for _, link in resource.links.items():
+                results.extend(self._run_rules(Validator.LINK_RULES, link))
+
+        return results
+
+    def _run_rules(self, rules, obj):
+        """
+        Runs a block of rules on a schema object
+
+        :param rules: List of rules to run
+        :param obj: reschema object to run the rules on
+
+        :return: List of Result objects
+        """
+
+        results = []
         for rule in rules:
             try:
-                rule.rule_func(obj)
-                if cls.VERBOSITY > 1:
-                    print('PASS: [{0}] - \'{1}\''.format(rule.rule_id, obj.id))
+                rule(obj)
+                result = Result(rule.rule_id, obj.id, Result.PASSED)
 
             except ValidationFail as exc:
-                failures += 1
-                print('FAIL: [{0}] - <{1}> - {2}'.format(
-                      rule.rule_id, obj.id, exc.message))
+                result = Result(rule.rule_id, obj.id, Result.FAILED,
+                                exc.message)
 
-        return failures
+            except RuleDisabled:
+                result = Result(rule.rule_id, obj.id, Result.DISABLED)
+
+            if (result.status != Result.PASSED) or (self.VERBOSITY > 1):
+                print(str(result))
+
+            results.append(result)
+
+        return results
 
 
 def lint(sdef):
     """
     Performs all checks on a loaded service definition.
+
+    :param sdef:
+    :type sdef: reschema.servicedef.ServiceDef
+
+    :returns: total number of failures
     """
 
-    failures = 0
-    print('Checking top-level schema correctness')
-    failures += Validator.run_rules(Validator.SCHEMA_RULES, sdef)
+    validator = Validator()
+    results = validator.run(sdef)
 
-    print('Checking types')
-    for typedef in sdef.type_iter():
-        failures += Validator.run_rules(Validator.TYPE_RULES, typedef)
-
-    print('Checking resources')
-    for resource in sdef.resource_iter():
-        failures += Validator.run_rules(Validator.RESOURCE_RULES, resource)
-        print('Checking links for resource \'{}\''.format(resource.name))
-        for _, link in resource.links.items():
-            failures += Validator.run_rules(Validator.LINK_RULES, link)
+    failures = len([r for r in results if r.status == Result.FAILED])
 
     # TODO: load cross-referenced schemas
     print('Checking referenced types and resources')
     errors = sdef.check_references()
+    xref_failures = 0
     if errors:
         for error in errors:
             print('FAIL: [E0001] - \'{0}\' cannot be resolved'
                   .format(error.id))
-        failures += len(errors)
+        xref_failures += len(errors)
 
-    return failures
+    return xref_failures + failures
 
 
 def check_valid_identifier(name, location):
@@ -287,8 +477,8 @@ def link_set_request_is_the_resource(link):
 @Validator.link('W0103')
 def link_set_response_is_null_or_resource(link):
     if ('set' == link.name and
-       'null' != link.response.typestr and
-       link.schema.id != link.response.id):
+            'null' != link.response.typestr and
+            link.schema.id != link.response.id):
         raise ValidationFail("'set' link response must be empty or '{0}'"
                              .format(link.schema.id))
 

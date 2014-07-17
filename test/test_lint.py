@@ -6,14 +6,13 @@
 # This software is distributed "AS IS" as set forth in the License.
 from __future__ import print_function
 
-import sys
 import os
-import imp
 import logging
 import unittest
+import yaml
 
 import reschema
-import reschema.lint
+from reschema.lint import Validator, Result
 
 logger = logging.getLogger(__name__)
 
@@ -21,41 +20,249 @@ TEST_PATH = os.path.abspath(os.path.dirname(__file__))
 SERVICE_DEF_TEST = os.path.join(TEST_PATH, 'service_test.yml')
 SERVICE_DEF_TEST_REF = os.path.join(TEST_PATH, 'service_test_ref.yml')
 
-
-class TestLint(unittest.TestCase):
-
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
-
-    def test_lint(self):
-        r = reschema.ServiceDef()
-        r.load(SERVICE_DEF_TEST)
-        reschema.lint.lint(r)
+SERVICE_DEF_TEMPLATE = '''
+$schema: http://support.riverbed.com/apis/service_def/2.2
+id: http://support.riverbed.com/apis/test/1.0
+provider: riverbed
+name: test
+version: '1.0'
+title: Test relint
+tags: {}
+'''
 
 
-class TestRelint(unittest.TestCase):
+def create_servicedef(fragment):
+    """
+    Parse a schema fragment and create a ServiceDef instance that can be
+    passed to the Validator.
 
-    def setUp(self):
-        pass
+    The fragment should be from an outermost section of a servicedef file, eg
+    "types:
+       test:
+         type: integer"
 
-    def tearDown(self):
-        pass
+    The fragment will be merged into a template servicedef instance; any keys
+    in the fragment override/are added to the template.
 
-    def test_relint(self):
-        # load the relint script as a module
-        path = os.path.realpath(os.path.join(TEST_PATH, '..', 'bin', 'relint'))
-        module = imp.load_source('relint', path)
+    :param fragment: Schema fragment to merge in
+    :return: TestValidator
+    """
 
-        # grab the 'start' function, which is relint's version of main()
-        start = getattr(module, 'start')
+    data = yaml.load(fragment)
 
-        # set up argv
-        sys.argv = [sys.argv[0], SERVICE_DEF_TEST]
+    template = yaml.load(SERVICE_DEF_TEMPLATE)
+    template.update(data)
 
-        failures = start()
+    sdef = reschema.ServiceDef.create_from_text(yaml.dump(template),
+                                                format='yaml')
+    return sdef
+
+
+class TestLintBase(unittest.TestCase):
+    """
+    Helper class to run and validate relint calls
+    """
+
+    def check_result(self, rule_id, obj_id, result, fragment):
+        """
+        Verifies that relint declares  on the given fragment
+
+        :param rule_id: Rule to verify passed
+        :param obj_id: Object to verify rule passed on
+        :param result: Test result expected
+        :param fragment: fragment to check
+        """
+
+        sdef = create_servicedef(fragment)
+        validator = Validator()
+        results = validator.run(sdef)
+
+        found_result = None
+        for r in results:
+            if (r.rule_id == rule_id) and (r.obj_id == obj_id):
+                found_result = r
+                break
+
+        self.assertTrue(found_result,
+                        'No result for {} on {} found'.format(rule_id, obj_id))
+        self.assertEqual(found_result.status, result,
+                         'Unexpected {}'.format(found_result))
+
+
+class TestRelintDisable(TestLintBase):
+    """
+    Collection of tests that verify the relint-disable handling
+    """
+
+    def test_servicedef_disable(self):
+        """
+        Verifies top-level servicedef checks honor disable
+        """
+        self.check_result('W0002',
+                          'http://support.riverbed.com/apis/test/1.0',
+                          Result.DISABLED,
+                          'tags:\n'
+                          '   relint-disable: [ W0002 ] ')
+
+    def test_resource_disable(self):
+        """
+        Verifies resource-level checks can be disabled
+        """
+
+        # Tag disable at the top level
+        self.check_result('C0003', '#/resources/foo_resource', Result.DISABLED,
+                          'tags:\n'
+                          '   relint-disable: [ C0003 ]\n'
+                          '\n'
+                          'resources:\n'
+                          '  foo_resource:\n'
+                          '    type: string\n'
+                          '    links:\n'
+                          '      self: { path: /foo }')
+
+        # Tag disable on the resource
+        self.check_result('C0003', '#/resources/foo_resource', Result.DISABLED,
+                          'resources:\n'
+                          '  foo_resource:\n'
+                          '    tags:\n'
+                          '       relint-disable: [ C0003 ]\n'
+                          '    type: string\n'
+                          '    links:\n'
+                          '      self: { path: /foo }')
+
+    def test_type_disable(self):
+        """
+        Verifies type-level checks can be disabled
+        """
+
+        # Tag disable at the top level
+        self.check_result('C0002', '#/types/foo_type', Result.DISABLED,
+                          'tags:\n'
+                          '   relint-disable: [ C0002 ]\n'
+                          '\n'
+                          'types:\n'
+                          '  foo_type:\n'
+                          '    type: string')
+
+        # Tag disable on the type
+        self.check_result('C0002', '#/types/foo_type', Result.DISABLED,
+                          'types:\n'
+                          '  foo_type:\n'
+                          '    tags:\n'
+                          '       relint-disable: [ C0002 ]\n')
+
+    def test_link_disable(self):
+        """
+        Verifies link-level checks can be disabled
+        """
+
+        # Tag disable at the top level
+        self.check_result('C0004', '#/resources/foo/links/foo_link',
+                          Result.DISABLED,
+                          'tags:\n'
+                          '   relint-disable: [ C0004 ]\n'
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: string\n'
+                          '    links:\n'
+                          '      self: { path: /foo }\n'
+                          '      foo_link: { path: /foo/nope }')
+
+        # Tag disable on the resource
+        self.check_result('C0004', '#/resources/foo/links/foo_link',
+                          Result.DISABLED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: string\n'
+                          '    tags:\n'
+                          '       relint-disable: [ C0004 ]\n'
+                          '    links:\n'
+                          '      self: { path: /foo }\n'
+                          '      foo_link: { path: /foo/nope }')
+
+        # Tag disable on the link
+        self.check_result('C0004', '#/resources/foo/links/foo_link',
+                          Result.DISABLED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: string\n'
+                          '    links:\n'
+                          '      self: { path: /foo }\n'
+                          '      foo_link:\n'
+                          '        path: /foo/nope\n'
+                          '        tags:\n'
+                          '           relint-disable: [ C0004 ]')
+
+
+class TestRelint(TestLintBase):
+
+    def test_rule_W0002(self):
+        self.check_result('W0002',
+                          'http://support.riverbed.com/apis/test/1.0',
+                          Result.PASSED,
+                          'id: http://support.riverbed.com/apis/test/1.0\n'
+                          'name: test')
+
+        self.check_result('W0002',
+                          'http://support.riverbed.com/apis/wrongid/1.0',
+                          Result.FAILED,
+                          'id: http://support.riverbed.com/apis/wrongid/1.0\n'
+                          'name: test')
+
+        self.check_result('W0002',
+                          'http://support.riverbed.com/apis/test/1.0',
+                          Result.FAILED,
+                          'id: http://support.riverbed.com/apis/test/1.0\n'
+                          'name: wrongname')
+
+    def test_rule_C0002(self):
+        """ Type should not end in _type """
+
+        self.check_result('C0002', '#/types/foo', Result.PASSED,
+                          'types:\n'
+                          '  foo: { type: string }')
+
+        self.check_result('C0002', '#/types/foo_type', Result.FAILED,
+                          'types:\n'
+                          '  foo_type: { type: string }')
+
+    def test_rule_C0003(self):
+        """ Resource should not end in _resource """
+
+        self.check_result('C0003', '#/resources/foo', Result.PASSED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: string\n'
+                          '    links:\n'
+                          '      self: { path: /foo }')
+
+        self.check_result('C0003', '#/resources/foo_resource', Result.FAILED,
+                          'resources:\n'
+                          '  foo_resource:\n'
+                          '    type: string\n'
+                          '    links:\n'
+                          '      self: { path: /foo }')
+
+    def test_rule_C0004(self):
+        """ Link should not end in _link """
+
+        self.check_result('C0004', '#/resources/foo/links/bar',
+                          Result.PASSED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: string\n'
+                          '    links:\n'
+                          '      self: { path: /foo }\n'
+                          '      bar: { path: /foo/yep }')
+
+        self.check_result('C0004', '#/resources/foo/links/foo_link',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: string\n'
+                          '    links:\n'
+                          '      self: { path: /foo }\n'
+                          '      foo_link: { path: /foo/nope }')
 
 
 if __name__ == '__main__':
