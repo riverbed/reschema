@@ -12,6 +12,7 @@ import re
 import sys
 import logging
 import tempfile
+import shutil
 from collections import namedtuple
 from optparse import OptionParser
 
@@ -107,7 +108,7 @@ class Processor(object):
                 break
             cur_infilename = outfile.name
 
-        os.rename(outfile.name, outfilename)
+        shutil.move(outfile.name, outfilename)
 
 
     def process(self, infilename, outfile):
