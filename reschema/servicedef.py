@@ -280,14 +280,6 @@ class ServiceDef(object):
                                    servicedef=self)
                 self.resources[resource] = sch
 
-                if 'self' not in sch.links:
-                    raise ParseError("Resource '%s' missing 'self' link" %
-                                     resource, input_)
-                if sch.links['self'].path is None:
-                    raise ParseError(
-                        "Resource '%s' 'self' link must define 'path'" %
-                        resource, input_)
-
             parser.parse('tasks')
             parser.parse('request_headers')
             parser.parse('response_headers')
