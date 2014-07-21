@@ -1056,6 +1056,25 @@ class TestSchema(TestSchemaBase):
                          valid=[None],
                          invalid=[{}, [], 0, '', ' '])
 
+    def test_array_constraints(self):
+        r = self.r.resources['test_array_min']
+
+        self.check_valid(r,
+                         valid=[range(10), range(15)],
+                         invalid=[range(0), range(9)])
+
+        r = self.r.resources['test_array_max']
+
+        self.check_valid(r,
+                         valid=[range(0), range(10)],
+                         invalid=[range(11)])
+
+        r = self.r.resources['test_array_min_max']
+
+        self.check_valid(r,
+                         valid=[range(10), range(20)],
+                         invalid=[range(0), range(9), range(21)])
+
 
 class TestExpandId(unittest.TestCase):
 

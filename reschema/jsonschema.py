@@ -993,6 +993,16 @@ class Array(Schema):
             raise ValidationError("%s should be an array, got '%s'" %
                                   (self.fullname(), type(input)), self)
 
+        if (self.minItems is not None) and (len(input) < self.minItems):
+            raise ValidationError(
+                "%s: input must be at least %d items, got %d" %
+                (self.fullname(), self.minItems, len(input)), self)
+
+        if (self.maxItems is not None) and (len(input) > self.maxItems):
+            raise ValidationError(
+                "%s: input must be no more than %d items, got %d" %
+                (self.fullname(), self.maxItems, len(input)), self)
+
         for o in input:
             self.items.validate(o)
 
