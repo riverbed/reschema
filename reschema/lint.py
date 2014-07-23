@@ -3,7 +3,7 @@
 from __future__ import print_function
 
 import re
-
+import uritemplate
 
 class ValidationFail(Exception):
     """
@@ -559,3 +559,14 @@ def resource_type_is_object(resource):
 @Validator.typedef('C0200')
 def type_has_valid_description(typedef):
     check_valid_description(typedef.description, typedef.id, required=True)
+
+
+@Validator.link('E0105')
+def link_uritemplate_param_declared(link):
+    params = uritemplate.variables(link.path.template)
+    for param in params:
+        if param not in link.schema.properties:
+            raise ValidationFail("The parameter '{0}' in the uritemplate '{1}'"
+                                 " is not declared in properties in '{2}'".
+                                 format(param, link.path.template, 
+                                        link.schema.fullname()))

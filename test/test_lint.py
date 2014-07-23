@@ -264,6 +264,25 @@ class TestRelint(TestLintBase):
                           '      self: { path: /foo }\n'
                           '      foo_link: { path: /foo/nope }')
 
+    def test_rule_E0105(self):
+        '''A parameter in URI template must be declared in schema properties'''
+
+        self.check_result('E0105', '#/resources/foo/links/self', Result.PASSED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      id: { type: number }\n'
+                          '    links:\n'
+                          '      self: { path: "/foos/{id}" }\n')
+        self.check_result('E0105', '#/resources/foo/links/self', Result.FAILED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      id: { type: number }\n'
+                          '    links:\n'
+                          '      self: { path: "/foos/{non_present}" }\n')
 
 if __name__ == '__main__':
     logging.basicConfig(filename='test.log', level=logging.DEBUG)

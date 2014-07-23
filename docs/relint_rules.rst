@@ -88,6 +88,8 @@ Links (100)
 
   * **E0104**: The relation is invalid.  The specified resource cannot be found
 
+  * **E0105**: A parameter in URI template must be declared in schema properties
+
 
 Types (200)
 -----------
