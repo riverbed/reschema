@@ -166,7 +166,9 @@ class TestRelintDisable(TestLintBase):
                           '    type: string\n'
                           '    links:\n'
                           '      self: { path: /foo }\n'
-                          '      foo_link: { path: /foo/nope }')
+                          '      foo_link:\n'
+                          '        path: /foo/nope\n'
+                          '        method: GET')
 
         # Tag disable on the resource
         self.check_result('C0004', '#/resources/foo/links/foo_link',
@@ -178,7 +180,9 @@ class TestRelintDisable(TestLintBase):
                           '       relint-disable: [ C0004 ]\n'
                           '    links:\n'
                           '      self: { path: /foo }\n'
-                          '      foo_link: { path: /foo/nope }')
+                          '      foo_link:\n'
+                          '        path: /foo/nope\n'
+                          '        method: GET')
 
         # Tag disable on the link
         self.check_result('C0004', '#/resources/foo/links/foo_link',
@@ -190,6 +194,7 @@ class TestRelintDisable(TestLintBase):
                           '      self: { path: /foo }\n'
                           '      foo_link:\n'
                           '        path: /foo/nope\n'
+                          '        method: GET\n'
                           '        tags:\n'
                           '           relint-disable: [ C0004 ]')
 
@@ -253,7 +258,9 @@ class TestRelint(TestLintBase):
                           '    type: string\n'
                           '    links:\n'
                           '      self: { path: /foo }\n'
-                          '      bar: { path: /foo/yep }')
+                          '      bar:\n'
+                          '        path: /foo/yep\n'
+                          '        method: GET')
 
         self.check_result('C0004', '#/resources/foo/links/foo_link',
                           Result.FAILED,
@@ -262,7 +269,9 @@ class TestRelint(TestLintBase):
                           '    type: string\n'
                           '    links:\n'
                           '      self: { path: /foo }\n'
-                          '      foo_link: { path: /foo/nope }')
+                          '      foo_link:\n'
+                          '        path: /foo/nope\n'
+                          '        method: GET')
 
     def test_rule_E0105(self):
         '''A parameter in URI template must be declared in schema properties'''

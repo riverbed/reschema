@@ -1162,6 +1162,11 @@ class Link(object):
             else:
                 self.path = None
 
+            # Everything other than 'self' requires a method set
+            if (name != 'self') and not self.method:
+                raise ParseError("Link '%s' does not have a method set"
+                                 % str(self), parser.input)
+
             self._request = parser.parse('request', save=False)
             if self._request:
                 self._request = Schema.parse(self._request,

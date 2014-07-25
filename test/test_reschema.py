@@ -714,6 +714,16 @@ class TestJsonSchema(TestSchemaBase):
                               "      method: GET\n",
                               ParseError)
 
+        # missing method on non-self link
+        self.check_bad_schema("type: object\n"
+                              "properties:\n"
+                              "   foo: { type: number }\n"
+                              "links:\n"
+                              "   self: { path: '$/authors' }\n"
+                              "   nomethod:\n"
+                              "      response: { type: integer }",
+                              ParseError)
+
         # extra link properties
         self.check_bad_schema("type: object\n"
                               "properties:\n"
