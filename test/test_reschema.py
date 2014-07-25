@@ -18,8 +18,7 @@ from reschema.exceptions import (ValidationError, NoManager,
                                  MissingParameter, ParseError,
                                  InvalidServiceId)
 
-from reschema.jsonschema import (Object, Integer, Number, String,
-                                 Array, Multi, Schema)
+from reschema.jsonschema import (Object, Integer, String, Array, Schema)
 from reschema import yaml_loader, ServiceDef, ServiceDefManager
 
 logger = logging.getLogger(__name__)
@@ -278,15 +277,24 @@ class TestCatalog(unittest.TestCase):
         self.assertEqual(a0.by_pointer('2/'), book)
         self.assertEqual(a0.by_pointer('2/id'), book['id'])
 
-        with self.assertRaises(KeyError): book['foo']
-        with self.assertRaises(KeyError): book.by_pointer('1/')
-        with self.assertRaises(TypeError): a['a']
-        with self.assertRaises(TypeError): a['10a']
-        with self.assertRaises(KeyError): a0.by_pointer('3/')
+        with self.assertRaises(KeyError):
+            book['foo']
 
-        # Unlike book, auther does not specify odditionalProperties
+        with self.assertRaises(KeyError):
+            book.by_pointer('1/')
+
+        with self.assertRaises(TypeError):
+            a['a']
+
+        with self.assertRaises(TypeError):
+            a['10a']
+
+        with self.assertRaises(KeyError):
+            a0.by_pointer('3/')
+
+        # Unlike book, auther does not specify additionalProperties
         author = self.r.resources['author']
-        empty = Schema.parse({}, name='<prop>', parent=author)
+        Schema.parse({}, name='<prop>', parent=author)
         self.assertEqual(author['randomjunk'], author.additional_properties)
         self.assertEqual(author.additional_properties,
                          author.children[-1])
@@ -330,7 +338,8 @@ class TestCatalogLinks(unittest.TestCase):
                                  .relations['books']
                                  .resolve(author_data))
 
-        logger.debug('author.relations.books uri: %s %s %s' % (uri, params, values))
+        logger.debug('author.relations.books uri: %s %s %s'
+                     % (uri, params, values))
 
 
 class TestSchemaBase(unittest.TestCase):
@@ -409,17 +418,15 @@ class TestJsonSchema(TestSchemaBase):
     def test_empty(self):
         e = Schema.parse({}, servicedef=self.servicedef)
         self.check_valid(e,
-            valid=[
-                None,
-                True,
-                False,
-                -1,
-                9999999.33333333,
-                'some string',
-                ['array', 42, {}],
-                {'object': 'stuff', 'nmber': 2},
-            ],
-            invalid=[])
+                         valid=[None,
+                                True,
+                                False,
+                                -1,
+                                9999999.33333333,
+                                'some string',
+                                ['array', 42, {}],
+                                {'object': 'stuff', 'nmber': 2}],
+                         invalid=[])
 
     def test_boolean(self):
         self.check_valid("type: boolean\n",
@@ -468,7 +475,7 @@ class TestJsonSchema(TestSchemaBase):
 
                          invalid=["11",
                                   11,
-                                  [ 1, 2 ],
+                                  [1, 2],
                                   "abc",
                                   "123",
                                   "1234512345"],
@@ -632,17 +639,21 @@ class TestJsonSchema(TestSchemaBase):
         self.check_valid("type: timestamp\n",
 
                          valid=[1234567890,
-                                1234567890.123],
+                                1234567890.123,
+                                long(1)],
                          invalid=['foo',
-                                  {'timestamp': 1234567890}]
+                                  {'timestamp': 1234567890},
+                                  True, False]
                          )
 
         self.check_valid("type: timestamp-hp\n",
 
                          valid=[1234567890,
-                                1234567890.123000],
+                                1234567890.123000,
+                                long(1)],
                          invalid=['foo',
-                                  {'timestamp': 1234567890}]
+                                  {'timestamp': 1234567890},
+                                  True, False]
                          )
 
     def test_object_simple(self):
@@ -880,6 +891,7 @@ class TestJsonSchema(TestSchemaBase):
                             "tags: { This is my tag: ~ }")
         self.assertEquals(schema.tags, {'This is my tag': None})
 
+
 class TestSchema(TestSchemaBase):
 
     def setUp(self):
@@ -897,26 +909,25 @@ class TestSchema(TestSchemaBase):
 
         self.check_valid(r,
 
-                         valid = [ {'prop_number': 1,
-                                    'prop_array': [ 99, 98 ] },
-                                   {'prop_number': 1,
-                                    'prop_string': 'foo',
-                                    'prop_array': [ 99, 98 ] },
-                                   ],
+                         valid=[{'prop_number': 1,
+                                 'prop_array': [99, 98]},
+                                {'prop_number': 1,
+                                 'prop_string': 'foo',
+                                 'prop_array': [99, 98]},
+                                ],
 
-                         invalid = [
-                                     { 'prop_array': [ 99, 98 ] },
-                                     { 'prop_array': [ 99, 98 ],
-                                       'prop_string': 'foo' } ])
+                         invalid=[{'prop_array': [99, 98]},
+                                  {'prop_array': [99, 98],
+                                   'prop_string': 'foo'}])
 
     def test_anyof1_validation(self):
         r = self.r.resources['test_anyof1']
         self.check_valid(r,
 
-                         valid = [ {'a1': 1, 'a2': 2},
-                                   {'a3': 3, 'a4': 4} ],
+                         valid=[{'a1': 1, 'a2': 2},
+                                {'a3': 3, 'a4': 4}],
 
-                         invalid = [ {'a1': 3, 'a4': 4} ] )
+                         invalid=[{'a1': 3, 'a4': 4}])
 
     @pytest.mark.xfail
     def test_anyof1_indexing(self):
@@ -936,22 +947,21 @@ class TestSchema(TestSchemaBase):
         r = self.r.resources['test_anyof2']
         self.check_valid(r,
 
-                         valid = [ {'a1': 1, 'a2': 5},
-                                   {'a1': 1, 'a2': 9},
-                                   {'a1': 2, 'a2': 11},
-                                   {'a1': 2, 'a2': 19},
-                                   ],
+                         valid=[{'a1': 1, 'a2': 5},
+                                {'a1': 1, 'a2': 9},
+                                {'a1': 2, 'a2': 11},
+                                {'a1': 2, 'a2': 19}],
 
-                         invalid = [ {'a1': 3, 'a2': 4},
-                                     {'a1': 1, 'a3': 5},
-                                     {'a1': 1, 'a2': 4},
-                                     {'a1': 1, 'a2': "foo"},
-                                     {'a1': 1, 'a2': 10},
-                                     {'a1': 2, 'a2': 4},
-                                     {'a1': 2, 'a2': 5},
-                                     {'a1': 2, 'a2': 9},
-                                     {'a1': 2, 'a2': 29},
-                                     ] )
+                         invalid=[{'a1': 3, 'a2': 4},
+                                  {'a1': 1, 'a3': 5},
+                                  {'a1': 1, 'a2': 4},
+                                  {'a1': 1, 'a2': "foo"},
+                                  {'a1': 1, 'a2': 10},
+                                  {'a1': 2, 'a2': 4},
+                                  {'a1': 2, 'a2': 5},
+                                  {'a1': 2, 'a2': 9},
+                                  {'a1': 2, 'a2': 29}]
+                         )
 
     @pytest.mark.xfail
     def test_anyof2_indexing(self):
@@ -969,22 +979,20 @@ class TestSchema(TestSchemaBase):
         r = self.r.resources['test_anyof3']
         self.check_valid(r,
 
-                         valid = [ {'a1': 1, 'a2': 5},
-                                   {'a1': 1, 'a2': 9},
-                                   {'a1': 2, 'a2': 11},
-                                   {'a1': 2, 'a2': 19},
-                                   ],
+                         valid=[{'a1': 1, 'a2': 5},
+                                {'a1': 1, 'a2': 9},
+                                {'a1': 2, 'a2': 11},
+                                {'a1': 2, 'a2': 19}],
 
-                         invalid = [ {'a1': 3, 'a2': 4},
-                                     {'a1': 1, 'a3': 5},
-                                     {'a1': 1, 'a2': 4},
-                                     {'a1': 1, 'a2': "foo"},
-                                     {'a1': 1, 'a2': 10},
-                                     {'a1': 2, 'a2': 4},
-                                     {'a1': 2, 'a2': 5},
-                                     {'a1': 2, 'a2': 9},
-                                     {'a1': 2, 'a2': 29},
-                                     ] )
+                         invalid=[{'a1': 3, 'a2': 4},
+                                  {'a1': 1, 'a3': 5},
+                                  {'a1': 1, 'a2': 4},
+                                  {'a1': 1, 'a2': "foo"},
+                                  {'a1': 1, 'a2': 10},
+                                  {'a1': 2, 'a2': 4},
+                                  {'a1': 2, 'a2': 5},
+                                  {'a1': 2, 'a2': 9},
+                                  {'a1': 2, 'a2': 29}])
 
         a2 = ServiceDef.find(self.r, '#/resources/test_anyof3/a2')
         self.assertEqual(a2.fullid(True),
@@ -994,34 +1002,33 @@ class TestSchema(TestSchemaBase):
         r = self.r.resources['test_allof']
         self.check_valid(r,
 
-                         valid = [ {'a1': 1,
-                                    'a2': { 'a21_number': 2,
-                                            'a21_string': 'foo' },
-                                    'a3': 'f3'},
+                         valid=[{'a1': 1,
+                                 'a2': {'a21_number': 2,
+                                        'a21_string': 'foo'},
+                                 'a3': 'f3'},
 
-                                   {'a1': 2,
-                                    'a2': { 'a22_number': 2,
-                                            'a22_string': 'foo',
-                                            'a22_array' : [ 1, 2, 3 ]},
-                                    'a3': 'd1' },
-                                   ],
+                                {'a1': 2,
+                                 'a2': {'a22_number': 2,
+                                        'a22_string': 'foo',
+                                        'a22_array': [1, 2, 3]},
+                                 'a3': 'd1'}],
 
-                         invalid = [ {'a1': 2,
-                                      'a2': { 'a21_number': 2,
-                                              'a21_string': 'foo' },
-                                      'a3': 'f3'},
+                         invalid=[{'a1': 2,
+                                   'a2': {'a21_number': 2,
+                                          'a21_string': 'foo'},
+                                   'a3': 'f3'},
 
-                                     {'a1': 1,
-                                      'a2': { 'a21_numbe': 2,
-                                              'a21_string': 'foo' },
-                                      'a3': 'f3'},
+                                  {'a1': 1,
+                                   'a2': {'a21_numbe': 2,
+                                          'a21_string': 'foo'},
+                                   'a3': 'f3'},
 
-                                     {'a1': 1,
-                                      'a2': { 'a21_number': 2,
-                                              'a21_string': 'foo',
-                                              'a21_bad': 4 },
-                                      'a3': 'f3'},
-                                     ])
+                                  {'a1': 1,
+                                   'a2': {'a21_number': 2,
+                                          'a21_string': 'foo',
+                                          'a21_bad': 4},
+                                   'a3': 'f3'}]
+                         )
 
     @pytest.mark.xfail
     def test_allof_indexing(self):
@@ -1037,24 +1044,23 @@ class TestSchema(TestSchemaBase):
         r = self.r.resources['test_oneof']
         self.check_valid(r,
 
-                         valid = [ {'a1': 1, 'a2': 21 },
-                                   {'a1': 5, 'a2': 10 },
-                                   ],
+                         valid=[{'a1': 1, 'a2': 21},
+                                {'a1': 5, 'a2': 10}],
 
-                         invalid = [ {'a1': 1, 'a2': 2 },
-                                     {'a1': 5, 'a2': 20 },])
+                         invalid=[{'a1': 1, 'a2': 2},
+                                  {'a1': 5, 'a2': 20}])
 
     def test_not(self):
         r = self.r.resources['test_not']
         self.check_valid(r,
-                         valid = [1, 2, 3, 4, 6, 9, 10],
-                         invalid = [0, 5, 7, 8, 11, 12, 13, 200] )
+                         valid=[1, 2, 3, 4, 6, 9, 10],
+                         invalid=[0, 5, 7, 8, 11, 12, 13, 200])
 
     def test_self_params(self):
         r = self.r.resources['test_self_params']
         self.check_valid(r,
-                         valid = [ 1, 2 ],
-                         invalid = ['one', '2'])
+                         valid=[1, 2],
+                         invalid=['one', '2'])
 
     def test_link_req_resp_defaults(self):
         r = self.r.resources['test_methods']
@@ -1117,31 +1123,28 @@ class TestSchemaMerge(TestSchemaBase):
 
     def test_merge(self):
         r = self.s.find('#/resources/test_merge')
-        (self.check_valid
-         (r,
-          valid = [{'val': 10}, {'val': 14}, {'val': 20}],
-          invalid = [{'val': 9}, {'val': 21}]))
+        (self.check_valid(r,
+                          valid=[{'val': 10}, {'val': 14}, {'val': 20}],
+                          invalid=[{'val': 9}, {'val': 21}]))
 
     def test_merge_simple_ref(self):
         r = self.s.find('#/resources/test_merge_simple_ref')
-        (self.check_valid
-         (r,
-          valid = [{'p1': 10}, {'p1': 14}, {'p1': 20}],
-          invalid = [{'p1': 9}, {'p1': 21}]))
+        (self.check_valid(r,
+                          valid=[{'p1': 10}, {'p1': 14}, {'p1': 20}],
+                          invalid=[{'p1': 9}, {'p1': 21}]))
 
     def test_merge_double_ref(self):
         r = self.s.find('#/resources/test_merge_double_ref')
-        (self.check_valid
-         (r,
-          valid = [{'p2': 10}, {'p2': 14}, {'p2': 20}],
-          invalid = [{'p2': 9}, {'p2': 21}]))
+        (self.check_valid(r,
+                          valid=[{'p2': 10}, {'p2': 14}, {'p2': 20}],
+                          invalid=[{'p2': 9}, {'p2': 21}]))
 
     def test_merge_merge(self):
         r = self.s.find('#/resources/test_merge_merge')
-        (self.check_valid
-         (r,
-          valid = [ {'val': 15}, {'val': 20}],
-          invalid = [{'val': 9}, {'val': 10}, {'val': 14},{'val': 21}]))
+        (self.check_valid(r,
+                          valid=[{'val': 15}, {'val': 20}],
+                          invalid=[{'val': 9}, {'val': 10},
+                                   {'val': 14}, {'val': 21}]))
 
 
 class TestSchemaRef(TestSchemaBase):
@@ -1159,16 +1162,14 @@ class TestSchemaRef(TestSchemaBase):
 
     def test_ref_type(self):
         r1 = self.s2.find('#/resources/test_ref_type')
-        (self.check_valid
-         (r1,
-          valid = [{'val': 10}, {'val': 14}, {'val': 20}],
-          invalid = [{'val': 9}, {'val': 21}]))
+        (self.check_valid(r1,
+                          valid=[{'val': 10}, {'val': 14}, {'val': 20}],
+                          invalid=[{'val': 9}, {'val': 21}]))
 
         r2 = r1.relations['full'].resource
-        (self.check_valid
-         (r2,
-          valid = [{'val': 10}, {'val': 14}, {'val': 20}],
-          invalid = [{'val': 9}, {'val': 21}]))
+        (self.check_valid(r2,
+                          valid=[{'val': 10}, {'val': 14}, {'val': 20}],
+                          invalid=[{'val': 9}, {'val': 21}]))
 
         r3 = self.s2.find('#/resources/test_ref_type_full')
 
@@ -1177,14 +1178,18 @@ class TestSchemaRef(TestSchemaBase):
     def test_ref_remote_types(self):
         r = self.s2.find('#/resources/test_ref_remote_types')
 
-        (self.check_valid
-         (r,
-          valid = [ {'prop_boolean': True, 'prop_number_limits': 12},
-                    {'prop_boolean': True, 'prop_number_limits': 19}],
+        (self.check_valid(r,
+                          valid=[{'prop_boolean': True,
+                                  'prop_number_limits': 12},
+                                 {'prop_boolean': True,
+                                  'prop_number_limits': 19}],
 
-          invalid = [ {'prop_boolean': 1, 'prop_number_limits': 12},
-                      {'prop_boolean': True, 'prop_number_limits': 22},
-                      {'prop_boolean': False, 'prop_number_limits': 19}]))
+                          invalid=[{'prop_boolean': 1,
+                                    'prop_number_limits': 12},
+                                   {'prop_boolean': True,
+                                    'prop_number_limits': 22},
+                                   {'prop_boolean': False,
+                                    'prop_number_limits': 19}]))
 
     def test_ref_relations(self):
         item = self.s1.find('#/resources/test_item')

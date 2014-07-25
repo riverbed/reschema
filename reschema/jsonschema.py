@@ -219,7 +219,6 @@ class Schema(object):
             else:
                 self.not_ = None
 
-        #print "Adding schema: %s - parent %s" % (self.fullid(), parent)
         self.schemas[self.fullid()] = self
 
     def __repr__(self):
@@ -527,7 +526,9 @@ class DynamicSchema(Schema):
         return getattr(self.refschema, name)
 
     def by_pointer(self, pointer):
-        """Index into a schema by breaking a data-based jsonpointer into parts."""
+        """
+        Index into a schema by breaking a data-based jsonpointer into parts.
+        """
         return self.refschema.by_pointer(pointer)
 
 
@@ -561,9 +562,9 @@ class Ref(DynamicSchema):
 
             # XXXCJ - Hopefully we can drop this deepcopy -- need to
             # make sure docs and sleepwalker don't rely on it
-            #sch = copy.deepcopy(sch)
-            #sch.parent = self
-            #sch.parent.api = self.api
+            # sch = copy.deepcopy(sch)
+            # sch.parent = self
+            # sch.parent.api = self.api
 
             self._refschema = sch
             for link in sch.links:
@@ -601,7 +602,9 @@ class Ref(DynamicSchema):
         return getattr(self.refschema, name)
 
     def by_pointer(self, pointer):
-        """Index into a schema by breaking a data-based jsonpointer into parts."""
+        """
+        Index into a schema by breaking a data-based jsonpointer into parts.
+        """
         return self.refschema.by_pointer(pointer)
 
 _register_type(Ref)
@@ -611,7 +614,8 @@ class Merge(DynamicSchema):
     _type = '$merge'
 
     def __init__(self, parser, name, parent, **kwargs):
-        DynamicSchema.__init__(self, Merge._type, parser, name, parent, **kwargs)
+        DynamicSchema.__init__(self, Merge._type, parser, name, parent,
+                               **kwargs)
 
         # Lazy resolution because references may be used before they
         # are defined
@@ -748,8 +752,8 @@ class NumberOrInteger(Schema):
         parser.parse('enum', types=list)
 
     def validate(self, input):
-        if (  not any(isinstance(input, t) for t in self.allowed_types) or
-              isinstance(input, bool)):
+        if (not any(isinstance(input, t) for t in self.allowed_types) or
+                isinstance(input, bool)):
             raise ValidationError("%s should be a number, got '%s'" %
                                   (self.fullname(), type(input)), self)
 
@@ -826,7 +830,8 @@ class Timestamp(Schema):
         Schema.__init__(self, Timestamp._type, parser, name, parent, **kwargs)
 
     def validate(self, input):
-        if not any(isinstance(input, t) for t in (int, float)):
+        if (not any(isinstance(input, t) for t in (int, float, long)) or
+                isinstance(input, bool)):
             raise ValidationError("'%s' expected to be a number for %s" %
                                   (input, self.fullname()), self)
         super(Timestamp, self).validate(input)
@@ -838,10 +843,12 @@ class TimestampHP(Schema):
     _type = 'timestamp-hp'
 
     def __init__(self, parser, name, parent, **kwargs):
-        Schema.__init__(self, TimestampHP._type, parser, name, parent, **kwargs)
+        Schema.__init__(self, TimestampHP._type, parser, name, parent,
+                        **kwargs)
 
     def validate(self, input):
-        if not any(isinstance(input, t) for t in (int, float)):
+        if (not any(isinstance(input, t) for t in (int, float, long)) or
+                isinstance(input, bool)):
             raise ValidationError("'%s' expected to be a number for %s" %
                                   (input, self.fullname()), self)
         super(TimestampHP, self).validate(input)
