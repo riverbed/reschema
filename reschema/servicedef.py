@@ -247,6 +247,9 @@ class ServiceDef(object):
                 raise ParseError("Service definition 'id' property must be a "
                                  "fully qualified URI: %s" % id)
 
+            # Expand all relative $ref targets to full absoslute references
+            parser.expand_refs(self.id)
+
             parser.parse('provider', required=True)
             parser.parse('name', required=True)
             parser.parse('version', required=True, types=[str, unicode])
@@ -333,41 +336,6 @@ class ServiceDef(object):
     def find_type(self, name):
         return self.types[name]
 
-    def expand_id(self, reference):
-        """ Expand a reference using this servicedef as a relative base
-
-        Returns a fully qualified reference based.
-
-        :param reference: string reference to resolve
-
-        The `reference` may be one of three supported forms:
-
-           * `<server><path>#<fragment>` - fully qualified reference
-
-           * `<path>#<fragment>` - reference is resolved against the
-             same <server> as `servicedef`.  <path> starts with '/'
-
-           * `#<fragment>` - reference is resolved against the same
-             <server> and <path> as `servicedef`
-
-        :raises InvalidReference: `reference` does not appear to
-            be to the correct syntax
-
-        """
-        parsed_reference = urlparse.urlparse(reference)
-        if parsed_reference.netloc:
-            # Already a fully qualified address, let urlparse rejoin
-            # to normalize it
-            return parsed_reference.geturl()
-
-        if reference[0] not in ['/', '#']:
-            raise InvalidReference("relative references should "
-                                   "start with '#' or '/'",
-                                   reference)
-
-        # urljoin will take care of the rest
-        return urlparse.urljoin(self.id, reference)
-
     def find(self, reference):
         """ Resolve a reference using this servicedef as a relative base
 
@@ -394,11 +362,15 @@ class ServiceDef(object):
         if parsed_reference.netloc or parsed_reference.path:
             # More than just a fragment, expand the id and find the full
             # servicedef by id
-            full_reference = self.expand_id(reference)
+            full_reference = Parser.expand_ref(self.id, reference)
             reference_id = urlparse.urldefrag(full_reference)[0]
-            if self.manager is None:
-                raise NoManager(reference)
-            servicedef = self.manager.find_by_id(reference_id)
+
+            if reference_id == self.id:
+                servicedef = self
+            else:
+                if self.manager is None:
+                    raise NoManager(reference)
+                servicedef = self.manager.find_by_id(reference_id)
         else:
             servicedef = self
 

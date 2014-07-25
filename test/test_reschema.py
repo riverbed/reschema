@@ -16,10 +16,11 @@ import reschema
 
 from reschema.exceptions import (ValidationError, NoManager,
                                  MissingParameter, ParseError,
-                                 InvalidServiceId)
+                                 InvalidServiceId, InvalidReference)
 
 from reschema.jsonschema import (Object, Integer, String, Array, Schema)
 from reschema import yaml_loader, ServiceDef, ServiceDefManager
+from reschema.parser import Parser
 
 logger = logging.getLogger(__name__)
 
@@ -447,7 +448,7 @@ class TestJsonSchema(TestSchemaBase):
                        "properties:\n"
                        "    id: { type: number }\n"
                        "    name: { type: string }\n"
-                       "    billing_address: { $ref: address }\n")
+                       "    billing_address: { type: striing }\n")
 
     def test_ref_invalid(self):
         schema = self.parse("type: object\n"
@@ -456,11 +457,17 @@ class TestJsonSchema(TestSchemaBase):
                             "    name: { type: string }\n"
                             "    billing_address: { $ref: '#/address' }\n")
 
-        with self.assertRaises(InvalidServiceId):
+        with self.assertRaises(InvalidReference):
             schema.validate({'id': 2,
                              'name': 'Frozzle',
                              'billing_address': "doesn't exist"})
 
+    def test_no_manager(self):
+        schema = self.parse("type: object\n"
+                            "properties:\n"
+                            "    id: { type: number }\n"
+                            "    name: { type: string }\n"
+                            "    billing_address: { $ref: '/api/other/1.0#/types/address' }\n")
         schema.servicedef.manager = None
         with self.assertRaises(NoManager):
             schema.validate({'id': 2,
@@ -1100,17 +1107,18 @@ class TestExpandId(unittest.TestCase):
 
     def test_local_ref(self):
         self.assertEqual(
-            self.s.expand_id("#/foo/bar"),
+            Parser.expand_ref(self.s.id, "#/foo/bar"),
             self.s.id + "#/foo/bar")
 
     def test_provider_ref(self):
         self.assertEqual(
-            self.s.expand_id("/apis/otherschema/2.0#/foo/bar"),
+            Parser.expand_ref(self.s.id, "/apis/otherschema/2.0#/foo/bar"),
             "http://support.riverbed.com/apis/otherschema/2.0#/foo/bar")
 
     def test_full_ref(self):
         id_ = "http://support.riverbed.com/apis/otherschema/2.0#/foo/bar"
-        self.assertEqual(self.s.expand_id(id_), id_)
+        self.assertEqual(Parser.expand_ref(self.s.id, id_), id_)
+
 
 
 class TestSchemaMerge(TestSchemaBase):
@@ -1127,8 +1135,19 @@ class TestSchemaMerge(TestSchemaBase):
                           valid=[{'val': 10}, {'val': 14}, {'val': 20}],
                           invalid=[{'val': 9}, {'val': 21}]))
 
-    def test_merge_simple_ref(self):
-        r = self.s.find('#/resources/test_merge_simple_ref')
+    def test_merge_source_ref(self):
+        r = self.s.find('#/resources/test_merge_source_ref')
+        (self.check_valid(r,
+                          valid=[{'p1': 10}, {'p1': 14}, {'p1': 20}],
+                          invalid=[{'p1': 9}, {'p1': 21}]))
+
+        # Verify that the original type's input was not modified
+        # by the merge operation
+        t = self.s.find('#/types/type_object')
+        self.assertFalse('links' in t.input)
+
+    def test_merge_with_ref(self):
+        r = self.s.find('#/resources/test_merge_with_ref')
         (self.check_valid(r,
                           valid=[{'p1': 10}, {'p1': 14}, {'p1': 20}],
                           invalid=[{'p1': 9}, {'p1': 21}]))
@@ -1136,8 +1155,8 @@ class TestSchemaMerge(TestSchemaBase):
     def test_merge_double_ref(self):
         r = self.s.find('#/resources/test_merge_double_ref')
         (self.check_valid(r,
-                          valid=[{'p2': 10}, {'p2': 14}, {'p2': 20}],
-                          invalid=[{'p2': 9}, {'p2': 21}]))
+                          valid=[10, 14, 20],
+                          invalid=[9, 21]))
 
     def test_merge_merge(self):
         r = self.s.find('#/resources/test_merge_merge')
@@ -1197,6 +1216,17 @@ class TestSchemaRef(TestSchemaBase):
         ref_resource_item = ref_resource.relations['item'].resource
 
         self.assertEqual(item, ref_resource_item)
+
+    def test_merge_remote_ref_ref(self):
+        r = self.s2.find('#/resources/test_merge_remote_ref_ref')
+
+        (self.check_valid
+         (r,
+          valid = [ {'p1': True, 'p2': 12},
+                    {'p1': True, 'p2': 19}],
+
+          invalid = [ {'p1': 1, 'p2': 12},
+                      {'p1': True, 'p2': 'foo'}]))
 
 
 class TestLoadHook(TestSchemaBase):

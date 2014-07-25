@@ -1,10 +1,12 @@
-from reschema.exceptions import ParseError
+import urlparse
+
+from reschema.exceptions import ParseError, InvalidReference
 from reschema.util import check_type
 
 
 class Parser(object):
     """ Input object parser. """
-    def __init__(self, input, name, obj=None):
+    def __init__(self, input, name, obj=None, base_id=None):
         """Create a parser object.
 
         :param dict input: input to parser
@@ -18,6 +20,7 @@ class Parser(object):
         if not isinstance(input, dict):
             raise ParseError('%s: definition should be a dictionary, got: %s' %
                              (name, type(input)), input)
+
         self.input = input
         self.obj = obj
         self.name = name
@@ -108,3 +111,64 @@ class Parser(object):
             raise ParseError(
                 '%s: unrecognized properties in definition: %s' %
                 (self.name, ','.join(unparsed)), list(unparsed)[0])
+
+    @classmethod
+    def expand_ref(cls, base_id, ref):
+        """ Expand a reference using base_id as a relative base
+
+        Returns a fully qualified reference based.
+
+        :param reference: string reference to resolve
+
+        The `reference` may be one of three supported forms:
+
+           * `<server><path>#<fragment>` - fully qualified reference
+
+           * `<path>#<fragment>` - reference is resolved against the
+             same <server> as `base_id`.  <path> starts with '/'
+
+           * `#<fragment>` - reference is resolved against the same
+             <server> and <path> as `base_id`
+
+        :raises InvalidReference: `reference` does not appear to
+            be to the correct syntax
+
+        """
+
+        parsed_ref = urlparse.urlparse(ref)
+        if parsed_ref.netloc:
+            # Already a fully qualified address, let urlparse rejoin
+            # to normalize it
+            return parsed_ref.geturl()
+
+        if ref[0] not in ['/', '#']:
+            raise InvalidReference("relative references should "
+                                   "start with '#' or '/'",
+                                   ref)
+
+        # urljoin will take care of the rest
+        return urlparse.urljoin(base_id, ref)
+
+    def expand_refs(self, base_id):
+        """ Replace all relative refs in this parsers input with absolute refs"""
+
+        return self._expand_refs(base_id, self.input)
+
+    def _expand_refs(self, base_id, input):
+        """ Replace all relative refs in input with absolute refs"""
+
+        if input:
+            if isinstance(input, dict):
+                if '$ref' in input:
+                    # replace relative refs with fully expanded refs
+                    oldref = input['$ref']
+                    newref = self.expand_ref(base_id, oldref)
+                    input['$ref'] = newref
+
+                elif len(input.keys()) > 0:
+                    for k, v in input.iteritems():
+                        self._expand_refs(base_id, v)
+
+            elif isinstance(input, list):
+                for v in input:
+                    self._expand_refs(base_id, v)

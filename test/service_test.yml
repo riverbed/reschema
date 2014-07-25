@@ -47,6 +47,9 @@ types:
          p1: { $ref: "#/types/type_boolean" }
          p2: { $ref: "#/types/type_number" }
 
+   type_ref_integer:
+      $ref: "#/types/type_integer"
+
 resources:
    test_boolean:
       type: boolean
@@ -507,25 +510,34 @@ resources:
                   minimum: 10
                   maximum: 20
 
-   test_merge_simple_ref:
+   test_merge_source_ref:
       $merge:
          source: { $ref: "#/types/type_object" }
          with:
-            links: { self: { path: "$/test_merge_simple_ref" } }
+            links: { self: { path: "$/test_merge_source_ref" } }
             properties:
                p1:
                   minimum: 10
                   maximum: 20
 
-   test_merge_double_ref:
+   test_merge_with_ref:
       $merge:
-         source: { $ref: "#/types/type_object_with_refs" }
-         with:
-            links: { self: { path: "$/test_merge_double_ref" } }
+         source:
+            links: { self: { path: "$/test_merge_with_ref" } }
             properties:
-               p2:
+               p1:
                   minimum: 10
                   maximum: 20
+         with:
+            $ref: "#/types/type_object"
+
+   test_merge_double_ref:
+      $merge:
+         source: { $ref: "#/types/type_ref_integer" }
+         with:
+            links: { self: { path: "$/test_merge_double_ref" } }
+            minimum: 10
+            maximum: 20
 
    test_merge_merge:
       $merge:
@@ -536,6 +548,7 @@ resources:
                val:
                   minimum: 15
                   maximum: 20
+
 
    test_self_after_get:
       type: boolean

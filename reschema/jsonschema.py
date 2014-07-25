@@ -541,14 +541,10 @@ class Ref(DynamicSchema):
         # Lazy resolution because references may be used before they
         # are defined
         self._refschema = None
-        ref_id = parser.parse('$ref', required=True, save=False)
+        parser.parse('$ref', required=True, save_as='_refschema_id')
         if len(parser.input.keys()) != 1:
             raise ParseError("$ref object may not have any other properties",
                              parser.input)
-        try:
-            self._refschema_id = self.servicedef.expand_id(ref_id)
-        except InvalidReference as e:
-            raise ParseError(str(e), ref_id)
 
     @property
     def refschema(self):
@@ -633,7 +629,8 @@ class Merge(DynamicSchema):
                                       self._mergesource, self._mergewith)
 
             self._refschema = Schema.parse(merged, self.name,
-                                           servicedef=self.servicedef)
+                                           servicedef=self.servicedef,
+                                           id=self.id)
 
         return self._refschema
 
@@ -1059,9 +1056,7 @@ class Relation(object):
             # Lazy resolution because references may be used before they
             # are defined
             self._resource = None
-            ref_id = parser.parse('resource', required=True, save=False)
-            self._resource_id = schema.servicedef.expand_id(ref_id)
-
+            parser.parse('resource', required=True, save_as='_resource_id')
             parser.parse('vars')
             parser.parse('tags', {}, types=dict)
 

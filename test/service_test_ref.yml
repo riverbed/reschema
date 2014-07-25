@@ -65,3 +65,10 @@ resources:
             vars: { id: "0" }
 
       links: { self: { path: "$/test_ref_remote_resource" }  }
+
+   test_merge_remote_ref_ref:
+      $merge:
+         source: { $ref: '/apis/test/1.0#/types/type_object_with_refs' }
+         with:
+            links:
+               self: { path: '$/test_merge_remote_ref_ref'}

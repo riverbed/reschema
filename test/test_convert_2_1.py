@@ -56,5 +56,5 @@ class TestConvert21(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(filename='test.log', level=logging.DEBUG)
+    logging.basicConfig(filename='test.log', level=logging.INFO)
     unittest.main()
