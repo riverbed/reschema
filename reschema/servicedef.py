@@ -6,7 +6,9 @@
 # This software is distributed "AS IS" as set forth in the License.
 
 # System imports
+import os
 import urlparse
+import json
 from cStringIO import StringIO
 from collections import OrderedDict
 import logging
@@ -23,9 +25,8 @@ from reschema.exceptions import (ParseError, UnsupportedSchema, NoManager,
                                  InvalidServiceId, InvalidServiceName)
 
 __all__ = ['ServiceDef']
-
-
 logger = logging.getLogger(__name__)
+MARKED_LOAD = ('RESCHEMA_MARKED_LOAD' in os.environ)
 
 
 class ServiceDefLoadHook(object):
@@ -202,9 +203,16 @@ class ServiceDef(object):
 
         with open(filename, 'r') as f:
             if filename.endswith('.json'):
-                obj = json_loader.marked_load(f)
+                if MARKED_LOAD:
+                    obj = json_loader.marked_load(f)
+                else:
+                    obj = json.load(f, object_pairs_hook=OrderedDict)
+
             elif filename.endswith(('.yml', '.yaml')):
-                obj = yaml_loader.marked_load(f)
+                if MARKED_LOAD:
+                    obj = yaml_loader.marked_load(f)
+                else:
+                    obj = yaml_loader.unmarked_load(f)
             else:
                 raise ValueError(
                     "Unrecognized file extension, use '*.json' or '*.yaml': %s"

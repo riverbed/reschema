@@ -44,15 +44,36 @@ class TestReschema(unittest.TestCase):
         pass
 
     def test_load_schema(self):
+        reschema.servicedef.MARKED_LOAD = True
         r = ServiceDef()
         r.load(CATALOG_YAML)
         self.assertEqual(r.name, 'catalog')
         self.assertEqual(r.check_references(), [])
+        info = r.resources['info']
+        self.assertTrue(hasattr(info.input, 'start_mark'))
+
+        reschema.servicedef.MARKED_LOAD = False
+        r = ServiceDef()
+        r.load(CATALOG_YAML)
+        self.assertEqual(r.name, 'catalog')
+        self.assertEqual(r.check_references(), [])
+        info = r.resources['info']
+        self.assertFalse(hasattr(info.input, 'start_mark'))
 
     def test_load_schema_json(self):
+        reschema.servicedef.MARKED_LOAD = True
         r = ServiceDef()
         r.load(CATALOG_JSON)
         self.assertEqual(r.name, 'catalog')
+        info = r.resources['info']
+        self.assertTrue(hasattr(info.input, 'start_mark'))
+
+        reschema.servicedef.MARKED_LOAD = False
+        r = ServiceDef()
+        r.load(CATALOG_JSON)
+        self.assertEqual(r.name, 'catalog')
+        info = r.resources['info']
+        self.assertFalse(hasattr(info.input, 'start_mark'))
 
     def test_unknown_schema(self):
         import tempfile

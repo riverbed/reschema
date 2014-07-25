@@ -32,6 +32,56 @@ from yaml.error import Mark
 from yaml.constructor import SafeConstructor, ConstructorError
 
 
+class UnmarkedNodeConstructor(SafeConstructor):
+    # To support lazy loading, the original constructors first yield
+    # an empty object, then fill them in when iterated. Due to
+    # laziness we omit this behaviour (and will only do "deep
+    # construction") by first exhausting iterators, then yielding
+    # copies.
+    def _construct_ordereddict(self, node):
+        # Inspired by http://stackoverflow.com/questions/5121931/
+        mapping = OrderedDict()
+        yield mapping
+        if not isinstance(node, yaml.MappingNode):
+            raise ConstructorError("while constructing an ordered map",
+                                   node.start_mark,
+                                   ("expected a mapping node, but found %s" %
+                                    node.id),
+                                   node.start_mark)
+        for key_node, value_node in node.value:
+            key = self.construct_object(key_node)
+            try:
+                hash(key)
+            except TypeError, exc:
+                raise ConstructorError('while constructing a mapping',
+                                       node.start_mark,
+                                       'found unacceptable key (%s)' % exc,
+                                       key_node.start_mark)
+            value = self.construct_object(value_node)
+            mapping[key] = value
+
+    def construct_yaml_omap(self, node):
+        obj, = self._construct_ordereddict(node)
+        return obj
+
+UnmarkedNodeConstructor.add_constructor(
+    'tag:yaml.org,2002:map', UnmarkedNodeConstructor.construct_yaml_omap)
+
+
+class UnmarkedLoader(Reader, Scanner, Parser,
+                   Composer, UnmarkedNodeConstructor, Resolver):
+    def __init__(self, stream):
+        Reader.__init__(self, stream)
+        Scanner.__init__(self)
+        Parser.__init__(self)
+        Composer.__init__(self)
+        SafeConstructor.__init__(self)
+        Resolver.__init__(self)
+
+def unmarked_load(stream):
+    return UnmarkedLoader(stream).get_single_data()
+
+
 def add_marks_to_node(obj, start_mark=None, end_mark=None):
     if start_mark is not None:
         obj.start_mark = start_mark
@@ -59,7 +109,7 @@ list_node = create_node_class(list)
 unicode_node = create_node_class(str)
 
 
-class NodeConstructor(SafeConstructor):
+class MarkedNodeConstructor(SafeConstructor):
     # To support lazy loading, the original constructors first yield
     # an empty object, then fill them in when iterated. Due to
     # laziness we omit this behaviour (and will only do "deep
@@ -104,18 +154,18 @@ class NodeConstructor(SafeConstructor):
         obj = SafeConstructor.construct_scalar(self, node)
         return unicode_node(obj, node.start_mark, node.end_mark)
 
-NodeConstructor.add_constructor('tag:yaml.org,2002:map',
-                                NodeConstructor.construct_yaml_omap)
+MarkedNodeConstructor.add_constructor(
+    'tag:yaml.org,2002:map', MarkedNodeConstructor.construct_yaml_omap)
 
-NodeConstructor.add_constructor('tag:yaml.org,2002:seq',
-                                NodeConstructor.construct_yaml_seq)
+MarkedNodeConstructor.add_constructor(
+    'tag:yaml.org,2002:seq', MarkedNodeConstructor.construct_yaml_seq)
 
-NodeConstructor.add_constructor('tag:yaml.org,2002:str',
-                                NodeConstructor.construct_yaml_str)
+MarkedNodeConstructor.add_constructor(
+    'tag:yaml.org,2002:str', MarkedNodeConstructor.construct_yaml_str)
 
 
 class MarkedLoader(Reader, Scanner, Parser,
-                   Composer, NodeConstructor, Resolver):
+                   Composer, MarkedNodeConstructor, Resolver):
     def __init__(self, stream):
         Reader.__init__(self, stream)
         Scanner.__init__(self)
@@ -124,6 +174,7 @@ class MarkedLoader(Reader, Scanner, Parser,
         SafeConstructor.__init__(self)
         Resolver.__init__(self)
 
+
 def marked_load(stream):
     return MarkedLoader(stream).get_single_data()
 
@@ -131,6 +182,23 @@ def marked_load(stream):
 def obj_key_node(obj, prop):
     idx = obj.keys().index(prop)
     return obj.keys()[idx]
+
+
+def test_unmarked_yaml():
+
+    # note: test very sensitive to whitespace in string below
+    d = unmarked_load('''\
+    a:
+      [b, c, {d: e}]
+    f:
+      g: h''')
+
+    assert d == {'a': ['b', 'c', {'d': 'e'}], 'f': {'g': 'h'}}
+
+    assert isinstance(d['a'][2]['d'], str)
+    assert isinstance(d, dict)
+    assert isinstance(d['f'], dict)
+    assert isinstance(d['a'], list)
 
 
 def test_marked_yaml():
@@ -155,5 +223,7 @@ def test_marked_yaml():
     assert isinstance(d['f'], dict)
     assert isinstance(d['a'], list)
 
+
 if __name__ == '__main__':
+    test_unmarked_yaml()
     test_marked_yaml()
