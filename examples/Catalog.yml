@@ -28,11 +28,12 @@ types:
 resources:
    info:
       type: object
-
+      description: 'Info resource'
       additionalProperties: false
       properties:
          owner: { type: string }
          email: { type: string }
+         description: { type: string, default: 'Info Description' }
 
       links:
          self: { path: "$/info" }

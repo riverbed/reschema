@@ -28,7 +28,6 @@ __all__ = ['ServiceDef']
 logger = logging.getLogger(__name__)
 MARKED_LOAD = ('RESCHEMA_MARKED_LOAD' in os.environ)
 
-
 class ServiceDefLoadHook(object):
     """ Interface for load hooks.
 
@@ -255,8 +254,9 @@ class ServiceDef(object):
                 raise ParseError("Service definition 'id' property must be a "
                                  "fully qualified URI: %s" % id)
 
-            # Expand all relative $ref targets to full absoslute references
-            parser.expand_refs(self.id)
+            # Preform some preprocessing:
+            #  - Expand all relative $ref targets to full absoslute references
+            parser.preprocess_input(self.id)
 
             parser.parse('provider', required=True)
             parser.parse('name', required=True)

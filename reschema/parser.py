@@ -1,7 +1,17 @@
+# Copyright (c) 2013 Riverbed Technology, Inc.
+#
+# This software is licensed under the terms and conditions of the
+# MIT License set forth at:
+#   https://github.com/riverbed/reschema/blob/master/LICENSE ("License").
+# This software is distributed "AS IS" as set forth in the License.
+
+import os
 import urlparse
 
 from reschema.exceptions import ParseError, InvalidReference
 from reschema.util import check_type
+
+DROP_DESCRIPTIONS = ('RESCHEMA_DROP_DESCRIPTIONS' in os.environ)
 
 
 class Parser(object):
@@ -79,7 +89,12 @@ class Parser(object):
         :return: The parsed value.
         """
 
-        if prop in self.input:
+        if prop == 'description' and DROP_DESCRIPTIONS:
+            val = None
+            if prop in self.input:
+                self.parsed_props.add(prop)
+
+        elif prop in self.input:
             val = self.input[prop]
             if types:
                 check_type(prop, val, types, self.input)
@@ -149,12 +164,12 @@ class Parser(object):
         # urljoin will take care of the rest
         return urlparse.urljoin(base_id, ref)
 
-    def expand_refs(self, base_id):
-        """ Replace all relative refs in this parsers input with absolute refs"""
+    def preprocess_input(self, base_id):
+        """Perform some input preprocessing."""
 
-        return self._expand_refs(base_id, self.input)
+        self.expand_refs(base_id, self.input)
 
-    def _expand_refs(self, base_id, input):
+    def expand_refs(self, base_id, input):
         """ Replace all relative refs in input with absolute refs"""
 
         if input:
@@ -167,8 +182,8 @@ class Parser(object):
 
                 elif len(input.keys()) > 0:
                     for k, v in input.iteritems():
-                        self._expand_refs(base_id, v)
+                        self.expand_refs(base_id, v)
 
             elif isinstance(input, list):
                 for v in input:
-                    self._expand_refs(base_id, v)
+                    self.expand_refs(base_id, v)

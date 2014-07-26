@@ -44,21 +44,43 @@ class TestReschema(unittest.TestCase):
         pass
 
     def test_load_schema(self):
+        # Test marked load and dropping descriptions
         reschema.servicedef.MARKED_LOAD = True
+        reschema.parser.DROP_DESCRIPTIONS = True
         r = ServiceDef()
         r.load(CATALOG_YAML)
         self.assertEqual(r.name, 'catalog')
         self.assertEqual(r.check_references(), [])
+
         info = r.resources['info']
         self.assertTrue(hasattr(info.input, 'start_mark'))
+        self.assertEqual(info.description, None)
 
+        info_descr = info.by_pointer('/description')
+        self.assertEqual(info_descr.default, 'Info Description')
+
+        address = r.types['address']
+        city = address.by_pointer('/city')
+        self.assertEqual(city.description, None)
+
+        # Test unmarked load and not dropping descriptions (defaults)
         reschema.servicedef.MARKED_LOAD = False
+        reschema.parser.DROP_DESCRIPTIONS = False
         r = ServiceDef()
         r.load(CATALOG_YAML)
         self.assertEqual(r.name, 'catalog')
         self.assertEqual(r.check_references(), [])
+
         info = r.resources['info']
         self.assertFalse(hasattr(info.input, 'start_mark'))
+        self.assertNotEqual(info.description, '')
+
+        info_descr = info.by_pointer('/description')
+        self.assertEqual(info_descr.default, 'Info Description')
+
+        address = r.types['address']
+        city = address.by_pointer('/city')
+        self.assertNotEqual(city.description, '')
 
     def test_load_schema_json(self):
         reschema.servicedef.MARKED_LOAD = True
