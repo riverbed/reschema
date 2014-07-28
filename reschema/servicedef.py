@@ -212,7 +212,7 @@ class ServiceDef(object):
                 if MARKED_LOAD:
                     obj = yaml_loader.marked_load(f)
                 else:
-                    obj = yaml_loader.unmarked_load(f)
+                    obj = yaml_loader.ordered_load(f)
             else:
                 raise ValueError(
                     "Unrecognized file extension, use '*.json' or '*.yaml': %s"
