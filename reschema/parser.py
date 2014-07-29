@@ -11,7 +11,7 @@ import urlparse
 from reschema.exceptions import ParseError, InvalidReference
 from reschema.util import check_type
 
-DROP_DESCRIPTIONS = ('RESCHEMA_DROP_DESCRIPTIONS' in os.environ)
+import reschema.settings
 
 
 class Parser(object):
@@ -89,9 +89,11 @@ class Parser(object):
         :return: The parsed value.
         """
 
-        if prop == 'description' and DROP_DESCRIPTIONS:
-            val = None
+        if (  prop == 'description' and
+              not reschema.settings.LOAD_DESCRIPTIONS):
+            val = ''
             if prop in self.input:
+                del(self.input[prop])
                 self.parsed_props.add(prop)
 
         elif prop in self.input:

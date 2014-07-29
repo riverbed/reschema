@@ -23,10 +23,11 @@ from reschema import yaml_loader, json_loader
 from reschema.exceptions import (ParseError, UnsupportedSchema, NoManager,
                                  InvalidReference, DuplicateServiceId,
                                  InvalidServiceId, InvalidServiceName)
+import reschema.settings
 
 __all__ = ['ServiceDef']
 logger = logging.getLogger(__name__)
-MARKED_LOAD = ('RESCHEMA_MARKED_LOAD' in os.environ)
+
 
 class ServiceDefLoadHook(object):
     """ Interface for load hooks.
@@ -202,13 +203,13 @@ class ServiceDef(object):
 
         with open(filename, 'r') as f:
             if filename.endswith('.json'):
-                if MARKED_LOAD:
+                if reschema.settings.MARKED_LOAD:
                     obj = json_loader.marked_load(f)
                 else:
                     obj = json.load(f, object_pairs_hook=OrderedDict)
 
             elif filename.endswith(('.yml', '.yaml')):
-                if MARKED_LOAD:
+                if reschema.settings.MARKED_LOAD:
                     obj = yaml_loader.marked_load(f)
                 else:
                     obj = yaml_loader.ordered_load(f)

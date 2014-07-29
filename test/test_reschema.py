@@ -45,8 +45,8 @@ class TestReschema(unittest.TestCase):
 
     def test_load_schema(self):
         # Test marked load and dropping descriptions
-        reschema.servicedef.MARKED_LOAD = True
-        reschema.parser.DROP_DESCRIPTIONS = True
+        reschema.settings.MARKED_LOAD = True
+        reschema.settings.LOAD_DESCRIPTIONS = False
         r = ServiceDef()
         r.load(CATALOG_YAML)
         self.assertEqual(r.name, 'catalog')
@@ -54,18 +54,18 @@ class TestReschema(unittest.TestCase):
 
         info = r.resources['info']
         self.assertTrue(hasattr(info.input, 'start_mark'))
-        self.assertEqual(info.description, None)
+        self.assertEqual(info.description, '')
 
         info_descr = info.by_pointer('/description')
         self.assertEqual(info_descr.default, 'Info Description')
 
         address = r.types['address']
         city = address.by_pointer('/city')
-        self.assertEqual(city.description, None)
+        self.assertEqual(city.description, '')
 
-        # Test unmarked load and not dropping descriptions (defaults)
-        reschema.servicedef.MARKED_LOAD = False
-        reschema.parser.DROP_DESCRIPTIONS = False
+        # Test unmarked load and not loading descriptions (defaults)
+        reschema.settings.MARKED_LOAD = False
+        reschema.settings.LOAD_DESCRIPTIONS = True
         r = ServiceDef()
         r.load(CATALOG_YAML)
         self.assertEqual(r.name, 'catalog')
@@ -83,14 +83,14 @@ class TestReschema(unittest.TestCase):
         self.assertNotEqual(city.description, '')
 
     def test_load_schema_json(self):
-        reschema.servicedef.MARKED_LOAD = True
+        reschema.settings.MARKED_LOAD = True
         r = ServiceDef()
         r.load(CATALOG_JSON)
         self.assertEqual(r.name, 'catalog')
         info = r.resources['info']
         self.assertTrue(hasattr(info.input, 'start_mark'))
 
-        reschema.servicedef.MARKED_LOAD = False
+        reschema.settings.MARKED_LOAD = False
         r = ServiceDef()
         r.load(CATALOG_JSON)
         self.assertEqual(r.name, 'catalog')
