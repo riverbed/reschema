@@ -6,6 +6,9 @@ import logging
 logging.basicConfig(filename='reschema-doc.log', level=logging.DEBUG)
 
 from reschema.doc import ReschemaDoc, ReschemaDocException
+import reschema.settings
+
+reschema.settings.LOAD_DESCRIPTIONS = True
 
 if __name__ == '__main__':
     r = ReschemaDoc()
