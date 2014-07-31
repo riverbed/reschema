@@ -1058,6 +1058,7 @@ class Relation(object):
             self._resource = None
             parser.parse('resource', required=True, save_as='_resource_id')
             parser.parse('vars')
+            parser.parse('description', '')
             parser.parse('tags', {}, types=dict)
 
     def __str__(self):

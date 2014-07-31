@@ -38,28 +38,29 @@ class Options(object):
 
 class RefSchemaProxy(object):
 
-    def __init__(self, schema, options=None):
+    def __init__(self, schema, options=None, attrname='refschema'):
         self.schema = schema
         self.options = options
 
         try:
-            self.refschema = schema.refschema
+            self.refschema = getattr(schema, attrname)
             self.passthrough = True
-            self.name = schema.refschema.name
-            self.typestr = schema.refschema.typestr
-            self.href = '#' + html_str_to_id(schema.refschema.fullid(True))
+            self.name = self.refschema.name
+            self.typestr = self.refschema.typestr
+            self.href = '#' + html_str_to_id(self.refschema.fullid(True))
         except NoManager:
             self.passthrough = False
-            self.name = schema._refschema_id.split('/')[-1]
+            refid = getattr(schema, '_' + attrname + '_id')
+            self.name = refid.split('/')[-1]
             self.typestr = '<ref>'
-            self.descritpion = schema._refschema_id
+            self.description = refid
 
             # refschema_id is something like:
             #   http://support.riverbed.com/apis/test/1.0#/types/type_number_limits
             #
             # Drop the netloc and api root and replace with a relative path ref
             # based on the current schema id
-            parsed_id = urlparse.urlparse(schema._refschema_id)
+            parsed_id = urlparse.urlparse(refid)
 
             # Fall back to just using an href of the schema id for the following cases:
             #  - not a riverbed service
@@ -67,7 +68,7 @@ class RefSchemaProxy(object):
             #  - looking for printable format
             m = re.match("/apis/(.*)$", parsed_id.path)
             if parsed_id.netloc != 'support.riverbed.com' or not m or self.options.printable:
-                self.href = schema._refschema_id
+                self.href = refid
             else:
                 # Look at the servidedef id of the current service and figure
                 # out how many levels up to recurse
@@ -163,7 +164,6 @@ class ResourceToHtml(object):
         menu = self.menu
         schema = self.schema
         baseid = html_str_to_id(schema.fullid(True))
-
         div = self.container.div(id=baseid)
         menu.add_item(schema.name, href=div)
 
@@ -180,9 +180,14 @@ class ResourceToHtml(object):
         self.schema_table(schema, div, baseid)
 
         if (not is_type):
-            methodsmenu = menu.add_submenu()
-            div.h3(id="methods").text = "Methods"
-            self.process_methods(div, baseid, methodsmenu)
+            submenu = menu.add_submenu()
+            div.h3(id="links").text = "Links"
+            self.process_links(div, baseid, submenu)
+
+            if self.schema.relations:
+                div.h3(id="relations").text = "Relations"
+                self.process_relations(div, baseid, submenu)
+
 
     def schema_table(self, schema, container,  baseid):
         tabbar = TabBar(container, baseid+'-tabbar',
@@ -200,17 +205,17 @@ class ResourceToHtml(object):
         tabbar.finish()
         container.append(SchemaTable(schema, self.options))
 
-    def process_methods(self, container, containerid, submenu):
+    def process_links(self, container, containerid, submenu):
         schema = self.schema
         for name, link in schema.links.iteritems():
             if name == 'self':
                 continue
 
-            logger.debug("Processing method: %s - %s" %
+            logger.debug("Processing link: %s - %s" %
                          (self.schema.fullname(), name))
 
-            baseid = containerid + '-method-%s' % name
-            div = container.div(id=baseid, cls="method-body")
+            baseid = containerid + '-link-%s' % name
+            div = container.div(id=baseid, cls="link-body")
             submenu.add_item(name, href=div)
             div.h4().text = link.schema.fullname() + ": " + link.name
             div.p().text = link.description
@@ -335,6 +340,35 @@ class ResourceToHtml(object):
                     div.append(md_html)
 
         return None
+
+    def process_relations(self, container, containerid, submenu):
+        schema = self.schema
+        for name, relation in schema.relations.iteritems():
+
+            logger.debug("Processing relation: %s - %s" %
+                         (self.schema.fullname(), name))
+
+            baseid = containerid + '-relation-%s' % name
+            div = container.div(id=baseid, cls="relation-body")
+            submenu.add_item(name, href=div)
+            div.h4().text = relation.schema.fullname() + ": " + relation.name
+            div.p().text = relation.description
+
+            div.span(cls="h5").text = "Related resource"
+            target_schema = RefSchemaProxy(relation, self.options,
+                                           attrname='resource')
+            p = div.p()
+            p.settext(p.a(cls="jsonschema-type", href=target_schema.href,
+                          text=target_schema.name))
+
+            if relation.vars:
+                div.span(cls="h5").text = "Variables"
+                table = HTMLTable(cls="paramtable")
+                table.row(["Related var", "Data value for replacement"],
+                          header=True)
+                for var, relp in relation.vars.iteritems():
+                    table.row([var, relp])
+                div.append(table)
 
 
 class SchemaSummaryJson(HTMLElement):
