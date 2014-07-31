@@ -5,7 +5,7 @@ dist
 version.txt
 *.egg-info
 
-docs/html
+docs/_build
 *.html
 *.pdf
 *.log
