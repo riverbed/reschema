@@ -11,7 +11,7 @@ from optparse import OptionParser
 
 import reschema
 import reschema.html
-from reschema import ServiceDef
+from reschema import ServiceDef, ServiceDefManager
 from reschema.tohtml import ServiceDefToHtml, Options
 
 
@@ -30,6 +30,9 @@ class ReschemaDoc(object):
             description="Generate docuemnation for service defintions.")
         parser.add_option('-f', '--file', dest='filename',
                           help='JSON doc source file', action="store")
+
+        parser.add_option('-r', '--related', dest='related',
+                          help='JSON doc source file', action="append")
 
         parser.add_option('-o', '--outdir', dest='outdir', default=None,
                           help='Output directory', action="store")
@@ -75,8 +78,16 @@ class ReschemaDoc(object):
 
     def run(self):
         options = self.options
+        servicedefmgr = ServiceDefManager()
+
         servicedef = ServiceDef()
         servicedef.load(options.filename)
+        servicedefmgr.add(servicedef)
+
+        for related in (options.related or []):
+            relateddef = ServiceDef()
+            relateddef.load(related)
+            servicedefmgr.add(relateddef)
 
         title = "%s v%s %s" % (servicedef.title, servicedef.version,
                                servicedef.status)

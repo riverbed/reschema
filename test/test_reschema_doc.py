@@ -32,12 +32,16 @@ from reschema.tohtml import ServiceDefToHtml, Options
 from reschema.doc import ReschemaDoc, ReschemaDocException
 
 
-def process_file(filename):
+def process_file(filename, *args):
     r = ReschemaDoc()
-    r.parse_args(['-f', filename,
+    rargs = ['-f', filename,
                   '--outdir', outdir,
-                  '--html',
-                  ])
+                  '--html']
+
+    for arg in args:
+        rargs.extend(['-r', arg])
+
+    r.parse_args(rargs)
     r.run()
     return
 
@@ -48,7 +52,7 @@ class TestReschema(unittest.TestCase):
         process_file(SERVICE_DEF_TEST)
 
     def test_service_ref(self):
-        process_file(SERVICE_DEF_TEST_REF)
+        process_file(SERVICE_DEF_TEST_REF, SERVICE_DEF_TEST)
 
     def test_service_catalog(self):
         process_file(SERVICE_DEF_CATALOG)
