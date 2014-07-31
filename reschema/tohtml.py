@@ -363,6 +363,9 @@ class SchemaSummaryJson(HTMLElement):
             schema = RefSchemaProxy(schema, self.options)
             parent.a(cls="servicedef-type", href=schema.href, text=schema.name)
 
+        elif isinstance(schema, reschema.jsonschema.Merge):
+            self.process(parent, schema.refschema, indent)
+
         else:
             parent.span(cls="servicedef-type").text = schema.typestr
 
@@ -633,6 +636,9 @@ class PropTable(HTMLTable):
             line += len(text)
 
     def makerow(self, schema, name):
+        if isinstance(schema, reschema.jsonschema.Merge):
+            return self.makerow(schema.refschema, name)
+
         tds = self.row(["", "", "", ""])
 
         logger.debug("Row: %s - %s " % (schema.fullname(), name))
