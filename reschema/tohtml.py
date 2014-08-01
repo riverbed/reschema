@@ -776,6 +776,9 @@ class SchemaTable(PropTable):
     def process(self, schema):
         self.makerow(schema, schema.fullname())
 
+        if isinstance(schema, reschema.jsonschema.Merge):
+            schema = schema.refschema
+
         for child in schema.children:
             if re.match("anyOf|allOf|oneOf|not", child.name):
                 continue

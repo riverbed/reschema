@@ -628,11 +628,23 @@ class Merge(DynamicSchema):
             merged = json_merge_patch(self.servicedef,
                                       self._mergesource, self._mergewith)
 
-            self._refschema = Schema.parse(merged, self.name,
+            self._refschema = Schema.parse(merged, name=self.name,
                                            servicedef=self.servicedef,
                                            id=self.id)
+            # Need to assign parent *after* assigning _refschema,
+            # because otherwise we hit a recursion when doing some
+            # logging that would try to resolve _refschema again...
+            self._refschema.parent = self
 
         return self._refschema
+
+    def fullname(self):
+        """Return the full printable name using dotted notation."""
+        # TODO: Should this be cached?  Do we support changing it?
+        if self.parent:
+            return self.parent.fullname()
+        else:
+            return ""
 
 _register_type(Merge)
 
