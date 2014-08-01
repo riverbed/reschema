@@ -209,6 +209,10 @@ class ResourceToHtml(object):
         schema = self.schema
         for name, link in schema.links.iteritems():
             if name == 'self':
+                #need to police invalid $refs underneath params
+                for k,v in link._params.iteritems():
+                    if isinstance(v, reschema.jsonschema.Ref):
+                        RefSchemaProxy(v)
                 continue
 
             logger.debug("Processing link: %s - %s" %
