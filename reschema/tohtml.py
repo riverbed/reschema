@@ -702,11 +702,10 @@ class PropTable(HTMLTable):
             parts.append("Required properties: [%s]" %
                          ', '.join(schema.required))
 
-
         if ( (schema.parent is not None) and
              (isinstance(schema.parent, reschema.jsonschema.Object)) and
              ((schema.parent.required is None) or
-              (name not in schema.parent.required)) and
+              (schema.name not in schema.parent.required)) and
              (not (re.match("anyOf|allOf|oneOf|not", schema.name)))
              ):
             parts.append("Optional")
