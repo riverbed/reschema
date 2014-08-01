@@ -340,14 +340,10 @@ class ServiceDef(object):
             yield self.types[r]
 
     def find_resource(self, name):
-        if name not in self.resources:
-            return None
-        return self.resources[name]
+        return self.resources.get(name, None)
 
     def find_type(self, name):
-        if name not in self.types:
-            return None
-        return self.types[name]
+        return self.types.get(name, None)
 
     def find(self, reference):
         """ Resolve a reference using this servicedef as a relative base
