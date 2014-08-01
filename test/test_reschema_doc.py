@@ -59,7 +59,5 @@ class TestReschema(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    for filename in [SERVICE_DEF_TEST,
-                     SERVICE_DEF_TEST_REF,
-                     SERVICE_DEF_CATALOG]:
-        html = process_file(filename)
+    logging.basicConfig(filename='test.log', level=logging.DEBUG)
+    unittest.main()
