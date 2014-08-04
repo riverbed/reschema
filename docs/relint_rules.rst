@@ -109,3 +109,4 @@ Resources (300)
   * **C0300**: A resource must have a valid description field
   * **C0301**: A resource should be an object
   * **C0302**: Collection resource object should have an 'items' property
+  * **C0303**: Self link should be the first in links

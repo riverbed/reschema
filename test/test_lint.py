@@ -47,14 +47,9 @@ def create_servicedef(fragment):
     :param fragment: Schema fragment to merge in
     :return: TestValidator
     """
+    sdef = reschema.ServiceDef.create_from_text(SERVICE_DEF_TEMPLATE + fragment
+                                                , format='yaml')
 
-    data = yaml.load(fragment)
-
-    template = yaml.load(SERVICE_DEF_TEMPLATE)
-    template.update(data)
-
-    sdef = reschema.ServiceDef.create_from_text(yaml.dump(template),
-                                                format='yaml')
     return sdef
 
 
@@ -292,6 +287,43 @@ class TestRelint(TestLintBase):
                           '      id: { type: number }\n'
                           '    links:\n'
                           '      self: { path: "/foos/{non_present}" }\n')
+
+    def test_rule_C0303(self):
+        ''' Self link should be the first link '''
+
+        self.check_result('C0303', '#/resources/r1', Result.PASSED,
+                          'resources:\n'
+                          '  r1:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self: { path: "/r1" }\n')
+
+        self.check_result('C0303', '#/resources/r4', Result.PASSED,
+                          'resources:\n'
+                          '  r4:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      put: { path: "/r4" }\n')
+
+        self.check_result('C0303', '#/resources/r2', Result.FAILED,
+                          'resources:\n'
+                          '  r2:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      r2_l1: { path: "/dsaf" }\n'
+                          '      r2_l2: { path: "/dsaf" }\n'
+                          '      r2_l3: { path: "/dsaf" }\n'
+                          '      self: { path: "/r2" }\n')
+
+        self.check_result('C0303', '#/resources/r3', Result.PASSED,
+                          'resources:\n'
+                          '  r3:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self: { path: "/r3" }\n'
+                          '      r3_l1: { path: "/dsaf" }\n'
+                          '      r3_l2: { path: "/dsaf" }\n'
+                          '      r3_l3: { path: "/dsaf" }\n')
 
 if __name__ == '__main__':
     logging.basicConfig(filename='test.log', level=logging.DEBUG)
