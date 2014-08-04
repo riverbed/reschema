@@ -199,34 +199,57 @@ class ServiceDef(object):
         :param filename: The path to the JSON or YAML file.
         :raises ValueError: if the file has an unsupported extension.
         """
-        # TODO: Add option for un-marked loads if performance becomes an issue
+
+        if filename.endswith('.json'):
+            format = 'json'
+
+        elif filename.endswith(('.yml', '.yaml')):
+            format = 'yaml'
+
+        else:
+            raise ValueError(
+                "Unrecognized file extension, use '*.json' or '*.yaml': %s"
+                % filename)
 
         with open(filename, 'r') as f:
-            if filename.endswith('.json'):
-                if reschema.settings.MARKED_LOAD:
-                    obj = json_loader.marked_load(f)
-                else:
-                    obj = json.load(f, object_pairs_hook=OrderedDict)
+            return self.load_from_stream(f, format=format)
 
-            elif filename.endswith(('.yml', '.yaml')):
-                if reschema.settings.MARKED_LOAD:
-                    obj = yaml_loader.marked_load(f)
-                else:
-                    obj = yaml_loader.ordered_load(f)
+    def load_from_stream(self, f, format='yaml'):
+        """Loads and parses a JSON or YAML schema.
+
+        Support both JSON(.json) and YAML(.yml/.yaml) file formats
+        as detected by filename extensions.
+
+        :param f: An open file object.
+        :raises ValueError: if the file has an unsupported extension.
+        """
+
+        if format == 'json':
+            if reschema.settings.MARKED_LOAD:
+                obj = json_loader.marked_load(f)
             else:
-                raise ValueError(
-                    "Unrecognized file extension, use '*.json' or '*.yaml': %s"
-                    % filename)
+                obj = json.load(f, object_pairs_hook=OrderedDict)
+
+        elif format == 'yaml':
+            if reschema.settings.MARKED_LOAD:
+                obj = yaml_loader.marked_load(f)
+            else:
+                obj = yaml_loader.ordered_load(f)
+
+        else:
+            raise ValueError(
+                "Unrecognized format, use 'json' or 'yaml': %s" % format)
+
         self.parse(obj)
 
-    def parse_text(self, text, format='json'):
+    def parse_text(self, text, format='yaml'):
         """Loads and parses a schema from a string.
 
         :param text: The string containing the schema.
         :param format: Either 'json' (the default), 'yaml' or 'yml'.
                        This much match the format of the data in the string.
         """
-        # TODO: Why not default format to 'yaml' as it will successfully
+
         stream = StringIO(text)
         if format == 'json':
             obj = json_loader.marked_load(stream)
