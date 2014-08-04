@@ -1,0 +1,24 @@
+$schema: "http://support.riverbed.com/apis/service_def/2.2"
+id: "http://support.riverbed.com/apis/test.ref/1.0"
+provider: "riverbed"
+name: "test.ref"
+version: "1.0"
+title: "Test ref REST API"
+defaultAuthorization: "required"
+
+types:
+   type_obj_number:
+      type: object
+      additionalProperties: False
+      properties:
+         val: { type: integer }
+
+resources:
+   invalid_ref_in_property:
+      type: object
+      properties: 
+         name: { $ref: '#/types/does_not_exist' }
+      links:
+         self: { path: '$/test_invalid_ref_in_property'}       
+          
+      

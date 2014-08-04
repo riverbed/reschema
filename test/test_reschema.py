@@ -21,12 +21,15 @@ from reschema.exceptions import (ValidationError, NoManager,
 from reschema.jsonschema import (Object, Integer, String, Array, Schema)
 from reschema import yaml_loader, ServiceDef, ServiceDefManager
 from reschema.parser import Parser
+from reschema.tohtml import ServiceDefToHtml
 
 logger = logging.getLogger(__name__)
 
 TEST_PATH = os.path.abspath(os.path.dirname(__file__))
 SERVICE_DEF_TEST = os.path.join(TEST_PATH, 'service_test.yml')
 SERVICE_DEF_TEST_REF = os.path.join(TEST_PATH, 'service_test_ref.yml')
+SERVICE_DEF_TEST_INVALID_REF_IN_PROPERTY = os.path.join(TEST_PATH, 'service_test_invalid_ref_in_property.yml')
+SERVICE_DEF_TEST_INVALID_REF_IN_LINKS = os.path.join(TEST_PATH, 'service_test_invalid_ref_in_links.yml')
 
 PACKAGE_PATH = os.path.dirname(TEST_PATH)
 
@@ -144,16 +147,14 @@ class TestReschema(unittest.TestCase):
         self.assertIn('author', r.resources)
         self.assertIn('authors', r.resources)
         self.assertTrue(r.find_resource('author'))
-        with self.assertRaises(KeyError):
-            r.find_resource('no_resource')
+        self.assertEquals(r.find_type('no_resource'), None)
 
     def test_type_load(self):
         r = ServiceDef()
         r.load(CATALOG_YAML)
         self.assertIn('address', r.types)
         self.assertTrue(r.find_type('address'))
-        with self.assertRaises(KeyError):
-            r.find_type('no_type')
+        self.assertEquals(r.find_type('no_type'), None)
 
     def test_resource_objects(self):
         r = ServiceDef()
@@ -1216,6 +1217,10 @@ class TestSchemaRef(TestSchemaBase):
         self.s1.load(SERVICE_DEF_TEST)
         self.s2 = ServiceDef()
         self.s2.load(SERVICE_DEF_TEST_REF)
+        self.s3 = ServiceDef()
+        self.s3.load(SERVICE_DEF_TEST_INVALID_REF_IN_PROPERTY)
+        self.s4 = ServiceDef()
+        self.s4.load(SERVICE_DEF_TEST_INVALID_REF_IN_LINKS)
         manager = ServiceDefManager()
         manager.add(self.s1)
         manager.add(self.s2)
@@ -1270,6 +1275,38 @@ class TestSchemaRef(TestSchemaBase):
 
           invalid = [ {'p1': 1, 'p2': 12},
                       {'p1': True, 'p2': 'foo'}]))
+        
+    def test_invalid_ref_in_property(self):
+        """ 
+        testing when one property's ref consists of undefined types, 
+        an invalid reference exception should be raised, such as below:
+        properties:
+           property: { $ref: '#/types/blah' } 
+        """
+        with self.assertRaises(reschema.exceptions.InvalidReference):
+ 
+            title = "%s v%s %s" % (self.s3.title, self.s3.version, self.s3.status)
+            htmldoc = reschema.html.Document(title, printable=False)
+            sd2html = ServiceDefToHtml(self.s3, htmldoc.content, htmldoc.menu)
+            sd2html.process()
+        
+    def test_invalid_ref_in_links(self):
+        """
+        testing when one property's ref consists of undefined resources,
+        an invalid reference exception should be raised. such as below:
+        properties:
+        links:
+          self: { path: '$/test_invalid_ref_in_lnks'}        
+          params:
+             id:
+                $ref: '#/types/does_not_exist'
+        """
+        #with self.assertRaises(reschema.exceptions.InvalidReference):
+        with self.assertRaises(InvalidReference):
+            title = "%s v%s %s" % (self.s4.title, self.s4.version, self.s4.status)
+            htmldoc = reschema.html.Document(title, printable=False)
+            sd2html = ServiceDefToHtml(self.s4, htmldoc.content, htmldoc.menu)
+            sd2html.process()        
 
 
 class TestLoadHook(TestSchemaBase):
