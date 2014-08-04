@@ -303,16 +303,16 @@ class TestRelint(TestLintBase):
                           '  r4:\n'
                           '    type: object\n'
                           '    links:\n'
-                          '      put: { path: "/r4" }\n')
+                          '      r4_l1: { method: GET, path: "/r4" }\n')
 
         self.check_result('C0303', '#/resources/r2', Result.FAILED,
                           'resources:\n'
                           '  r2:\n'
                           '    type: object\n'
                           '    links:\n'
-                          '      r2_l1: { path: "/dsaf" }\n'
-                          '      r2_l2: { path: "/dsaf" }\n'
-                          '      r2_l3: { path: "/dsaf" }\n'
+                          '      r2_l1: { method: GET, path: "/dsaf" }\n'
+                          '      r2_l2: { method: GET, path: "/dsaf" }\n'
+                          '      r2_l3: { method: GET, path: "/dsaf" }\n'
                           '      self: { path: "/r2" }\n')
 
         self.check_result('C0303', '#/resources/r3', Result.PASSED,
@@ -321,9 +321,9 @@ class TestRelint(TestLintBase):
                           '    type: object\n'
                           '    links:\n'
                           '      self: { path: "/r3" }\n'
-                          '      r3_l1: { path: "/dsaf" }\n'
-                          '      r3_l2: { path: "/dsaf" }\n'
-                          '      r3_l3: { path: "/dsaf" }\n')
+                          '      r3_l1: { method: GET, path: "/dsaf" }\n'
+                          '      r3_l2: { method: GET, path: "/dsaf" }\n'
+                          '      r3_l3: { method: GET, path: "/dsaf" }\n')
 
 if __name__ == '__main__':
     logging.basicConfig(filename='test.log', level=logging.DEBUG)
