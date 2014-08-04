@@ -1283,7 +1283,7 @@ class TestSchemaRef(TestSchemaBase):
         properties:
            property: { $ref: '#/types/blah' } 
         """
-        with self.assertRaises(reschema.exceptions.InvalidReference):
+        with self.assertRaises(InvalidReference):
  
             title = "%s v%s %s" % (self.s3.title, self.s3.version, self.s3.status)
             htmldoc = reschema.html.Document(title, printable=False)
@@ -1301,7 +1301,6 @@ class TestSchemaRef(TestSchemaBase):
              id:
                 $ref: '#/types/does_not_exist'
         """
-        #with self.assertRaises(reschema.exceptions.InvalidReference):
         with self.assertRaises(InvalidReference):
             title = "%s v%s %s" % (self.s4.title, self.s4.version, self.s4.status)
             htmldoc = reschema.html.Document(title, printable=False)
