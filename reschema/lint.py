@@ -5,6 +5,10 @@ from __future__ import print_function
 import re
 import uritemplate
 
+import reschema.settings
+reschema.settings.LOAD_DESCRIPTIONS=True
+reschema.settings.MARKED_LOAD=True
+
 class ValidationFail(Exception):
     """
     Schema did something it shouldn't have
@@ -570,3 +574,15 @@ def link_uritemplate_param_declared(link):
                                  " is not declared in properties in '{2}'".
                                  format(param, link.path.template, 
                                         link.schema.fullname()))
+
+
+@Validator.resource('C0303')
+def self_link_is_first(resource):
+    if 'self' not in resource.links:
+        return
+
+    self_mark = resource.links['self'].name.start_mark
+    for link in resource.links.values():
+        if link.name != 'self' and link.name.start_mark < self_mark:
+            raise ValidationFail("'self' link should be the first in '{0}'"
+                                 .format(resource.fullname()))

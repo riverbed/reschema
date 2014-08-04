@@ -1219,12 +1219,13 @@ class Link(object):
     def order_link_keys(self, keys):
         # Make sure to process 'self' first, other links may rely
         # on 'self.path'
-        if 'self' in keys:
-            new_keys = ['self']
-            keys.remove('self')
-            new_keys.extend(keys)
-            return new_keys
-        return keys
+        new_keys = []
+        for k in keys:
+            if k == 'self':
+                new_keys.append(k)
+                keys.remove('self')
+        new_keys.extend(keys)
+        return new_keys
 
     def is_ref(self):
         return False
