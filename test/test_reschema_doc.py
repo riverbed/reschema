@@ -50,10 +50,6 @@ def process_file(filename, *args):
 
 class TestReschema(unittest.TestCase):
 
-    def setUp(self):
-        self.sd = ServiceDef()
-        self.sd.load(SERVICE_DEF_INVALID_REF)
-
     def test_service(self):
         process_file(SERVICE_DEF_TEST)
 
@@ -62,6 +58,13 @@ class TestReschema(unittest.TestCase):
 
     def test_service_catalog(self):
         process_file(SERVICE_DEF_CATALOG)
+
+
+class TestReschemaInvalidRef(unittest.TestCase):
+
+    def setUp(self):
+        self.sd = ServiceDef()
+        self.sd.load(SERVICE_DEF_INVALID_REF)
 
     def test_invalid_ref_in_property(self):
         """
