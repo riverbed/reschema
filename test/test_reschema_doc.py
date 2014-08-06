@@ -11,6 +11,7 @@ import os
 import unittest
 import shutil
 import logging
+from reschema.util import str_to_id as html_str_to_id
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,8 @@ TEST_PATH = os.path.abspath(os.path.dirname(__file__))
 SERVICE_DEF_TEST = os.path.join(TEST_PATH, 'service_test.yml')
 SERVICE_DEF_TEST_REF = os.path.join(TEST_PATH, 'service_test_ref.yml')
 SERVICE_DEF_CATALOG = os.path.join(TEST_PATH, '../examples/Catalog.yml')
+SERVICE_DEF_INVALID_REF = os.path.join(TEST_PATH,
+                                       'service_test_invalid_ref.yml')
 
 outdir = 'test_reschema_doc_output'
 if os.path.exists(outdir):
@@ -26,17 +29,16 @@ if os.path.exists(outdir):
 os.makedirs(outdir)
 
 import reschema
-from reschema.html import *
 from reschema import ServiceDef
-from reschema.tohtml import ServiceDefToHtml, Options
-from reschema.doc import ReschemaDoc, ReschemaDocException
+from reschema.tohtml import ResourceToHtml, RefSchemaProxy
+from reschema.doc import ReschemaDoc
 
 
 def process_file(filename, *args):
     r = ReschemaDoc()
     rargs = ['-f', filename,
-                  '--outdir', outdir,
-                  '--html']
+             '--outdir', outdir,
+             '--html']
 
     for arg in args:
         rargs.extend(['-r', arg])
@@ -56,6 +58,50 @@ class TestReschema(unittest.TestCase):
 
     def test_service_catalog(self):
         process_file(SERVICE_DEF_CATALOG)
+
+
+class TestReschemaInvalidRef(unittest.TestCase):
+
+    def setUp(self):
+        self.sd = ServiceDef()
+        self.sd.load(SERVICE_DEF_INVALID_REF)
+
+    def test_invalid_ref_in_property(self):
+        """
+        testing when one property's ref consists of undefined types,
+        an invalid reference exception should be raised, such as below:
+        properties:
+           property: { $ref: '#/types/blah' }
+        """
+        with self.assertRaises(reschema.exceptions.InvalidReference):
+            schema = self.sd.resources.values()[0].properties['name']
+            RefSchemaProxy(schema, None)
+
+    def test_invalid_ref_in_links(self):
+        """
+        testing when one property's ref consists of undefined resources,
+        an invalid reference exception should be raised. such as below:
+        properties:
+        links:
+          self: { path: '$/test_invalid_ref_in_lnks'}
+          params:
+             id:
+                $ref: '#/types/does_not_exist'
+        """
+        with self.assertRaises(reschema.exceptions.InvalidReference):
+            resource = self.sd.resources.values()[0]
+            title = "%s v%s %s" % (self.sd.title, self.sd.version,
+                                   self.sd.status)
+            htmldoc = reschema.html.Document(title, printable=False)
+            r2h = ResourceToHtml(resource, htmldoc.content,
+                                 htmldoc.menu.add_submenu(),
+                                 "http://{device}/{root}",
+                                 None)
+            baseid = html_str_to_id(r2h.schema.fullid(True))
+            div = r2h.container.div(id=baseid)
+            r2h.menu.add_item(r2h.schema.name, href=div)
+            submenu = r2h.menu.add_submenu()
+            r2h.process_links(div, baseid, submenu)
 
 
 if __name__ == '__main__':

@@ -144,16 +144,14 @@ class TestReschema(unittest.TestCase):
         self.assertIn('author', r.resources)
         self.assertIn('authors', r.resources)
         self.assertTrue(r.find_resource('author'))
-        with self.assertRaises(KeyError):
-            r.find_resource('no_resource')
+        self.assertEquals(r.find_type('no_resource'), None)
 
     def test_type_load(self):
         r = ServiceDef()
         r.load(CATALOG_YAML)
         self.assertIn('address', r.types)
         self.assertTrue(r.find_type('address'))
-        with self.assertRaises(KeyError):
-            r.find_type('no_type')
+        self.assertEquals(r.find_type('no_type'), None)
 
     def test_resource_objects(self):
         r = ServiceDef()

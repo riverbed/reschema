@@ -363,10 +363,10 @@ class ServiceDef(object):
             yield self.types[r]
 
     def find_resource(self, name):
-        return self.resources[name]
+        return self.resources.get(name, None)
 
     def find_type(self, name):
-        return self.types[name]
+        return self.types.get(name, None)
 
     def find(self, reference):
         """ Resolve a reference using this servicedef as a relative base
@@ -420,7 +420,7 @@ class ServiceDef(object):
             raise InvalidReference("Expected '/resources' or '/types'",
                                    reference)
 
-        if len(p.parts) > 2:
+        if len(p.parts) > 2 and schema is not None:
             return schema.by_pointer('/' + '/'.join(p.parts[2:]))
         else:
             return schema
