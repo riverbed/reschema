@@ -14,11 +14,15 @@ types:
          val: { type: integer }
 
 resources:
-   invalid_ref_in_property:
+   invalid_ref_in_links:
       type: object
       properties: 
          name: { $ref: '#/types/does_not_exist' }
       links:
-         self: { path: '$/test_invalid_ref_in_property'}       
-          
-      
+         self: 
+            path: 
+               '$/test_invalid_ref_in_lnks'
+            params:
+               id:
+                  $ref: '#/types/does_not_exist'
+
