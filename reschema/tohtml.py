@@ -189,16 +189,16 @@ class ResourceToHtml(object):
                 self.process_relations(div, baseid, submenu)
 
 
-    def schema_table(self, schema, container,  baseid):
-        tabbar = TabBar(container, baseid+'-tabbar',
+    def schema_table(self, schema, container, baseid):
+        tabbar = TabBar(container, baseid + '-tabbar',
                         printable=self.options.printable)
         if self.options.json:
-            tabbar.add_tab("JSON", baseid+'-json',
+            tabbar.add_tab("JSON", baseid + '-json',
                            SchemaSummaryJson(schema, self.options))
         if self.options.xml:
-            tabbar.add_tab("XML", baseid+'-xml',
+            tabbar.add_tab("XML", baseid + '-xml',
                            SchemaSummaryXML(schema, self.options))
-        #tabbar.add_tab("JSON Schema", "jsonschema",
+        # tabbar.add_tab("JSON Schema", "jsonschema",
         #               HTMLElement("pre",
         #                            text=json.dumps(self.schema_raw,
         #                           indent=2)))
@@ -209,8 +209,8 @@ class ResourceToHtml(object):
         schema = self.schema
         for name, link in schema.links.iteritems():
             if name == 'self':
-                #need to police invalid $refs underneath params
-                for k,v in link._params.iteritems():
+                # need to police invalid $refs underneath params
+                for k, v in link._params.iteritems():
                     if isinstance(v, reschema.jsonschema.Ref):
                         RefSchemaProxy(v)
                 continue
@@ -252,12 +252,12 @@ class ResourceToHtml(object):
             else:
                 div.p().text = "This request does not require authorization."
 
-            #if link.headers:
-                #div.span(cls="h5").text = "HTTP Headers"
-                #table = div.table(cls="paramtable")
-                #div.append(ParamTable(link.headers))
-                #table.row(["Name", "Type", "Description"], header=True)
-                #for name in link.parameters:
+            # if link.headers:
+                # div.span(cls="h5").text = "HTTP Headers"
+                # table = div.table(cls="paramtable")
+                # div.append(ParamTable(link.headers))
+                # table.row(["Name", "Type", "Description"], header=True)
+                # for name in link.parameters:
                 #    p = link.parameters[name]
                 #    table.row([name, p.typestr, p.description])
 
@@ -279,7 +279,7 @@ class ResourceToHtml(object):
                                   " ",
                                   p.a(cls="jsonschema-type", href=schema.href,
                                       text=schema.name),
-                                  " data object." )
+                                  " data object.")
                     elif type(link.request) is reschema.jsonschema.Data:
                         p = div.p()
                         if link.request.description is None:
@@ -323,7 +323,7 @@ class ResourceToHtml(object):
                                      text=schema.content_type),
                               ".")
                 else:
-                    logger.debug(baseid+'-response')
+                    logger.debug(baseid + '-response')
                     logger.debug("\n" + schema.str_detailed() + "\n")
                     p = div.p().text = ("On success, the server returns a "
                                         "response body with the following "
@@ -415,11 +415,11 @@ class SchemaSummaryJson(HTMLElement):
             if last is not None:
                 last.text = ",\n"
 
-            txt = ('%*.*s"%s": ' % (indent+2, indent+2, "", k))
+            txt = ('%*.*s"%s": ' % (indent + 2, indent + 2, "", k))
             parent.span(cls="servicedef-property").text = txt
 
             s = parent.span()
-            self.process(s, obj.properties[k], indent+2)
+            self.process(s, obj.properties[k], indent + 2)
             last = parent.span()
             last.text = '\n'
 
@@ -427,17 +427,17 @@ class SchemaSummaryJson(HTMLElement):
             if last is not None:
                 last.text = ",\n"
             if obj.additional_properties is True:
-                txt = '%*.*s%s' % (indent+2, indent+2, "", 'prop')
+                txt = '%*.*s%s' % (indent + 2, indent + 2, "", 'prop')
                 parent.span(cls="servicedef-type").text = txt
                 parent.span().text = ": "
                 parent.span(cls="servicedef-type").text = 'value'
             else:
-                txt = '%*.*s%s' % (indent+2, indent+2, "",
+                txt = '%*.*s%s' % (indent + 2, indent + 2, "",
                                    obj.additional_properties.name)
                 parent.span(cls="servicedef-type").text = txt
                 parent.span().text = ": "
                 s = parent.span()
-                self.process(s, obj.additional_properties, indent+2)
+                self.process(s, obj.additional_properties, indent + 2)
 
             last = parent.span()
             last.text = '\n'
@@ -454,8 +454,8 @@ class SchemaSummaryJson(HTMLElement):
                        " ]")
 
         else:
-            parent.span().text = "[\n%*.*s" % (indent+2, indent+2, "")
-            self.process(parent.span(), item, indent+2)
+            parent.span().text = "[\n%*.*s" % (indent + 2, indent + 2, "")
+            self.process(parent.span(), item, indent + 2)
             parent.span().text = "\n%*.*s]" % (indent, indent, "")
 
 
@@ -568,7 +568,7 @@ class SchemaSummaryXML(HTMLElement):
 
     def process_object(self, parent, obj, indent, name, key=None):
         parent.span().text = "%*s<" % (indent, "")
-        parent.span(cls="xmlschema-element").text =  name
+        parent.span(cls="xmlschema-element").text = name
         subelems = obj.additional_properties
         first = True
         attr_indent = "\n%*s" % (indent + 2 + len(name), "")
@@ -594,7 +594,7 @@ class SchemaSummaryXML(HTMLElement):
             if prop.is_simple():
                 continue
             s = parent.span()
-            self.process(s, prop, indent+2, name=k)
+            self.process(s, prop, indent + 2, name=k)
 
         if obj.additional_properties is True:
             pass
@@ -614,7 +614,7 @@ class SchemaSummaryXML(HTMLElement):
                     subobj.props[k] = obj.additional_properties.props[k]
             except:
                 pass
-            self.process(s, subobj, indent+2, name=subobj.name, key=keyname)
+            self.process(s, subobj, indent + 2, name=subobj.name, key=keyname)
 
         if subelems:
             parent.span().text = "%*s</" % (indent, "")
@@ -625,7 +625,7 @@ class SchemaSummaryXML(HTMLElement):
         parent.span().text = "%*s<" % (indent, "")
         parent.span(cls="xmlschema-element").text = name
         parent.span().text = ">\n"
-        self.process(parent.span(), array.children[0], indent+2,
+        self.process(parent.span(), array.children[0], indent + 2,
                      name=array.children[0].name)
         parent.span().text = "%*s</" % (indent, "")
         parent.span(cls="xmlschema-element").text = name
@@ -665,7 +665,7 @@ class PropTable(HTMLTable):
                 line = 2
                 elem.span(cls="servicedef-indent", text="")
             if i != len(L) - 1:
-                if L[i+1][-1] != "]":
+                if L[i + 1][-1] != "]":
                     text += "."
 
             elem.span(cls="servicedef-%s" % "basename" if i == 0
@@ -700,13 +700,13 @@ class PropTable(HTMLTable):
         if schema.readOnly:
             parts.append("Read-only")
 
-        if ( isinstance(schema, reschema.jsonschema.Object) and
+        if (isinstance(schema, reschema.jsonschema.Object) and
              schema.required is not None and
              len(schema.required) > 0):
             parts.append("Required properties: [%s]" %
                          ', '.join(schema.required))
 
-        if ( (schema.parent is not None) and
+        if ((schema.parent is not None) and
              (isinstance(schema.parent, reschema.jsonschema.Object)) and
              ((schema.parent.required is None) or
               (schema.name not in schema.parent.required)) and
@@ -714,8 +714,8 @@ class PropTable(HTMLTable):
              ):
             parts.append("Optional")
 
-        if ( isinstance(schema, reschema.jsonschema.Number) or
-             isinstance(schema, reschema.jsonschema.Integer) ):
+        if (isinstance(schema, reschema.jsonschema.Number) or
+             isinstance(schema, reschema.jsonschema.Integer)):
             minimum = None
             if schema.minimum is not None:
                 minimum = str(schema.minimum)
