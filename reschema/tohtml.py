@@ -652,6 +652,8 @@ class PropTable(HTMLTable):
         pass
 
     def setname(self, elem, name):
+        if not name:
+            return
         limit = 40
         L = re.split("[.[]", name)
         line = 0

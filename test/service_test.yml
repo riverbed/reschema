@@ -495,7 +495,7 @@ resources:
                resource: "#/resources/test_item"
                vars: { num: "0" }
 
-      links: { self: { path: "$/test_items}" } }
+      links: { self: { path: "$/test_items" } }
 
    test_merge:
       $merge:

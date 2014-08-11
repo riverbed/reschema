@@ -321,6 +321,8 @@ class Schema(object):
         if self.parent:
             if isinstance(self.parent, Array):
                 return self.parent.fullname() + '[' + self.name + ']'
+            elif self.parent.fullname() is None:
+                return self.name
             else:
                 return self.parent.fullname() + '.' + self.name
 
@@ -644,7 +646,7 @@ class Merge(DynamicSchema):
         if self.parent:
             return self.parent.fullname()
         else:
-            return ""
+            return None
 
 _register_type(Merge)
 
