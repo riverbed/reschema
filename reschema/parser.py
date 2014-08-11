@@ -176,7 +176,7 @@ class Parser(object):
 
         if input:
             if isinstance(input, dict):
-                if '$ref' in input:
+                if '$ref' in input and isinstance(input['$ref'], basestring):
                     # replace relative refs with fully expanded refs
                     oldref = input['$ref']
                     newref = self.expand_ref(base_id, oldref)
