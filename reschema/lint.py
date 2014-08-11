@@ -5,6 +5,7 @@ from __future__ import print_function
 import re
 import uritemplate
 
+
 class ValidationFail(Exception):
     """
     Schema did something it shouldn't have
@@ -332,6 +333,19 @@ def check_valid_description(text, location, required=True):
                              "character".format(location))
 
 
+def check_required_properties(obj):
+    """
+    Checks the required properties, should exist in the
+    object's properties or additional properties
+    """
+    if obj.required is not None and len(obj.required) > 0:
+        for k in obj.required:
+            if k in obj.properties:
+                continue
+            elif obj.additional_properties is False:
+                raise ValidationFail("required must exist in the properties")
+
+
 @Validator.servicedef('W0001')
 def schema_provider_valid(sdef):
     if sdef.provider != 'riverbed':
@@ -561,6 +575,16 @@ def type_has_valid_description(typedef):
     check_valid_description(typedef.description, typedef.id, required=True)
 
 
+@Validator.typedef('C0201')
+def type_required_is_valid(typedef):
+    check_required_properties(typedef)
+
+
+@Validator.resource('C0302')
+def resource_required_is_valid(resource):
+    check_required_properties(resource)
+
+
 @Validator.link('E0105')
 def link_uritemplate_param_declared(link):
     params = uritemplate.variables(link.path.template)
@@ -568,5 +592,5 @@ def link_uritemplate_param_declared(link):
         if param not in link.schema.properties:
             raise ValidationFail("The parameter '{0}' in the uritemplate '{1}'"
                                  " is not declared in properties in '{2}'".
-                                 format(param, link.path.template, 
+                                 format(param, link.path.template,
                                         link.schema.fullname()))
