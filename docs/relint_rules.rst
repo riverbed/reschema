@@ -110,3 +110,10 @@ Resources (300)
   * **C0301**: A resource should be an object
   * **C0302**: Collection resource object should have an 'items' property
   * **C0303**: Self link should be the first in links
+
+  * **W0300**: All entries in required must exist in properties
+  * **W0301**: A required property should not have a default value
+
+--------------
+
+

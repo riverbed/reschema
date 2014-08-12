@@ -881,6 +881,140 @@ class TestRelint(TestLintBase):
                           '  res:\n'
                           '    type: string\n')
 
+    def test_rule_W0300(self):
+        """ All entries in required should exist in properties """
+
+        self.check_result('W0300', '#/resources/foo', Result.PASSED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      id: { type: number }\n'
+                          '    links:\n'
+                          '      self: { path: /foo }\n'
+                          '    required: [id]')
+
+        self.check_result('W0300', '#/resources/foo', Result.FAILED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      id: { type: number }\n'
+                          '    links:\n'
+                          '      self: { path: /foo }\n'
+                          '    required: [id, non_existing_prop]')
+
+        # check the recursive
+        self.check_result('W0300', '#/resources/foo', Result.PASSED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      id: { type: number }\n'
+                          '      outer:\n'
+                          '        type: object\n'
+                          '        properties:\n'
+                          '          inner: { type: number } \n'
+                          '        required: [inner]\n'
+                          '    links:\n'
+                          '      self: { path: /foo }\n')
+
+        self.check_result('W0300', '#/resources/foo', Result.FAILED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      id: { type: number }\n'
+                          '      outer:\n'
+                          '        type: object\n'
+                          '        properties:\n'
+                          '          inner: { type: number } \n'
+                          '        required: [inner, non_present]\n'
+                          '    links:\n'
+                          '      self: { path: /foo }\n')
+
+        self.check_result('W0300', '#/resources/foo', Result.FAILED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      id: { type: number }\n'
+                          '      outer:\n'
+                          '        type: array\n'
+                          '        items:\n'
+                          '           type: object\n'
+                          '           properties:\n'
+                          '              inner: { type: number } \n'
+                          '           required: [inner, non_present]\n'
+                          '    links:\n'
+                          '      self: { path: /foo }\n')
+
+    def test_rule_W0301(self):
+        """ A required property should not have a default value """
+        self.check_result('W0301', '#/resources/foo', Result.PASSED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      id: { type: number }\n'
+                          '    links:\n'
+                          '      self: { path: /foo }\n'
+                          '    required: [id]')
+        self.check_result('W0301', '#/resources/foo', Result.FAILED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      id: { type: number, default: 0 }\n'
+                          '    links:\n'
+                          '      self: { path: /foo }\n'
+                          '    required: [id]')
+        # check the recursive
+        self.check_result('W0301', '#/resources/foo', Result.PASSED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      id: { type: number }\n'
+                          '      outer:\n'
+                          '        type: object\n'
+                          '        properties:\n'
+                          '          inner: { type: number }\n'
+                          '        required: [inner]\n'
+                          '    links:\n'
+                          '      self: { path: /foo }\n')
+
+        self.check_result('W0301', '#/resources/foo', Result.FAILED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      id: { type: number }\n'
+                          '      outer:\n'
+                          '        type: object\n'
+                          '        properties:\n'
+                          '          inner: { type: number, default: 0 }\n'
+                          '        required: [inner]\n'
+                          '    links:\n'
+                          '      self: { path: /foo }\n')
+
+        self.check_result('W0301', '#/resources/foo', Result.FAILED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      id: { type: number }\n'
+                          '      outer:\n'
+                          '        type: array\n'
+                          '        items:\n'
+                          '           type: object\n'
+                          '           properties:\n'
+                          '              inner: {type: number,default: 0}\n'
+                          '           required: [inner]\n'
+                          '    links:\n'
+                          '      self: { path: /foo }\n')
+
+
 if __name__ == '__main__':
     logging.basicConfig(filename='test.log', level=logging.DEBUG)
     unittest.main()

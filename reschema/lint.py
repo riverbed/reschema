@@ -593,3 +593,40 @@ def self_link_is_first(resource):
         if link.name != 'self' and link.name.start_mark < self_mark:
             raise ValidationFail("'self' link should be the first in '{0}'"
                                  .format(resource.fullname()))
+
+
+@Validator.typedef('W0300')
+@Validator.resource('W0300')
+def required_has_valid_values(schema):
+    if hasattr(schema, 'required') and schema.required:
+        for required_prop in schema.required:
+            if required_prop not in schema.properties:
+                raise ValidationFail("The required property '{0}' is not "
+                                     "defined in '{1}'"
+                                     .format(required_prop, schema.fullname()))
+
+    if hasattr(schema, 'properties'):
+        for prop in schema.properties.itervalues():
+            required_has_valid_values(prop)
+    if hasattr(schema, 'items'):
+        required_has_valid_values(schema.items)
+
+
+@Validator.typedef('W0301')
+@Validator.resource('W0301')
+def required_property_with_default_value(schema):
+    if hasattr(schema, 'required') and schema.required:
+        for required_prop in schema.required:
+            if required_prop in schema.properties:
+                if (hasattr(schema.properties[required_prop], 'default')
+                    and schema.properties[required_prop].default is not None) :
+                    raise ValidationFail("A required property '{0}' should not"
+                                         " have a default value in '{1}'".
+                                         format(required_prop,
+                                                schema.fullname()))
+
+    if hasattr(schema, 'properties'):
+        for prop in schema.properties.itervalues():
+            required_property_with_default_value(prop)
+    if hasattr(schema, 'items'):
+        required_property_with_default_value(schema.items)
