@@ -333,19 +333,6 @@ def check_valid_description(text, location, required=True):
                              "character".format(location))
 
 
-def check_required_properties(obj):
-    """
-    Checks the required properties, should exist in the
-    object's properties or additional properties
-    """
-    if obj.required is not None and len(obj.required) > 0:
-        for k in obj.required:
-            if k in obj.properties:
-                continue
-            elif obj.additional_properties is False:
-                raise ValidationFail("required must exist in the properties")
-
-
 @Validator.servicedef('W0001')
 def schema_provider_valid(sdef):
     if sdef.provider != 'riverbed':
@@ -576,13 +563,15 @@ def type_has_valid_description(typedef):
 
 
 @Validator.typedef('C0201')
-def type_required_is_valid(typedef):
-    check_required_properties(typedef)
-
-
 @Validator.resource('C0302')
-def resource_required_is_valid(resource):
-    check_required_properties(resource)
+def required_is_valid(schema):
+    if hasattr(schema, 'required') and hasattr(schema, 'properties') \
+       and hasattr(schema, 'additional_properties'):
+        if schema.additional_properties is False:
+            for k in schema.required:
+                if k not in schema.properties:
+                    raise ValidationFail("Required field '{0}' should be "
+                                         "included in properties".format(k))
 
 
 @Validator.link('E0105')
