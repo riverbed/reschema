@@ -287,6 +287,13 @@ class TestRelint(TestLintBase):
                           '      id: { type: number }\n'
                           '    links:\n'
                           '      self: { path: "/foos/{non_present}" }\n')
+        self.check_result('E0105', '#/resources/foo/links/self', Result.FAILED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: "null"\n'
+                          '    links:\n'
+                          '      self: { path: "/foos/{non_present}" }\n')
+
 
     def test_rule_C0303(self):
         ''' Self link should be the first link '''

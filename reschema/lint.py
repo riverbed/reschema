@@ -569,10 +569,17 @@ def type_has_valid_description(typedef):
 def link_uritemplate_param_declared(link):
     params = uritemplate.variables(link.path.template)
     for param in params:
-        if param not in link.schema.properties:
+        if link.schema.typestr != 'object':
+            raise ValidationFail("The resource '{0}' is not an object, "
+                                 "so the parameter '{1}' in the uritemplate "
+                                 "'{2}' is not declared in link '{3}'".
+                                 format(link.schema.fullname(), param,
+                                        link.path.template, link.name))
+        elif param not in link.schema.properties:
             raise ValidationFail("The parameter '{0}' in the uritemplate '{1}'"
-                                 " is not declared in properties in '{2}'".
-                                 format(param, link.path.template, 
+                                 " in link '{2}' is not declared in properties"
+                                 " in resouce '{3}'".
+                                 format(param, link.path.template, link.name,
                                         link.schema.fullname()))
 
 
