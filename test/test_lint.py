@@ -195,8 +195,22 @@ class TestRelintDisable(TestLintBase):
 
 
 class TestRelint(TestLintBase):
+    def test_rule_W0001(self):
+        ''' The ``provider`` field must be set to ``riverbed`` '''
+
+        self.check_result('W0001',
+                          'http://support.riverbed.com/apis/test/1.0',
+                          Result.PASSED,
+                          'provider: riverbed\n')
+
+        self.check_result('W0001',
+                          'http://support.riverbed.com/apis/test/1.0',
+                          Result.FAILED,
+                          'provider: wrong_provider\n')
 
     def test_rule_W0002(self):
+        ''' The ``id`` field must be ``http://support.riverbed.com/apis/{name}/{version}`` '''
+
         self.check_result('W0002',
                           'http://support.riverbed.com/apis/test/1.0',
                           Result.PASSED,
@@ -214,6 +228,19 @@ class TestRelint(TestLintBase):
                           Result.FAILED,
                           'id: http://support.riverbed.com/apis/test/1.0\n'
                           'name: wrongname')
+
+    def test_rule_W0004(self):
+        ''' the schema must have a title '''
+
+        self.check_result('W0004',
+                          'http://support.riverbed.com/apis/test/1.0',
+                          Result.PASSED,
+                          'title: test_relint\n')
+
+        self.check_result('W0004',
+                          'http://support.riverbed.com/apis/test/1.0',
+                          Result.FAILED,
+                          'title: \n')
 
     def test_rule_C0002(self):
         """ Type should not end in _type """
@@ -244,7 +271,7 @@ class TestRelint(TestLintBase):
                           '      self: { path: /foo }')
 
     def test_rule_C0004(self):
-        """ Link should not end in _link """
+        ''' The name of a link should not start or end with ``link``'''
 
         self.check_result('C0004', '#/resources/foo/links/bar',
                           Result.PASSED,
@@ -267,6 +294,485 @@ class TestRelint(TestLintBase):
                           '      foo_link:\n'
                           '        path: /foo/nope\n'
                           '        method: GET')
+
+    def test_rule_C0005(self):
+        ''' A resource, type, link, or relation name must be at least 2 characters long '''
+
+        self.check_result('C0005', '#/types/a_good_type_name',
+                          Result.PASSED,
+                          'types:\n'
+                          '  a_good_type_name:\n'
+                          '    type: object\n')
+
+        self.check_result('C0005', '#/types/t',
+                          Result.FAILED,
+                          'types:\n'
+                          '  t: \n'
+                          '    type: object\n')
+
+        self.check_result('C0005', '#/resources/a_good_resource_name',
+                          Result.PASSED,
+                          'resources:\n'
+                          '  a_good_resource_name:\n'
+                          '    type: object\n')
+
+        self.check_result('C0005', '#/resources/r',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  r:\n'
+                          '    type: object\n')
+
+        self.check_result('C0005', '#/resources/res/links/a_good_link_name',
+                          Result.PASSED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self: { path: /res }\n'
+                          '      a_good_link_name:\n'
+                          '        method: GET\n')
+
+        self.check_result('C0005', '#/resources/res/links/l',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self: { path: /res }\n'
+                          '      l:\n'
+                          '        method: GET\n')
+
+    def test_rule_C0006(self):
+        ''' The service definition must have a valid description field, starting with a capital letter '''
+
+        self.check_result('C0006',
+                          'http://support.riverbed.com/apis/test/1.0',
+                          Result.PASSED,
+                          'description: Test description')
+
+        self.check_result('C0006',
+                          'http://support.riverbed.com/apis/test/1.0',
+                          Result.FAILED,
+                          'description: test description')
+
+        self.check_result('C0006',
+                          'http://support.riverbed.com/apis/test/1.0',
+                          Result.FAILED,
+                          'description: ')
+
+    def test_rule_C0100(self):
+        '''  Standard links must not have a description field. '''
+
+        self.check_result('C0100', '#/resources/res/links/self',
+                          Result.PASSED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n')
+
+        self.check_result('C0100', '#/resources/res/links/self',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '        description: needless description\n')
+
+    def test_rule_C0101(self):
+        ''' A non-standard link must have a valid description field. '''
+
+        self.check_result('C0101', '#/resources/res/links/buy',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      buy:\n'
+                          '        method: GET\n'
+                          '        path: "/path"\n'
+                          '        description: non capital description\n')
+
+        self.check_result('C0101', '#/resources/res/links/buy',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      buy:\n'
+                          '        method: GET\n'
+                          '        path: "/path"\n'
+                          '        description: buy it\n')
+
+        self.check_result('C0101', '#/resources/res/links/buy',
+                          Result.PASSED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      buy:\n'
+                          '        method: GET\n'
+                          '        path: "/path"\n'
+                          '        description: Capital description\n')
+
+    def test_rule_W0100(self):
+        '''  A ``get`` link cannot have a request body '''
+
+        self.check_result('W0100', '#/resources/res/links/get',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      get:\n'
+                          '        method: GET\n'
+                          '        request: { type: string }\n')
+
+        self.check_result('W0100', '#/resources/res/links/get',
+                          Result.PASSED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      get:\n'
+                          '        method: GET\n')
+
+    def test_rule_W0101(self):
+        '''  A ``get`` link cannot have a request body '''
+
+        self.check_result('W0101', '#/resources/res/links/get',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      get:\n'
+                          '        method: GET\n'
+                          '        response: { type: string }\n')
+
+        self.check_result('W0101', '#/resources/res/links/get',
+                          Result.PASSED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      get:\n'
+                          '        method: GET\n'
+                          '        response: { $ref: "#/resources/res" }\n')
+
+    def test_rule_W0102(self):
+        '''A ``set`` link request must be the representation of the resource it belongs to'''
+
+        self.check_result('W0102', '#/resources/res/links/set',
+                          Result.PASSED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      set:\n'
+                          '        method: PUT\n'
+                          '        request: { $ref: "#/resources/res" }\n')
+
+        self.check_result('W0102', '#/resources/res/links/set',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      set:\n'
+                          '        method: PUT\n'
+                          '        request: { type: string }\n')
+
+    def test_rule_W0103(self):
+        '''A ``set`` link response must be null or the representation of the resource it belongs to'''
+
+        self.check_result('W0103', '#/resources/res/links/set',
+                          Result.PASSED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      set:\n'
+                          '        method: PUT\n')
+
+        self.check_result('W0103', '#/resources/res/links/set',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      set:\n'
+                          '        method: PUT\n'
+                          '        response: { type: string }\n')
+
+        self.check_result('W0103', '#/resources/res/links/set',
+                          Result.PASSED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      set:\n'
+                          '        method: PUT\n'
+                          '        response: { $ref: "#/resources/res" }\n')
+
+    def test_rule_W0104(self):
+        ''' A ``delete`` link cannot have a request body '''
+
+        self.check_result('W0104', '#/resources/res/links/delete',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      delete:\n'
+                          '        method: DELETE\n'
+                          '        request: { type: string }\n')
+
+        self.check_result('W0104', '#/resources/res/links/delete',
+                          Result.PASSED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      delete:\n'
+                          '        method: DELETE\n')
+
+    def test_rule_W0105(self):
+        ''' A ``delete`` link cannot have a response body '''
+
+        self.check_result('W0105', '#/resources/res/links/delete',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      delete:\n'
+                          '        method: DELETE\n'
+                          '        response: { type: string }\n')
+
+        self.check_result('W0105', '#/resources/res/links/delete',
+                          Result.PASSED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      delete:\n'
+                          '        method: DELETE\n')
+
+    def test_rule_W0106(self):
+        '''A ``create`` link must have a request body '''
+
+        self.check_result('W0106', '#/resources/res/links/create',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      create:\n'
+                          '        method: POST\n')
+
+        self.check_result('W0106', '#/resources/res/links/create',
+                          Result.PASSED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      create:\n'
+                          '        method: POST\n'
+                          '        request: { type: string }\n')
+
+    def test_rule_W0107(self):
+        ''' A ``create`` link request must not be the same as the resource it belongs to '''
+
+        self.check_result('W0107', '#/resources/res/links/create',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      create:\n'
+                          '        method: POST\n'
+                          '        request: { $ref: "#/resources/res"}\n')
+
+        self.check_result('W0107', '#/resources/res/links/create',
+                          Result.PASSED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      create:\n'
+                          '        method: POST\n'
+                          '        request: { type: string }\n')
+
+    def test_rule_W0108(self):
+        '''A ``create`` link response must not be the same as the resource it belongs to '''
+
+        self.check_result('W0108', '#/resources/res/links/create',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      create:\n'
+                          '        method: POST\n'
+                          '        response: { $ref: "#/resources/res"}\n')
+
+        self.check_result('W0108', '#/resources/res/links/create',
+                          Result.PASSED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      create:\n'
+                          '        method: POST\n'
+                          '        response: { type: string }\n')
+
+    def test_rule_E0100(self):
+        ''' A ``get`` link must use http method GET '''
+
+        self.check_result('E0100', '#/resources/res/links/get',
+                          Result.PASSED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      get:\n'
+                          '        method: GET\n')
+
+        self.check_result('E0100', '#/resources/res/links/get',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      get:\n'
+                          '        method: PUT\n')
+
+    def test_rule_E0101(self):
+        '''  A ``set`` link must use http method PUT '''
+
+        self.check_result('E0101', '#/resources/res/links/set',
+                          Result.PASSED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      set:\n'
+                          '        method: PUT\n')
+
+        self.check_result('E0101', '#/resources/res/links/set',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      set:\n'
+                          '        method: GET\n')
+
+    def test_rule_E0102(self):
+        '''  A ``create`` link must use http method POST '''
+
+        self.check_result('E0102', '#/resources/res/links/create',
+                          Result.PASSED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      create:\n'
+                          '        method: POST\n')
+
+        self.check_result('E0102', '#/resources/res/links/create',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      create:\n'
+                          '        method: GET\n')
+
+    def test_rule_E0103(self):
+        '''  A ``delete`` link must use http method DELETE '''
+
+        self.check_result('E0103', '#/resources/res/links/delete',
+                          Result.PASSED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      delete:\n'
+                          '        method: DELETE\n')
+
+        self.check_result('E0103', '#/resources/res/links/delete',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/path"\n'
+                          '      delete:\n'
+                          '        method: GET\n')
 
     def test_rule_E0105(self):
         '''A parameter in URI template must be declared in schema properties'''
@@ -331,6 +837,49 @@ class TestRelint(TestLintBase):
                           '      r3_l1: { method: GET, path: "/dsaf" }\n'
                           '      r3_l2: { method: GET, path: "/dsaf" }\n'
                           '      r3_l3: { method: GET, path: "/dsaf" }\n')
+
+    def test_rule_C0200(self):
+        ''' A type must have a valid description field '''
+
+        self.check_result('C0200', '#/types/a_type', Result.PASSED,
+                          'types:\n'
+                          '  a_type:\n'
+                          '    type: object\n'
+                          '    description: A good description\n')
+
+        self.check_result('C0200', '#/types/a_type', Result.FAILED,
+                          'types:\n'
+                          '  a_type:\n'
+                          '    type: object\n'
+                          '    description: a bad description\n')
+
+    def test_rule_C0300(self):
+        ''' A resource must have a valid description field '''
+
+        self.check_result('C0300', '#/resources/res', Result.PASSED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    description: A good description\n')
+
+        self.check_result('C0300', '#/resources/res', Result.FAILED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n'
+                          '    description: a bad description\n')
+
+    def test_rule_C0301(self):
+        '''  A resource should be an object '''
+
+        self.check_result('C0301', '#/resources/res', Result.PASSED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: object\n')
+
+        self.check_result('C0301', '#/resources/res', Result.FAILED,
+                          'resources:\n'
+                          '  res:\n'
+                          '    type: string\n')
 
 if __name__ == '__main__':
     logging.basicConfig(filename='test.log', level=logging.DEBUG)

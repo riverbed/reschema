@@ -6,8 +6,8 @@ import re
 import uritemplate
 
 import reschema.settings
-reschema.settings.LOAD_DESCRIPTIONS=True
-reschema.settings.MARKED_LOAD=True
+reschema.settings.LOAD_DESCRIPTIONS = True
+reschema.settings.MARKED_LOAD = True
 
 class ValidationFail(Exception):
     """
