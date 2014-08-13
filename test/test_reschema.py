@@ -1139,6 +1139,74 @@ class TestSchema(TestSchemaBase):
                          valid=[range(10), range(20)],
                          invalid=[range(0), range(9), range(21)])
 
+    def test_self_vars(self):
+        r = self.r.resources['test_self_vars']
+        l = r.links['self']
+
+        # Classic resolution of all path variables using
+        # a data representation
+        (uri, kvs) = l.path.resolve(
+            data={'id1': 3, 'buried': {'id2': 'foo'}})
+        self.assertEqual(uri, '$/test_self_vars/3/foo')
+
+        # Override of 'id2' via kvs
+        (uri, kvs) = l.path.resolve(
+            data={'id1': 3, 'buried': {'id2': 'foo'}},
+            kvs={'id2': 'bar'})
+        self.assertEqual(uri, '$/test_self_vars/3/bar')
+
+        # Override of 'id1' via kvs
+        (uri, kvs) = l.path.resolve(
+            data={'id1': 3, 'buried': {'id2': 'foo'}},
+            kvs={'id1': 4})
+        self.assertEqual(uri, '$/test_self_vars/4/foo')
+
+        # Only use kvs
+        (uri, kvs) = l.path.resolve(
+            kvs={'id1': 4, 'id2': 'bar'})
+        self.assertEqual(uri, '$/test_self_vars/4/bar')
+
+        # Missing parameters cases
+        with self.assertRaises(MissingParameter):
+            (uri, params, values) = l.path.resolve()
+
+        with self.assertRaises(MissingParameter):
+            (uri, params, values) = l.path.resolve(
+                data={'id1': 3, 'buried': {'id3': 'foo'}})
+
+        with self.assertRaises(MissingParameter):
+            (uri, params, values) = l.path.resolve(
+                data={'id3': 3, 'buried': {'id2': 'foo'}})
+
+        with self.assertRaises(MissingParameter):
+            (uri, params, values) = l.path.resolve(
+                kvs={'id1': 5})
+
+    def test_self_vars_rel(self):
+        r = self.r.resources['test_self_vars_rel']
+        rel = r.relations['rel']
+        (uri, params, values) = rel.resolve(
+            data={'var_id1': 3, 'var_id2': 'foo'})
+        self.assertEqual(uri, '$/test_self_vars/3/foo')
+
+        (uri, params, values) = rel.resolve(
+            kvs={'id1': 3, 'id2': 'foo'})
+        self.assertEqual(uri, '$/test_self_vars/3/foo')
+
+        (uri, params, values) = rel.resolve(
+            data={'var_id1': 3, 'var_id2': 'foo'},
+            kvs={'id1': 4})
+        self.assertEqual(uri, '$/test_self_vars/4/foo')
+
+        with self.assertRaises(MissingParameter):
+            (uri, params, values) = rel.resolve(data=None)
+
+        with self.assertRaises(MissingParameter):
+            (uri, params, values) = rel.resolve(data=None, kvs={'v': 3})
+
+        with self.assertRaises(MissingParameter):
+            (uri, params, values) = rel.resolve(data={'v': 3})
+
 
 class TestExpandId(unittest.TestCase):
 

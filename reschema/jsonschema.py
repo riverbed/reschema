@@ -79,7 +79,7 @@ from jsonpointer import resolve_pointer, JsonPointer
 from reschema.jsonmergepatch import json_merge_patch
 from reschema.parser import Parser
 from reschema.util import check_type
-from reschema.reljsonpointer import resolve_rel_pointer
+from reschema.reljsonpointer import resolve_rel_pointer, JsonPointerException
 from reschema.exceptions import \
     ValidationError, MissingParameter, ParseError, InvalidReference
 
@@ -1076,7 +1076,7 @@ class Relation(object):
             parser.parse('tags', {}, types=dict)
 
     def __str__(self):
-        return self.resource.name
+        return self.name
 
     def __repr__(self):
         return "<jsonschema.%s '%s'>" % (self.__class__.__name__,
@@ -1116,37 +1116,65 @@ class Relation(object):
     def str_simple(self):
         return '%-30s %-20s\n' % (self.fullname(), '<relation>')
 
-    def resolve(self, data, fragment=None, params=None):
-        """ Resolves this path against data and params.
+    def resolve(self, data=None, fragment='', kvs=None):
+        """ Resolves this path against data and kvs.
 
-        Returns a tuple (path, values) where path is this path
-        template resolved against the passed `data` and
-        `params`.  The return `values` is the dictionary
-        of vars defined for the path and the resolved
-        values for these vars.
+        :param obj data: object to use for resolving relation vars
+        :param str fragment: relative JSON pointer into indicating
+            relative starting point within data to resolve vars
+        :param obj kvs: override key / value pairs for the target
+            resource's path vars
+
+        :return: a tuple (uri, params, values), uri is the
+           fully resolved path, params is a dictionary of
+           parameters values according to the target resources
+           self.params list (if any), and values is the
+           complete dictionary of all resolved values used
+           to complete the path
 
         """
         target_self = self.resource.links['self']
         target_params = target_self._params
 
-        if params:
-            vals = params
+        if kvs is None:
+            kvs = {}
         else:
-            vals = {}
+            # We're going to add vals to kvs, so copy to
+            # make sure we don't tweak the callers dict
+            kvs = copy.copy(kvs)
 
-        if data is not None:
-            if self.vars is not None:
-                for var, relp in self.vars.iteritems():
-                    vals[var] = resolve_rel_pointer(data, fragment or '', relp)
+        if self.vars is not None:
+            # If the resource defines 'vars', use data to
+            # resolve them and put them in kvs
+            for var, relp in self.vars.iteritems():
+                if var in kvs:
+                    # This var's value was provided directly
+                    # by the caller in kvs, so take the caller's
+                    # version
+                    continue
 
-        (uri, values) = target_self.path.resolve(vals)
+                if data is None:
+                    # If var was not in kvs and no data, raise an exception
+                    raise MissingParameter(
+                        "Missing value for relation '%s' var: %s" %
+                        (str(self), var), self)
+
+                try:
+                    kvs[var] = resolve_rel_pointer(data, fragment, relp)
+                except JsonPointerException:
+                    raise MissingParameter(
+                        ("Relation %s failed to assign var %s from data "
+                         "using rel pointer %s") %
+                        (self.fullname(), var, relp), self)
+
+        (uri, values) = target_self.path.resolve(data=None, kvs=kvs)
 
         params = {}
         if target_params:
             for var, schema in target_params.iteritems():
-                if var in vals:
-                    schema.validate(vals[var])
-                    params[var] = vals[var]
+                if var in kvs:
+                    schema.validate(kvs[var])
+                    params[var] = kvs[var]
 
         return (uri, params, values)
 
@@ -1311,34 +1339,96 @@ class Path(object):
     def __str__(self):
         return self.template
 
-    def resolve(self, data, pointer=None):
-        """Resolve variables in template from `data` relative to `pointer`."""
-        values = {}
+    def resolve(self, data=None, pointer=None, kvs=None):
+        """Resolve variables in template from `data` relative to `pointer`.
+
+        :param obj data: source data to use for path vars
+        :param str pointer: relative JSON pointer to index into data
+        :param obj kvs: override key / value pairs for template vars
+
+        :return: a tuple (uri, values), uri is the fully resolved
+           path, and values is the complete dictionary of all resolved
+           values used to complete the path
+
+        A path object has a template with 0 or more variables in it
+        that must be resolved.  The template varaiables are resolved
+        first from `kvs` directly, then from data.  When data is used,
+        if any path.vars are defined, they are used for resolution.
+        Remaining template vars are resolved directly from data.
+
+        Example with direct resolution:
+           path: '$/foos/{id}
+
+           data           kvs           uri
+           {'id': 5}      None          $/foos/5
+           {'id': 5}      {'id': 6}     $/foos/6
+           None           {'id': 6}     $/foos/6
+
+        Example with indirect resolution:
+           path:
+              template: '$/foos/{id}
+              vars: { id: '0/sub/id' }
+
+           data                    kvs           uri
+           {'sub': {'id': 5}}      None          $/foos/5
+           {'sub': {'id': 5}}      {'id': 6}     $/foos/6
+
+        Example with indirect resolution and a fragment
+           path:
+              template: '$/foos/{id}
+              vars: { id: '1/suba/id' }
+
+           fragment='/subb'
+
+           data                              kvs           uri
+           {'suba': {'id': 5}, 'subb': 7}    None          $/foos/5
+           {'suba': {'id': 5}, 'subb': 7}    {'id': 6}     $/foos/6
+
+        """
+        if kvs is None:
+            kvs = {}
+        else:
+            # We're going to add vals to kvs, so copy to
+            # make sure we don't tweak the callers dict
+            kvs = copy.copy(kvs)
+
         if data:
-            values['$'] = resolve_pointer(data, pointer or '')
+            kvs['$'] = resolve_pointer(data, pointer or '')
 
             if self.vars:
-                for v in self.vars:
-                    values[v] = resolve_rel_pointer(data,
-                                                    pointer or '',
-                                                    self.vars[v])
+                for var, relp in self.vars.iteritems():
+                    if var in kvs:
+                        # This var's value was provided directly
+                        # by the caller in kvs, so take the caller's
+                        # version
+                        continue
+
+                    try:
+                        kvs[var] = resolve_rel_pointer(
+                            data, pointer or '', relp)
+
+                    except JsonPointerException:
+                        raise MissingParameter(
+                            ("Path %s failed to assign var %s from data "
+                            "using rel pointer %s") % (self, var, relp),
+                            self)
 
             if data and isinstance(data, dict):
                 for v in data.keys():
-                    if v not in values:
-                        values[v] = data[v]
+                    if v not in kvs:
+                        kvs[v] = data[v]
 
         tmpl = self.template
         logger.debug("%s template: %s" % (self.link.fullname(), tmpl))
         required = set(uritemplate.variables(self.template))
-        have = set(values.keys())
+        have = set(kvs.keys())
         if not required.issubset(have):
             raise MissingParameter(
                 "Missing parameters for link '%s' path template '%s': %s" %
-                (self.link.name, self.template, [x for x in
-                                                 required.difference(have)]),
+                (self.link.fullname(), self.template,
+                 [x for x in required.difference(have)]),
                 self)
 
-        uri = uritemplate.expand(self.template, values)
+        uri = uritemplate.expand(self.template, kvs)
 
-        return (uri, values)
+        return (uri, kvs)

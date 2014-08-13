@@ -557,3 +557,30 @@ resources:
          # when self is defined after get
          get: { method: GET }
          self: { path: "$/test_self_after_get" }
+
+   test_self_vars:
+      type: object
+      properties:
+         id1: { type: integer }
+         buried:
+            type: object
+            properties: { id2: { type: string } }
+      links:
+         self:
+            path:
+               template: "$/test_self_vars/{id1}/{id2}"
+               vars: { id2: '0/buried/id2' }
+
+   test_self_vars_rel:
+      type: object
+      properties:
+         var_id1: { type: integer }
+         var_id2: { type: string }
+      links:
+         self: { path: "$/test_self_vars_rel" }
+      relations:
+         rel:
+            resource: "#/resources/test_self_vars"
+            vars:
+               id1: "0/var_id1"
+               id2: "0/var_id2"
