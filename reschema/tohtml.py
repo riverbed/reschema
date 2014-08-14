@@ -93,13 +93,13 @@ class ServiceDefToHtml(object):
     servicedef = None
 
     def __init__(self, servicedef, container, menu=None, options=None,
-                 device="{device}", root="/{root}"):
+                 device="{device}", apiroot="/{root}"):
         ServiceDefToHtml.servicedef = servicedef
         self.servicedef = servicedef
         self.container = container
         self.menu = menu
         self.options = (options or Options())
-        self.servicepath = "http://%s%s" % (device, root)
+        self.servicepath = "http://%s%s" % (device, apiroot)
 
     def process(self):
 

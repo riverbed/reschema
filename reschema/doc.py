@@ -117,6 +117,7 @@ class ReschemaDoc(object):
 
             r2h = ServiceDefToHtml(servicedef, htmldoc.content, htmldoc.menu,
                                    device=options.device,
+                                   apiroot=options.apiroot,
                                    options=Options(printable=False,
                                                    json=(not options.nojson),
                                                    xml=(not options.noxml),
