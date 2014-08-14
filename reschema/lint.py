@@ -272,7 +272,6 @@ class Validator(object):
                 print('Checking links for \'{}\''.format(resource.name))
 
             for _, link in resource.links.items():
-                print (dir(link))
                 results.extend(self._run_rules(Validator.LINK_RULES, link))
                 results.extend(self._run_rules(Validator.SCHEMA_RULES,
                                                link, self))
