@@ -590,7 +590,9 @@ def self_link_is_first(resource):
 
     self_mark = resource.links['self'].name.start_mark
     for link in resource.links.values():
-        if link.name != 'self' and link.name.start_mark < self_mark:
+        mark = link.name.start_mark
+        if (  link.name != 'self' and
+              (mark.line, mark.column) < (self_mark.line, self_mark.column)):
             raise ValidationFail("'self' link should be the first in '{0}'"
                                  .format(resource.fullname()))
 
