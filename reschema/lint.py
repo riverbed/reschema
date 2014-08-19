@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import re
 import uritemplate
+import traceback
 
 from reschema.jsonschema import Merge
 
@@ -356,7 +357,7 @@ class Validator(object):
         return results
 
 
-def lint(sdef):
+def lint(sdef, filename):
     """
     Performs all checks on a loaded service definition.
 
@@ -381,7 +382,59 @@ def lint(sdef):
                   .format(error.id))
         xref_failures += len(errors)
 
-    return xref_failures + failures
+    print ('Checking indentation')
+    errors = check_indentation(filename)
+    indent_failures = len(errors)
+    for line_number in errors:
+        print ("FAIL: [C0007] - line {0} indentation should be 4 spaces"
+               .format(line_number))
+
+    return xref_failures + failures + indent_failures
+
+
+def first_char_pos(line):
+    """
+    return the indentation of first non-space character of the line
+    If the first char is # or none such char exists, return False
+    """
+    ind = 0
+    while ind < len(line):
+        if line[ind] == ' ':
+            ind += 1
+        elif line[ind] == '#':
+            return False
+        else:
+            return ind
+    return False
+
+
+def check_indentation(filename):
+    """
+    check if each indentation is 4 spaces, otherwise generate issue C0007
+    rule: when the first non-whitespace character is '#', ignore.
+          otherwise, the indentation of the first valid char is deeper
+          than the previous indentation, then the delta must be 4 spaces
+    """
+    try:
+        f = open(filename, 'r')
+        # return a list of strings
+        list = f.read().split('\n')
+        pre_pos = first_char_pos(list[0])
+        curr_pos = 0
+        ind = 1
+        errors = []
+        while ind < len(list):
+            curr_pos = first_char_pos(list[ind])
+            if not (curr_pos == pre_pos or curr_pos == pre_pos + 4 or
+                    (pre_pos > curr_pos and (pre_pos - curr_pos) % 4 == 0)):
+                errors.append(ind + 1)
+            pre_pos = curr_pos
+            ind += 1
+        return errors
+    except:
+        print ("Function check_indentation failed, Exception: {0}"
+               .format(traceback.format_exc()))
+        return []
 
 
 def check_valid_identifier(name, location):
