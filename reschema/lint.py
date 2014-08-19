@@ -510,6 +510,13 @@ def schema_has_title(sdef):
         raise ValidationFail("the schema must have a title")
 
 
+@Validator.schema('W0005')
+def schema_has_additional(schema):
+    if not hasattr(schema, 'additional_properties'):
+        raise ValidationFail("schema '{0}' misses additionalProperties"
+                             .format(schema.id))
+
+
 @Validator.schema('C0001')
 def schema_has_valid_name(schema):
     check_valid_identifier(schema.name, schema.id)
