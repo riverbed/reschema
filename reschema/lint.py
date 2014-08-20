@@ -257,6 +257,9 @@ class Validator(object):
         Check if one general schema is valid
         """
         results = []
+        # validate the schema itself
+        results.extend(self._run_rules(Validator.SCHEMA_RULES, schema))
+
         if hasattr(schema, 'properties'):
             for _, prop in schema.properties.iteritems():
                 self.validate_schema(prop, results)
@@ -649,6 +652,7 @@ def link_create_response_is_not_resource(link):
 def link_get_return_path_template(link):
     pass
 
+
 @Validator.link('E0100')
 def link_get_method_is_get(link):
     if 'get' == link.name and 'GET' != link.method.upper():
@@ -695,7 +699,7 @@ def schema_has_valid_description(schema):
     check_valid_description(schema.description, schema.id, required=True)
 
 
-@Validator.schema('E0104')
+@Validator.schema('E0002')
 def required_is_valid(schema):
     if (hasattr(schema, 'required') and hasattr(schema, 'properties')
             and hasattr(schema, 'additional_properties')):

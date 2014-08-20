@@ -273,6 +273,29 @@ class TestRelint(TestLintBase):
                           '        path: /foo/nope\n'
                           '        method: GET')
 
+
+    def test_rule_E0002(self):
+        """ Required fields should exist in properties if
+        additionalProperties is False"""
+        # import pdb;pdb.set_trace()
+        self.check_result('E0002', '#/types/foo', Result.PASSED,
+                          'types:\n'
+                          '  foo:\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      name: { type: string }\n'
+                          '    required: [ name ]\n'
+                          '    additionalProperties: false')
+
+        self.check_result('E0002', '#/types/foo', Result.FAILED,
+                          'types:\n'
+                          '  foo:\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      name: { type: string }\n'
+                          '    required: [ nonesuch ]\n'
+                          '    additionalProperties: false')
+
     def test_rule_E0105(self):
         '''A parameter in URI template must be declared in schema properties'''
 
@@ -292,51 +315,6 @@ class TestRelint(TestLintBase):
                           '      id: { type: number }\n'
                           '    links:\n'
                           '      self: { path: "/foos/{non_present}" }\n')
-
-    def test_rule_C0201(self):
-        """ Required fields should exist in properties if
-        additionalProperties is False for types"""
-
-        self.check_result('C0201', '#/types/foo', Result.PASSED,
-                          'types:\n'
-                          '  foo:\n'
-                          '    type: object\n'
-                          '    properties:\n'
-                          '      name: { type: string }\n'
-                          '    required: [ name ]\n'
-                          '    additionalProperties: false')
-
-        self.check_result('C0201', '#/types/foo', Result.FAILED,
-                          'types:\n'
-                          '  foo:\n'
-                          '    type: object\n'
-                          '    properties:\n'
-                          '      name: { type: string }\n'
-                          '    required: [ nonesuch ]\n'
-                          '    additionalProperties: false')
-
-    def test_rule_C0302(self):
-        """ Required fields should exist in properties if
-        additionalProperties is False for resources"""
-
-        self.check_result('C0302', '#/resources/foo', Result.PASSED,
-                          'resources:\n'
-                          '  foo:\n'
-                          '    type: object\n'
-                          '    properties:\n'
-                          '      name: { type: string }\n'
-                          '    required: [ name ]\n'
-                          '    additionalProperties: false')
-
-        self.check_result('C0302', '#/resources/foo', Result.FAILED,
-                          'resources:\n'
-                          '  foo:\n'
-                          '    type: object\n'
-                          '    properties:\n'
-                          '      name: { type: string }\n'
-                          '    required: [ nonesuch ]\n'
-                          '    additionalProperties: false')
-
 
 if __name__ == '__main__':
     logging.basicConfig(filename='test.log', level=logging.DEBUG)

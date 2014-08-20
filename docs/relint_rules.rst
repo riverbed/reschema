@@ -42,6 +42,8 @@ General schema issues / naming conventions (001)
 
   * **E0001**: Invalid ``$ref``; the target cannot be found
 
+  * **E0002**: Invalid required property when additional property is False
+
 
 Links (100)
 -----------
