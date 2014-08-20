@@ -419,17 +419,21 @@ def check_indentation(filename):
         f = open(filename, 'r')
         # return a list of strings
         list = f.read().split('\n')
-        pre_pos = first_char_pos(list[0])
+        ind = 0
+        while ind < len(list) and first_char_pos(list[ind]) is False:
+            ind += 1
+        pre_pos = first_char_pos(list[ind])
         curr_pos = 0
-        ind = 1
         errors = []
         while ind < len(list):
             curr_pos = first_char_pos(list[ind])
+            ind += 1
+            if curr_pos is False:
+                continue
             if not (curr_pos == pre_pos or curr_pos == pre_pos + 4 or
                     (pre_pos > curr_pos and (pre_pos - curr_pos) % 4 == 0)):
-                errors.append(ind + 1)
+                errors.append(ind)
             pre_pos = curr_pos
-            ind += 1
         return errors
     except:
         print ("Function check_indentation failed, Exception: {0}"
@@ -640,6 +644,10 @@ def link_create_response_is_not_resource(link):
         raise ValidationFail("'create' response must not be '{0}'".format(
                              link.schema.id))
 
+
+@Validator.link('W0109')
+def link_get_return_path_template(link):
+    pass
 
 @Validator.link('E0100')
 def link_get_method_is_get(link):
