@@ -273,7 +273,6 @@ class TestRelint(TestLintBase):
                           '        path: /foo/nope\n'
                           '        method: GET')
 
-
     def test_rule_E0002(self):
         """ Required fields should exist in properties if
         additionalProperties is False"""

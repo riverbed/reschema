@@ -648,11 +648,6 @@ def link_create_response_is_not_resource(link):
                              link.schema.id))
 
 
-@Validator.link('W0109')
-def link_get_return_path_template(link):
-    pass
-
-
 @Validator.link('E0100')
 def link_get_method_is_get(link):
     if 'get' == link.name and 'GET' != link.method.upper():
