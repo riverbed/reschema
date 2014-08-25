@@ -88,8 +88,6 @@ Links (100)
 
   * **E0103**: A ``delete`` link must use http method DELETE
 
-  * **E0104**: The relation is invalid.  The specified resource cannot be found
-
   * **E0105**: A parameter in URI template must be declared in schema properties
 
 
@@ -111,3 +109,7 @@ Resources (300)
   * **C0300**: A resource must have a valid description field
   * **C0301**: A resource should be an object
   * **C0302**: Collection resource object should have an 'items' property
+  
+-------
+
+  * **E0300**: The relation is invalid.  The specified resource cannot be found

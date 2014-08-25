@@ -315,6 +315,42 @@ class TestRelint(TestLintBase):
                           '    links:\n'
                           '      self: { path: "/foos/{non_present}" }\n')
 
+    def test_rule_E0300(self):
+        '''relations should be valid. The specified resource must be found'''
+
+        self.check_result('E0300', '#/resources/info', Result.PASSED,
+                          'resources:\n'
+                          '  info:\n'
+                          '    relations:\n'
+                          '      foo:\n'
+                          '        resource: \'#/resources/info\'\n')
+
+        self.check_result('E0300', '#/resources/info', Result.FAILED,
+                          'resources:\n'
+                          '  info:\n'
+                          '    relations:\n'
+                          '      foo:\n'
+                          '        resource: \'#/resources/foo\'\n')
+
+        # when relations is nested inside of each element of an array
+        self.check_result('E0300', '#/resources/info', Result.PASSED,
+                          'resources:\n'
+                          '  info:\n'
+                          '    type: array\n'
+                          '    items:\n'
+                          '      relations:\n'
+                          '        foo:\n'
+                          '          resource: \'#/resources/info\'\n')
+
+        self.check_result('E0300', '#/resources/info', Result.FAILED,
+                          'resources:\n'
+                          '  info:\n'
+                          '    type: array\n'
+                          '    items:\n'
+                          '      relations:\n'
+                          '        foo:\n'
+                          '          resource: \'#/resources/foo\'\n')
+
 if __name__ == '__main__':
     logging.basicConfig(filename='test.log', level=logging.DEBUG)
     unittest.main()

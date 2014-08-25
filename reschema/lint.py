@@ -6,7 +6,7 @@ import re
 import uritemplate
 import traceback
 
-from reschema.jsonschema import Merge
+from reschema.jsonschema import Merge, InvalidReference
 
 
 class ValidationFail(Exception):
@@ -715,3 +715,23 @@ def link_uritemplate_param_declared(link):
                                  " is not declared in properties in '{2}'".
                                  format(param, link.path.template,
                                         link.schema.fullname()))
+
+
+@Validator.resource('E0300')
+def relation_is_valid(resource):
+    # for one resource, it seems if it has non-empty relations,
+    # it will not be type array;
+    # if it is type array, then it has empty relations
+    r = resource
+    if hasattr(r, 'relations') and len(r.relations) > 0:
+        for e in r.relations.items():
+            # e[1] is type of jsonschema.Relations
+            rel = e[1]
+            try:
+                rel.resource
+            except InvalidReference:
+                raise ValidationFail("Invalid relation '{0}': '{1}' not found".
+                                     format(rel.fullname(), rel._resource_id))
+    else:
+        for c in r.children:
+            relation_is_valid(c)
