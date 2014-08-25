@@ -519,6 +519,14 @@ def link_create_response_is_not_resource(link):
                              link.schema.id))
 
 
+@Validator.link('W0112')
+def link_path_does_not_end_in_slash(link):
+    if link.path:
+        pathstr = str(link.path)
+        if pathstr.endswith('/') and pathstr != '/':
+            raise ValidationFail("A link path must not end with /")
+
+
 @Validator.link('E0100')
 def link_get_method_is_get(link):
     if 'get' == link.name and 'GET' != link.method.upper():

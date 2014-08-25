@@ -674,6 +674,70 @@ class TestRelint(TestLintBase):
                           '        method: POST\n'
                           '        response: { type: string }\n')
 
+    def test_rule_W0112(self):
+        ''' A link should not end with / '''
+
+        self.check_result('W0112', '#/resources/foo/links/self',
+                          Result.PASSED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: string\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/foo"\n'
+                          '      bar:\n'
+                          '        method: POST\n'
+                          '        path: /foo/bar\n')
+
+        # Self link
+        self.check_result('W0112', '#/resources/foo/links/self',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: string\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/foo/"\n'
+                          '      bar:\n'
+                          '        method: POST\n'
+                          '        path: /foo/bar\n')
+
+        # Bar link with inherited path
+        self.check_result('W0112', '#/resources/foo/links/bar',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: string\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/foo/"\n'
+                          '      bar:\n'
+                          '        method: POST\n')
+
+        # Bar link with explicit path
+        self.check_result('W0112', '#/resources/foo/links/bar',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: string\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/foo"\n'
+                          '      bar:\n'
+                          '        method: POST\n'
+                          '        path: /foo/bar/\n')
+
+        # Special check for root
+        self.check_result('W0112', '#/resources/foo/links/self',
+                          Result.PASSED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: string\n'
+                          '    links:\n'
+                          '      self:\n'
+                          '        path: "/"\n')
+
+
     def test_rule_E0100(self):
         ''' A ``get`` link must use http method GET '''
 

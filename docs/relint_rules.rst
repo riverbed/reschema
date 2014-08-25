@@ -76,6 +76,8 @@ Links (100)
 
   * **W0111**: The relation cannot be followed; the URI template for the target resource requires client input
 
+  * **W0112**: A link path should not end in a /.  '/resource' is a different URI than '/resource/', but not all clients and servers honor that.  It is also too subtle of a distinction between two resources.
+
 -------
 
   * **E0100**: A ``get`` link must use http method GET
