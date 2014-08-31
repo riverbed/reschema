@@ -5,11 +5,12 @@
 #   https://github.com/riverbed/reschema/blob/master/LICENSE ("License").
 # This software is distributed "AS IS" as set forth in the License.
 
-import os
 import urlparse
 
 from reschema.exceptions import ParseError, InvalidReference
 from reschema.util import check_type
+
+from reschema.loader_nodes import obj_key_node
 
 import reschema.settings
 
@@ -32,9 +33,12 @@ class Parser(object):
                              (name, type(input)), input)
 
         self.input = input
-        self.obj = obj
+        self.obj = None
         self.name = name
         self.parsed_props = set()
+
+        if obj:
+            self.set_context(name, obj)
 
     def __enter__(self):
         return self
@@ -59,6 +63,48 @@ class Parser(object):
 
         self.obj = obj
         self.name = name
+
+        self.mark_object(obj)
+
+    def mark_object(self, obj, prop=None, as_key=False, required=False):
+        """Associtate input property marks with a object.
+
+        Used by tools that use marked input to copy their marks to
+        representitive objects. Invoke for objects that are not constructed
+        by the parser class.
+
+        :param obj: The object that represents the property
+        :param prop: The property that is being represented. If None, the
+            full input is used.
+        :param as_key: Assoicate with the key of the property instead of it's
+            value.
+        :param bool required: Causes ParseError to be raised if `prop`
+            is not in the input
+        :raises reschema.exceptions.ParseError: if the type of the
+            data is incorrect or if the property is required but
+            missing.
+
+        """
+
+        # If object aleady is marked, short circuit.
+        if hasattr(obj, "start_mark"):
+            return
+
+        if prop is None:
+            val = self.input
+        else:
+            val = obj_key_node(self.input, prop)
+            if val is None:
+                if required:
+                    raise ParseError(
+                        "Missing required property '%s'" % prop, self.input)
+                return
+            if not as_key:
+                val = self.input[val]
+
+        if hasattr(val, "start_mark"):
+            obj.start_mark = val.start_mark
+            obj.end_mark = val.end_mark
 
     def parse(self, prop, default_value=None, required=False,
               types=None, save=True, save_as=None):

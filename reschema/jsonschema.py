@@ -1198,6 +1198,7 @@ class Link(object):
             pathdef = parser.parse('path', save=False)
             if pathdef is not None:
                 self.path = Path(self, pathdef)
+                parser.mark_object(self.path, 'path')
             elif self.method is not None:
                 if 'self' not in self.schema.links:
                     raise ParseError(("Link '%s' defined with no path and "

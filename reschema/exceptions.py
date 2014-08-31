@@ -6,7 +6,7 @@
 # This software is distributed "AS IS" as set forth in the License.
 
 
-from .yaml_loader import obj_key_node
+from reschema.loader_nodes import obj_key_node
 
 
 #
@@ -79,7 +79,7 @@ class InvalidReference(ReschemaException):
 #
 class MarkedError(ReschemaException):
     """ Base exception class for marked schema objects. """
-    def __init__(self, message, obj, parent_obj=None):
+    def __init__(self, message, obj=None, parent_obj=None):
         super(MarkedError, self).__init__(message)
 
         if hasattr(obj, 'start_mark'):
