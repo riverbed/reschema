@@ -8,15 +8,10 @@
 import os
 import logging
 import unittest
-import pytest
 import subprocess
 
-from yaml.error import MarkedYAMLError
-
-import reschema
-
 from reschema.exceptions import UnsupportedSchema
-from reschema import yaml_loader, ServiceDef, ServiceDefManager
+from reschema import ServiceDef
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +22,7 @@ SERVICE_22 = os.path.join(TEST_PATH, 'service_convert_2.2.yml')
 PACKAGE_PATH = os.path.dirname(TEST_PATH)
 
 CONVERT_21_22 = os.path.join(PACKAGE_PATH, 'bin', 'convert-2.1-2.2')
+
 
 class TestConvert21(unittest.TestCase):
 
@@ -45,14 +41,18 @@ class TestConvert21(unittest.TestCase):
         if os.path.exists(SERVICE_22):
             os.unlink(SERVICE_22)
 
-        r = subprocess.check_output([CONVERT_21_22, '-f', SERVICE_21,
+        try:
+            subprocess.check_output([CONVERT_21_22, '-f', SERVICE_21,
                                      '-o', SERVICE_22])
-        s = ServiceDef()
-        s.load(SERVICE_22)
+            s = ServiceDef()
+            s.load(SERVICE_22)
 
-        t = s.find('#/types/type3')
-        t.validate({'key1': 15})
+            t = s.find('#/types/type3')
+            t.validate({'key1': 15})
 
+        finally:
+            if os.path.exists(SERVICE_22):
+                os.unlink(SERVICE_22)
 
 
 if __name__ == '__main__':
