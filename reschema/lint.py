@@ -384,6 +384,9 @@ def lint(sdef, filename):
     :param sdef:
     :type sdef: reschema.servicedef.ServiceDef
 
+    :param filename:
+    :type string: the absolute name of the processing yml file
+
     :returns: total number of failures
     """
 
@@ -402,7 +405,6 @@ def lint(sdef, filename):
                   .format(error.id))
         xref_failures += len(errors)
 
-    print ('Checking indentation')
     errors = check_indentation(filename)
     indent_failures = len(errors)
     for line_number in errors:
