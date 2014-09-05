@@ -327,14 +327,16 @@ class TestRelint(TestLintBase):
     def test_rule_E0003(self):
         '''relations should be valid. The specified resource must be found'''
 
-        self.check_result('E0003', '#/resources/info/relations/foo', Result.PASSED,
+        self.check_result('E0003', '#/resources/info/relations/foo',
+                          Result.PASSED,
                           'resources:\n'
                           '  info:\n'
                           '    relations:\n'
                           '      foo:\n'
                           '        resource: \'#/resources/info\'\n')
 
-        self.check_result('E0003', '#/resources/info/relations/foo', Result.FAILED,
+        self.check_result('E0003', '#/resources/info/relations/foo',
+                          Result.FAILED,
                           'resources:\n'
                           '  info:\n'
                           '    relations:\n'
@@ -342,7 +344,8 @@ class TestRelint(TestLintBase):
                           '        resource: \'#/resources/foo\'\n')
 
         # when relations is nested inside of each element of an array
-        self.check_result('E0003', '#/resources/info/items/relations/foo', Result.PASSED,
+        self.check_result('E0003', '#/resources/info/items/relations/foo',
+                          Result.PASSED,
                           'resources:\n'
                           '  info:\n'
                           '    type: array\n'
@@ -351,7 +354,8 @@ class TestRelint(TestLintBase):
                           '        foo:\n'
                           '          resource: \'#/resources/info\'\n')
 
-        self.check_result('E0003', '#/resources/info/items/relations/foo', Result.FAILED,
+        self.check_result('E0003', '#/resources/info/items/relations/foo',
+                          Result.FAILED,
                           'resources:\n'
                           '  info:\n'
                           '    type: array\n'
