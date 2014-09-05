@@ -700,7 +700,7 @@ def resource_type_is_object(resource):
 
 
 @Validator.typedef('C0200')
-def schema_has_valid_description(typedef):
+def type_has_valid_description(typedef):
     check_valid_description(typedef.description, typedef.id, required=True)
 
 
