@@ -295,6 +295,15 @@ class TestRelint(TestLintBase):
                           '    required: [ nonesuch ]\n'
                           '    additionalProperties: false')
 
+        self.check_result('E0002', '#/types/foo', Result.PASSED,
+                          'types:\n'
+                          '  foo:\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      name: { type: string }\n'
+                          '    required: [ nonesuch ]\n'
+                          '    additionalProperties: true')
+
     def test_rule_E0105(self):
         '''A parameter in URI template must be declared in schema properties'''
 
@@ -315,17 +324,17 @@ class TestRelint(TestLintBase):
                           '    links:\n'
                           '      self: { path: "/foos/{non_present}" }\n')
 
-    def test_rule_E0300(self):
+    def test_rule_E0003(self):
         '''relations should be valid. The specified resource must be found'''
 
-        self.check_result('E0300', '#/resources/info', Result.PASSED,
+        self.check_result('E0003', '#/resources/info/relations/foo', Result.PASSED,
                           'resources:\n'
                           '  info:\n'
                           '    relations:\n'
                           '      foo:\n'
                           '        resource: \'#/resources/info\'\n')
 
-        self.check_result('E0300', '#/resources/info', Result.FAILED,
+        self.check_result('E0003', '#/resources/info/relations/foo', Result.FAILED,
                           'resources:\n'
                           '  info:\n'
                           '    relations:\n'
@@ -333,7 +342,7 @@ class TestRelint(TestLintBase):
                           '        resource: \'#/resources/foo\'\n')
 
         # when relations is nested inside of each element of an array
-        self.check_result('E0300', '#/resources/info', Result.PASSED,
+        self.check_result('E0003', '#/resources/info/items/relations/foo', Result.PASSED,
                           'resources:\n'
                           '  info:\n'
                           '    type: array\n'
@@ -342,7 +351,7 @@ class TestRelint(TestLintBase):
                           '        foo:\n'
                           '          resource: \'#/resources/info\'\n')
 
-        self.check_result('E0300', '#/resources/info', Result.FAILED,
+        self.check_result('E0003', '#/resources/info/items/relations/foo', Result.FAILED,
                           'resources:\n'
                           '  info:\n'
                           '    type: array\n'
