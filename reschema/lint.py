@@ -6,7 +6,7 @@ import re
 import uritemplate
 import traceback
 
-from reschema.jsonschema import Merge, InvalidReference
+from reschema.jsonschema import Merge, InvalidReference, Relation, Ref, Null
 
 
 class ValidationFail(Exception):
@@ -245,55 +245,63 @@ class Validator(object):
     def set_verbosity(cls, level):
         cls.VERBOSITY = level
 
-    def validate_schema(self, schema, results):
+    def check_schema(self, schema, results):
         """
-        run type rule and schema rule against a schema and populate results
+        Report any failures defined within a schema, including
+        top-level failures as well as any failures in each subschema
         """
-        results.extend(self._run_rules(Validator.SCHEMA_RULES, schema))
-        results.extend(self.check_valid_schema(schema))
+        if type(schema) is not Ref:
+            results.extend(self._run_rules(Validator.TYPE_RULES +
+                                           Validator.SCHEMA_RULES, schema))
+            self.check_sub_schema(schema, results)
 
-    def check_valid_schema(self, schema):
+    def check_sub_schema(self, schema, results):
         """
-        Check if one general schema is valid
+        Check if any subschema defined within schema is valid.
+        In particular, find any possible existing keywords and
+        check individual subschema defined underneath the keyword.
         """
-        results = []
-        # validate the schema itself
-        results.extend(self._run_rules(Validator.SCHEMA_RULES, schema))
-
         if hasattr(schema, 'properties'):
             for _, prop in schema.properties.iteritems():
-                self.validate_schema(prop, results)
+                self.check_schema(prop, results)
 
         if hasattr(schema, 'items'):
-            self.validate_schema(schema.items, results)
+            self.check_schema(schema.items, results)
 
-        if hasattr(schema, 'request') and schema.request is not None:
-            self.validate_schema(schema.request, results)
+        if hasattr(schema, '_request') and schema._request is not None:
+            if type(schema._request) not in [Ref, Null]:
+                self.check_schema(schema._request, results)
 
-        if hasattr(schema, 'response') and schema.request is not None:
-            self.validate_schema(schema.response, results)
+        if hasattr(schema, '_response') and schema._response is not None:
+            if type(schema._response) not in [Ref, Null]:
+                self.check_schema(schema._response, results)
 
         if hasattr(schema, 'anyof'):
             for subschema in schema.anyof:
-                self.validate_schema(subschema, results)
+                self.check_schema(subschema, results)
 
         if hasattr(schema, 'oneof'):
             for subschema in schema.oneof:
-                self.validate_schema(subschema, results)
+                self.check_schema(subschema, results)
 
         if hasattr(schema, 'allof'):
             for subschema in schema.allof:
-                self.validate_schema(subschema, results)
+                self.check_schema(subschema, results)
 
         if hasattr(schema, 'not_') and schema.not_ is not None:
-            self.validate_schema(schema.not_, results)
+            self.check_schema(schema.not_, results)
 
         if hasattr(schema, '_params'):
             for _, param in schema._params.iteritems():
-                self.validate_schema(param, results)
+                self.check_schema(param, results)
 
         if (isinstance(schema, Merge)):
-            self.validate_schema(schema.refschema, results)
+            self.check_schema(schema.refschema, results)
+
+        if hasattr(schema, 'relations') and len(schema.relations) > 0:
+            for relation in schema.relations.items():
+                # relation[1] is type of jsonschema.Relation
+                self.check_schema(relation[1], results)
 
         return results
 
@@ -313,20 +321,29 @@ class Validator(object):
 
         print('Checking types')
         for typedef in sdef.type_iter():
-            results.extend(self._run_rules(Validator.TYPE_RULES, typedef))
-            results.extend(self.check_valid_schema(typedef))
+            if type(typedef) is not Ref:
+                results.extend(self._run_rules(Validator.TYPE_RULES +
+                                               Validator.SCHEMA_RULES,
+                                               typedef))
+                self.check_sub_schema(typedef, results)
 
         print('Checking resources')
         for resource in sdef.resource_iter():
-            results.extend(self._run_rules(Validator.RESOURCE_RULES, resource))
-            results.extend(self.check_valid_schema(resource))
+            if type(resource) is not Ref:
+                results.extend(self._run_rules(Validator.RESOURCE_RULES +
+                                               Validator.SCHEMA_RULES,
+                                               resource))
+                self.check_sub_schema(resource, results)
 
             if self.VERBOSITY > 1:
                 print('Checking links for \'{}\''.format(resource.name))
 
             for _, link in resource.links.items():
-                results.extend(self._run_rules(Validator.LINK_RULES, link))
-                results.extend(self.check_valid_schema(link))
+                if type(link) is not Ref:
+                    results.extend(self._run_rules(Validator.LINK_RULES +
+                                                   Validator.SCHEMA_RULES,
+                                                   link))
+                    self.check_sub_schema(link, results)
         return results
 
     def _run_rules(self, rules, obj):
@@ -682,9 +699,9 @@ def resource_type_is_object(resource):
                              resource.name))
 
 
-@Validator.schema('C0200')
-def schema_has_valid_description(schema):
-    check_valid_description(schema.description, schema.id, required=True)
+@Validator.typedef('C0200')
+def schema_has_valid_description(typedef):
+    check_valid_description(typedef.description, typedef.id, required=True)
 
 
 @Validator.schema('E0002')
@@ -699,6 +716,17 @@ def required_is_valid(schema):
                                          "included in properties".format(k))
 
 
+@Validator.schema('E0003')
+def relation_is_valid(schema):
+    if isinstance(schema, Relation):
+        try:
+            schema.resource
+        except InvalidReference:
+            raise ValidationFail("Invalid relation '{0}': '{1}' not found".
+                                 format(schema.fullname(),
+                                        schema._resource_id))
+
+
 @Validator.link('E0105')
 def link_uritemplate_param_declared(link):
     params = uritemplate.variables(link.path.template)
@@ -708,23 +736,3 @@ def link_uritemplate_param_declared(link):
                                  " is not declared in properties in '{2}'".
                                  format(param, link.path.template,
                                         link.schema.fullname()))
-
-
-@Validator.resource('E0300')
-def relation_is_valid(resource):
-    # for one resource, it seems if it has non-empty relations,
-    # it will not be type array;
-    # if it is type array, then it has empty relations
-    r = resource
-    if hasattr(r, 'relations') and len(r.relations) > 0:
-        for e in r.relations.items():
-            # e[1] is type of jsonschema.Relations
-            rel = e[1]
-            try:
-                rel.resource
-            except InvalidReference:
-                raise ValidationFail("Invalid relation '{0}': '{1}' not found".
-                                     format(rel.fullname(), rel._resource_id))
-    else:
-        for c in r.children:
-            relation_is_valid(c)

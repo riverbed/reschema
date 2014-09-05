@@ -1061,6 +1061,7 @@ class Relation(object):
     def __init__(self, input, name, schema, id):
         self.name = name
         self.schema = schema
+        self.servicedef = schema.servicedef
         self.vars = None
         self.id = id
 
@@ -1091,7 +1092,7 @@ class Relation(object):
         if self._resource is None:
             sch = Schema.find_by_id(self._resource_id)
             if sch is None:
-                sch = self.schema.servicedef.find(self._resource_id)
+                sch = self.servicedef.find(self._resource_id)
             if sch is None:
                 raise InvalidReference(("%s resource" % self.fullname()),
                                        self._resource_id)
@@ -1108,7 +1109,7 @@ class Relation(object):
             servicedef
 
         """
-        return '%s%s' % (('' if relative else self.schema.servicedef.id),
+        return '%s%s' % (('' if relative else self.servicedef.id),
                          self.id)
 
     def str_simple(self):

@@ -43,6 +43,8 @@ General schema issues / naming conventions (001)
   * **E0001**: Invalid ``$ref``; the target cannot be found
 
   * **E0002**: Invalid required property when additional property is False
+  
+  * **E0003**: The relation is invalid.  The specified resource cannot be found
 
 
 Links (100)
@@ -109,7 +111,4 @@ Resources (300)
   * **C0300**: A resource must have a valid description field
   * **C0301**: A resource should be an object
   * **C0302**: Collection resource object should have an 'items' property
-  
--------
 
-  * **E0300**: The relation is invalid.  The specified resource cannot be found
