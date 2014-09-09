@@ -130,6 +130,20 @@ class TestRelintDisable(TestLintBase):
                           '    links:\n'
                           '      self: { path: /foo }')
 
+        # Tag disable on the sub-schema of resource
+        self.check_result('C0001', '#/resources/foo_resource/properties/name',
+                          Result.DISABLED,
+                          'resources:\n'
+                          '  foo_resource:\n'
+                          '    tags:\n'
+                          '       relint-disable: [ C0001 ]\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      name:\n'
+                          '        type: string\n'
+                          '    links:\n'
+                          '      self: { path: /foo }')
+
     def test_type_disable(self):
         """
         Verifies type-level checks can be disabled
@@ -150,6 +164,17 @@ class TestRelintDisable(TestLintBase):
                           '  foo_type:\n'
                           '    tags:\n'
                           '       relint-disable: [ C0002 ]\n')
+
+
+        # test disable on the sub-schema of type
+        self.check_result('C0002', '#/types/foo_type/properties/name', Result.DISABLED,
+                          'types:\n'
+                          '  foo_type:\n'
+                          '    tags:\n'
+                          '       relint-disable: [ C0002 ]\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      name: {type: string}\n')
 
     def test_link_disable(self):
         """
@@ -198,6 +223,23 @@ class TestRelintDisable(TestLintBase):
                           '        tags:\n'
                           '           relint-disable: [ C0004 ]')
 
+        # test disable on the subschema of link
+        self.check_result('C0005', '#/resources/foo/links/foo_link/request/properties/p1',
+                          Result.DISABLED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: string\n'
+                          '    links:\n'
+                          '      self: { path: /foo }\n'
+                          '      foo_link:\n'
+                          '        path: /foo/nope\n'
+                          '        method: GET\n'
+                          '        tags:\n'
+                          '           relint-disable: [ C0005 ]\n'
+                          '        request:\n'
+                          '          type: object\n'
+                          '          properties:\n'
+                          '            p1: { type: number }')
 
 class TestRelint(TestLintBase):
 
