@@ -8,10 +8,6 @@ import traceback
 
 from reschema import jsonschema
 INDENT_OFFSET = 4
-# flag values to tell how to obtain disabled rules
-DISABLED_SDEF = 0
-DISABLED_SCHEMA = 1
-DISABLED_LINK = 2
 
 
 class ValidationFail(Exception):
@@ -163,8 +159,8 @@ class Validator(object):
         top-level failures as well as any failures in each subschema
         """
         if type(schema) is not jsonschema.Ref:
-            rules = get_disabled_rules(schema, DISABLED_SCHEMA)
-            disabled_rules = disabled_rules_above.union(rules)
+            schema_disabled = get_disabled(schema)
+            disabled_rules = disabled_rules_above.union(schema_disabled)
 
             results.extend(self._run_rules(Validator.TYPE_RULES +
                                            Validator.SCHEMA_RULES,
@@ -234,39 +230,39 @@ class Validator(object):
         results = []
 
         print('Checking top-level schema correctness')
+        sdef_disabled = get_disabled(sdef)
         results.extend(self._run_rules(Validator.SERVICEDEF_RULES, sdef,
-                                       get_disabled_rules(sdef,
-                                                          DISABLED_SDEF)))
+                                       sdef_disabled))
 
         print('Checking types')
         for typedef in sdef.type_iter():
             if type(typedef) is not jsonschema.Ref:
-                disabled_rules = get_disabled_rules(typedef, DISABLED_SCHEMA)
+                typedef_disabled = get_disabled(typedef).union(sdef_disabled)
                 results.extend(self._run_rules(Validator.TYPE_RULES +
                                                Validator.SCHEMA_RULES,
-                                               typedef, disabled_rules))
-                self.check_sub_schema(typedef, results, disabled_rules)
+                                               typedef, typedef_disabled))
+                self.check_sub_schema(typedef, results, typedef_disabled)
 
         print('Checking resources')
         for resource in sdef.resource_iter():
             if type(resource) is not jsonschema.Ref:
-                disabled_rules = get_disabled_rules(resource, DISABLED_SCHEMA)
+                resource_disabled = get_disabled(resource).union(sdef_disabled)
                 results.extend(self._run_rules(Validator.RESOURCE_RULES +
                                                Validator.SCHEMA_RULES,
-                                               resource, disabled_rules))
+                                               resource, resource_disabled))
 
-                self.check_sub_schema(resource, results, disabled_rules)
+                self.check_sub_schema(resource, results, resource_disabled)
 
             if self.VERBOSITY > 1:
                 print('Checking links for \'{}\''.format(resource.name))
 
             for _, link in resource.links.items():
                 if type(link) is not jsonschema.Ref:
-                    disabled_rules = get_disabled_rules(link, DISABLED_LINK)
+                    link_disabled = get_disabled(link).union(resource_disabled)
                     results.extend(self._run_rules(Validator.LINK_RULES +
                                                    Validator.SCHEMA_RULES,
-                                                   link, disabled_rules))
-                    self.check_sub_schema(link, results, disabled_rules)
+                                                   link, link_disabled))
+                    self.check_sub_schema(link, results, link_disabled)
         return results
 
     def _run_rules(self, rules, obj, disabled_rules):
@@ -300,7 +296,7 @@ class Validator(object):
         return results
 
 
-def get_disabled_rules(obj, flag):
+def get_disabled(obj):
     """
     Obtain the top-level disabled rules as well as on the object
 
@@ -310,25 +306,9 @@ def get_disabled_rules(obj, flag):
            reschema.jsonschema.Link or
            reschema.servicedef.ServiceDef
 
-    :param: flag to tell how to obtain disabled rules
-    :type: integer
-
     :returns: set of disabled rules of the object
     """
-    rules = []
-    if flag == DISABLED_SDEF:
-        rules = set(obj.tags.get('relint-disable', []))
-
-    # Grab the disabled rules from the typedef/resource and the servicedef
-    elif flag == DISABLED_SCHEMA:
-        rules = set(obj.tags.get('relint-disable', []) +
-                    obj.servicedef.tags.get('relint-disable', []))
-    # Grab the disabled rules from the link, resource, and the servicedef
-    elif flag == DISABLED_LINK:
-        rules = set(obj.tags.get('relint-disable', []) +
-                    obj.schema.tags.get('relint-disable', []) +
-                    obj.servicedef.tags.get('relint-disable', []))
-    return rules
+    return set(obj.tags.get('relint-disable', []))
 
 
 def lint(sdef, filename):
