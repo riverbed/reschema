@@ -159,8 +159,8 @@ class Validator(object):
         top-level failures as well as any failures in each subschema
         """
         if type(schema) is not jsonschema.Ref:
-            schema_disabled = get_disabled(schema)
-            disabled_rules = disabled_rules_above.union(schema_disabled)
+            rules = get_disabled(schema)
+            disabled_rules = disabled_rules_above.union(rules)
 
             results.extend(self._run_rules(Validator.TYPE_RULES +
                                            Validator.SCHEMA_RULES,
