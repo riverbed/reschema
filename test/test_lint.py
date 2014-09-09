@@ -165,9 +165,9 @@ class TestRelintDisable(TestLintBase):
                           '    tags:\n'
                           '       relint-disable: [ C0002 ]\n')
 
-
         # test disable on the sub-schema of type
-        self.check_result('C0002', '#/types/foo_type/properties/name', Result.DISABLED,
+        self.check_result('C0002', '#/types/foo_type/properties/name',
+                          Result.DISABLED,
                           'types:\n'
                           '  foo_type:\n'
                           '    tags:\n'
@@ -224,14 +224,15 @@ class TestRelintDisable(TestLintBase):
                           '           relint-disable: [ C0004 ]')
 
         # test disable on the subschema of link
-        self.check_result('C0005', '#/resources/foo/links/foo_link/request/properties/p1',
+        self.check_result('C0005',
+                          '#/resources/foo/links/link1/request/properties/p1',
                           Result.DISABLED,
                           'resources:\n'
                           '  foo:\n'
                           '    type: string\n'
                           '    links:\n'
                           '      self: { path: /foo }\n'
-                          '      foo_link:\n'
+                          '      link1:\n'
                           '        path: /foo/nope\n'
                           '        method: GET\n'
                           '        tags:\n'
@@ -240,6 +241,7 @@ class TestRelintDisable(TestLintBase):
                           '          type: object\n'
                           '          properties:\n'
                           '            p1: { type: number }')
+
 
 class TestRelint(TestLintBase):
 

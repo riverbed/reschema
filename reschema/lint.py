@@ -53,7 +53,7 @@ class Rule(object):
                reschema.jsonschema.Link or
                reschema.jsonschema.Relation or
                reschema.servicedef.ServiceDef
-               
+
         :param disabled: list of disabled rules
         """
 
