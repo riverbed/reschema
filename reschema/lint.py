@@ -9,6 +9,9 @@ import traceback
 from reschema import jsonschema
 INDENT_OFFSET = 4
 
+import reschema.settings
+reschema.settings.LOAD_DESCRIPTIONS = True
+reschema.settings.MARKED_LOAD = True
 
 class ValidationFail(Exception):
     """
@@ -465,6 +468,14 @@ def schema_field_valid(sdef):
 def schema_has_title(sdef):
     if not sdef.title:
         raise ValidationFail("the schema must have a title")
+
+
+@Validator.schema('W0005')
+def schema_has_additional_properties(schema):
+    if isinstance(schema, jsonschema.Object):
+        if 'additionalProperties' not in schema.input:
+            raise ValidationFail("additionalProperties missing in '{0}'"
+                                 .format(schema.id))
 
 
 @Validator.schema('C0001')
