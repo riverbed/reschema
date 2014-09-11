@@ -5,13 +5,14 @@ from __future__ import print_function
 import re
 import uritemplate
 import traceback
-
+import reschema.settings
 from reschema import jsonschema
+
 INDENT_OFFSET = 4
 
-import reschema.settings
 reschema.settings.LOAD_DESCRIPTIONS = True
 reschema.settings.MARKED_LOAD = True
+
 
 class ValidationFail(Exception):
     """
