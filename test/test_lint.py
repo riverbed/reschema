@@ -9,7 +9,6 @@ from __future__ import print_function
 import os
 import logging
 import unittest
-import yaml
 
 import reschema
 from reschema.lint import Validator, Result
@@ -46,8 +45,9 @@ def create_servicedef(fragment):
     :param fragment: Schema fragment to merge in
     :return: TestValidator
     """
-    sdef = reschema.ServiceDef.create_from_text(SERVICE_DEF_TEMPLATE + fragment
-                                                , format='yaml')
+    sdef = reschema.ServiceDef.create_from_text(SERVICE_DEF_TEMPLATE +
+                                                fragment,
+                                                format='yaml')
 
     return sdef
 
@@ -252,7 +252,8 @@ class TestRelint(TestLintBase):
                           'provider: wrong_provider\n')
 
     def test_rule_W0002(self):
-        ''' The ``id`` field must be ``http://support.riverbed.com/apis/{name}/{version}`` '''
+        ''' The ``id`` field must be
+        ``http://support.riverbed.com/apis/{name}/{version}`` '''
 
         self.check_result('W0002',
                           'http://support.riverbed.com/apis/test/1.0',
@@ -304,7 +305,6 @@ class TestRelint(TestLintBase):
                           'id: http://support.riverbed.com/apis/test/1.0\n'
                           'name: test\n')
 
-
     def test_rule_W0005(self):
         '''additionalProperties required for Object schema'''
         self.check_result('W0005', '#/resources/info',
@@ -321,9 +321,9 @@ class TestRelint(TestLintBase):
                           '    type: object\n')
 
     def test_rule_C0001(self):
-        """name should start with a letter and contains only
+        '''name should start with a letter and contains only
            lowercase, numbers and _
-        """
+        '''
         self.check_result('C0001', '#/types/foo1_', Result.PASSED,
                           'types:\n'
                           '  foo1_: { type: string }')
@@ -394,7 +394,9 @@ class TestRelint(TestLintBase):
                           '        method: GET')
 
     def test_rule_C0005(self):
-        ''' A resource, type, link, or relation name must be at least 2 characters long '''
+        ''' A resource, type, link, or relation name must be
+            at least 2 characters long
+        '''
 
         self.check_result('C0005', '#/types/a_good_type_name',
                           Result.PASSED,
@@ -465,11 +467,10 @@ class TestRelint(TestLintBase):
                           'id: http://support.riverbed.com/apis/test/1.0\n'
                           'name: test\n')
 
-
     def test_rule_E0002(self):
-        """ Required fields should exist in properties if
-        additionalProperties is False"""
-        # import pdb;pdb.set_trace()
+        ''' Required fields should exist in properties if
+            additionalProperties is False
+        '''
         self.check_result('E0002', '#/types/foo', Result.PASSED,
                           'types:\n'
                           '  foo:\n'
@@ -496,6 +497,78 @@ class TestRelint(TestLintBase):
                           '      name: { type: string }\n'
                           '    required: [ nonesuch ]\n'
                           '    additionalProperties: true')
+
+        self.check_result('E0002', '#/resources/foo', Result.PASSED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      id: { type: number }\n'
+                          '    links:\n'
+                          '      self: { path: /foo }\n'
+                          '    required: [id]\n'
+                          '    additionalProperties: false')
+
+        self.check_result('E0002', '#/resources/foo', Result.FAILED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      id: { type: number }\n'
+                          '    links:\n'
+                          '      self: { path: /foo }\n'
+                          '    required: [id, non_existing_prop]\n'
+                          '    additionalProperties: False')
+
+        # check the recursive
+        self.check_result('E0002', '#/resources/foo', Result.PASSED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      id: { type: number }\n'
+                          '      outer:\n'
+                          '        type: object\n'
+                          '        properties:\n'
+                          '          inner: { type: number } \n'
+                          '        required: [inner]\n'
+                          '        additionalProperties: False\n'
+                          '    links:\n'
+                          '      self: { path: /foo }\n')
+
+        self.check_result('E0002', '#/resources/foo/properties/outer',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      id: { type: number }\n'
+                          '      outer:\n'
+                          '        type: object\n'
+                          '        properties:\n'
+                          '          inner: { type: number } \n'
+                          '        required: [inner, non_present]\n'
+                          '        additionalProperties: False\n'
+                          '    links:\n'
+                          '      self: { path: /foo }\n')
+
+        self.check_result('E0002', '#/resources/foo/properties/outer/items',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      id: { type: number }\n'
+                          '      outer:\n'
+                          '        type: array\n'
+                          '        items:\n'
+                          '           type: object\n'
+                          '           properties:\n'
+                          '              inner: { type: number } \n'
+                          '           required: [inner, non_present]\n'
+                          '           additionalProperties: False\n'
+                          '    links:\n'
+                          '      self: { path: /foo }\n')
 
     def test_rule_E0003(self):
         '''relations should be valid. The specified resource must be found'''
@@ -536,7 +609,6 @@ class TestRelint(TestLintBase):
                           '      relations:\n'
                           '        foo:\n'
                           '          resource: \'#/resources/foo\'\n')
-
 
     def test_rule_C0100(self):
         '''  Standard links must not have a description field. '''
@@ -656,7 +728,9 @@ class TestRelint(TestLintBase):
                           '        response: { $ref: "#/resources/res" }\n')
 
     def test_rule_W0102(self):
-        '''A ``set`` link request must be the representation of the resource it belongs to'''
+        '''A ``set`` link request must be the representation
+           of the resource it belongs to
+        '''
 
         self.check_result('W0102', '#/resources/res/links/set',
                           Result.PASSED,
@@ -683,7 +757,9 @@ class TestRelint(TestLintBase):
                           '        request: { type: string }\n')
 
     def test_rule_W0103(self):
-        '''A ``set`` link response must be null or the representation of the resource it belongs to'''
+        '''A ``set`` link response must be null or the representation
+          of the resource it belongs to
+        '''
 
         self.check_result('W0103', '#/resources/res/links/set',
                           Result.PASSED,
@@ -799,7 +875,9 @@ class TestRelint(TestLintBase):
                           '        request: { type: string }\n')
 
     def test_rule_W0107(self):
-        ''' A ``create`` link request must not be the same as the resource it belongs to '''
+        ''' A ``create`` link request must not be the same
+            as the resource it belongs to
+        '''
 
         self.check_result('W0107', '#/resources/res/links/create',
                           Result.FAILED,
@@ -826,7 +904,9 @@ class TestRelint(TestLintBase):
                           '        request: { type: string }\n')
 
     def test_rule_W0108(self):
-        '''A ``create`` link response must not be the same as the resource it belongs to '''
+        '''A ``create`` link response must not be the same as
+           the resource it belongs to
+        '''
 
         self.check_result('W0108', '#/resources/res/links/create',
                           Result.FAILED,
@@ -914,7 +994,6 @@ class TestRelint(TestLintBase):
                           '    links:\n'
                           '      self:\n'
                           '        path: "/"\n')
-
 
     def test_rule_E0100(self):
         ''' A ``get`` link must use http method GET '''
@@ -1042,7 +1121,6 @@ class TestRelint(TestLintBase):
                           '    links:\n'
                           '      self: { path: "/foos/{non_present}" }\n')
 
-
     def test_rule_C0303(self):
         ''' Self link should be the first link '''
 
@@ -1123,77 +1201,9 @@ class TestRelint(TestLintBase):
                           '  res:\n'
                           '    type: string\n')
 
-    def test_rule_W0300(self):
-        """ All entries in required should exist in properties """
-
-        self.check_result('W0300', '#/resources/foo', Result.PASSED,
-                          'resources:\n'
-                          '  foo:\n'
-                          '    type: object\n'
-                          '    properties:\n'
-                          '      id: { type: number }\n'
-                          '    links:\n'
-                          '      self: { path: /foo }\n'
-                          '    required: [id]')
-
-        self.check_result('W0300', '#/resources/foo', Result.FAILED,
-                          'resources:\n'
-                          '  foo:\n'
-                          '    type: object\n'
-                          '    properties:\n'
-                          '      id: { type: number }\n'
-                          '    links:\n'
-                          '      self: { path: /foo }\n'
-                          '    required: [id, non_existing_prop]')
-
-        # check the recursive
-        self.check_result('W0300', '#/resources/foo', Result.PASSED,
-                          'resources:\n'
-                          '  foo:\n'
-                          '    type: object\n'
-                          '    properties:\n'
-                          '      id: { type: number }\n'
-                          '      outer:\n'
-                          '        type: object\n'
-                          '        properties:\n'
-                          '          inner: { type: number } \n'
-                          '        required: [inner]\n'
-                          '    links:\n'
-                          '      self: { path: /foo }\n')
-
-        self.check_result('W0300', '#/resources/foo', Result.FAILED,
-                          'resources:\n'
-                          '  foo:\n'
-                          '    type: object\n'
-                          '    properties:\n'
-                          '      id: { type: number }\n'
-                          '      outer:\n'
-                          '        type: object\n'
-                          '        properties:\n'
-                          '          inner: { type: number } \n'
-                          '        required: [inner, non_present]\n'
-                          '    links:\n'
-                          '      self: { path: /foo }\n')
-
-        self.check_result('W0300', '#/resources/foo', Result.FAILED,
-                          'resources:\n'
-                          '  foo:\n'
-                          '    type: object\n'
-                          '    properties:\n'
-                          '      id: { type: number }\n'
-                          '      outer:\n'
-                          '        type: array\n'
-                          '        items:\n'
-                          '           type: object\n'
-                          '           properties:\n'
-                          '              inner: { type: number } \n'
-                          '           required: [inner, non_present]\n'
-                          '    links:\n'
-                          '      self: { path: /foo }\n')
-
-    def test_rule_W0301(self):
+    def test_rule_W0006(self):
         """ A required property should not have a default value """
-        self.check_result('W0301', '#/resources/foo', Result.PASSED,
+        self.check_result('W0006', '#/resources/foo', Result.PASSED,
                           'resources:\n'
                           '  foo:\n'
                           '    type: object\n'
@@ -1202,7 +1212,7 @@ class TestRelint(TestLintBase):
                           '    links:\n'
                           '      self: { path: /foo }\n'
                           '    required: [id]')
-        self.check_result('W0301', '#/resources/foo', Result.FAILED,
+        self.check_result('W0006', '#/resources/foo', Result.FAILED,
                           'resources:\n'
                           '  foo:\n'
                           '    type: object\n'
@@ -1212,7 +1222,8 @@ class TestRelint(TestLintBase):
                           '      self: { path: /foo }\n'
                           '    required: [id]')
         # check the recursive
-        self.check_result('W0301', '#/resources/foo', Result.PASSED,
+        self.check_result('W0006', '#/resources/foo/properties/outer',
+                          Result.PASSED,
                           'resources:\n'
                           '  foo:\n'
                           '    type: object\n'
@@ -1226,7 +1237,8 @@ class TestRelint(TestLintBase):
                           '    links:\n'
                           '      self: { path: /foo }\n')
 
-        self.check_result('W0301', '#/resources/foo', Result.FAILED,
+        self.check_result('W0006', '#/resources/foo/properties/outer',
+                          Result.FAILED,
                           'resources:\n'
                           '  foo:\n'
                           '    type: object\n'
@@ -1240,7 +1252,8 @@ class TestRelint(TestLintBase):
                           '    links:\n'
                           '      self: { path: /foo }\n')
 
-        self.check_result('W0301', '#/resources/foo', Result.FAILED,
+        self.check_result('W0006', '#/resources/foo/properties/outer/items',
+                          Result.FAILED,
                           'resources:\n'
                           '  foo:\n'
                           '    type: object\n'

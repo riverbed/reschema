@@ -74,6 +74,7 @@ class Rule(object):
 
         self._rule_func(schema)
 
+
 class Result(object):
     """ Helper to hold the result of a rule execution """
 
@@ -104,8 +105,8 @@ class Result(object):
         if self.exc and self.exc.start_mark:
             return ('{name}:{line}:{column}: {status} [{rule}]  '
                     '{message}').format(name=self.exc.start_mark.name,
-                                        line=self.exc.start_mark.line+1,
-                                        column=self.exc.start_mark.column+1,
+                                        line=self.exc.start_mark.line + 1,
+                                        column=self.exc.start_mark.column + 1,
                                         status=status,
                                         rule=self.rule_id,
                                         message=self.message)
@@ -368,9 +369,9 @@ def lint(sdef, filename):
 
     errors = check_indentation(filename)
     indent_failures = len(errors)
-    for line_number in errors:
-        print ("FAIL: [C0007] - line {0} indentation should be 4 spaces"
-               .format(line_number))
+    for row, col in errors:
+        print ("{0}:{1}:{2} FAIL: [C0007] - indentation should be {3} spaces"
+               .format(filename, row, col, INDENT_OFFSET))
 
     return xref_failures + failures + indent_failures
 
@@ -412,7 +413,7 @@ def check_indentation(filename):
                         curr_pos == pre_pos + INDENT_OFFSET or
                         (pre_pos > curr_pos and
                          (pre_pos - curr_pos) % INDENT_OFFSET == 0)):
-                    errors.append(ind)
+                    errors.append((ind, curr_pos))
                 pre_pos = curr_pos
             return errors
     except:
@@ -501,7 +502,23 @@ def schema_has_additional_properties(schema):
     if isinstance(schema, jsonschema.Object):
         if 'additionalProperties' not in schema.input:
             raise ValidationFail("additionalProperties missing in '{0}'"
-                                 .format(schema.id))
+                                 .format(schema.id), schema.name)
+
+
+@Validator.schema('W0006')
+def required_property_with_default_value(schema):
+    if hasattr(schema, 'required') and schema.required:
+        for required_prop in schema.required:
+            if required_prop in schema.properties:
+                default = getattr(schema.properties[required_prop], 'default',
+                                  None)
+                if default is not None:
+                    raise ValidationFail(
+                        "A required property '{0}' should not have a default "
+                        "value in '{1}'".format(
+                            required_prop, schema.fullname()
+                        ),
+                        default)
 
 
 @Validator.schema('C0001')
@@ -552,7 +569,7 @@ def link_does_not_have_prefix_or_suffix(link):
 
 @Validator.schema('C0005')
 def schema_name_check_length(schema):
-    check_name_length(schema.name, schema.id)
+    check_name_length(schema.name, schema)
 
 
 @Validator.servicedef('C0006')
@@ -707,6 +724,7 @@ def type_has_valid_description(typedef):
     check_valid_description(typedef.description, typedef.id, typedef,
                             required=True)
 
+
 @Validator.schema('E0002')
 def required_is_valid(schema):
     if (hasattr(schema, 'required') and hasattr(schema, 'properties')
@@ -715,8 +733,9 @@ def required_is_valid(schema):
                 schema.required is not None):
             for k in schema.required:
                 if k not in schema.properties:
-                    raise ValidationFail("Required field '{0}' should be "
-                                         "included in properties".format(k))
+                    raise ValidationFail("Required field '{0}' is not"
+                                         " defined in '{1}'"
+                                         .format(k, schema.fullname()), k)
 
 
 @Validator.schema('E0003')
@@ -727,7 +746,7 @@ def relation_is_valid(schema):
         except jsonschema.InvalidReference:
             raise ValidationFail("Invalid relation '{0}': '{1}' not found".
                                  format(schema.fullname(),
-                                        schema._resource_id))
+                                        schema._resource_id), schema.name)
 
 
 @Validator.link('E0105')
@@ -768,49 +787,3 @@ def self_link_is_first(resource):
                 msg.format(resource.fullname()),
                 resource.links['self'].name
             )
-
-
-@Validator.typedef('W0300')
-@Validator.resource('W0300')
-def required_has_valid_values(schema):
-    if schema.is_ref():
-        return
-    if hasattr(schema, 'required') and schema.required:
-        for required_prop in schema.required:
-            if required_prop not in schema.properties:
-                msg = "The required property '{0}' is not defined in '{1}'"
-                raise ValidationFail(
-                    msg.format(required_prop, schema.fullname()),
-                    required_prop
-                )
-
-    if hasattr(schema, 'properties'):
-        for prop in schema.properties.itervalues():
-            required_has_valid_values(prop)
-    if hasattr(schema, 'items'):
-        required_has_valid_values(schema.items)
-
-
-@Validator.typedef('W0301')
-@Validator.resource('W0301')
-def required_property_with_default_value(schema):
-    if schema.is_ref():
-        return
-    if hasattr(schema, 'required') and schema.required:
-        for required_prop in schema.required:
-            if required_prop in schema.properties:
-                default = getattr(schema.properties[required_prop], 'default',
-                                  None)
-                if default is not None:
-                    raise ValidationFail(
-                        "A required property '{0}' should not have a default "
-                        "value in '{1}'".format(
-                            required_prop, schema.fullname()
-                        ),
-                        default)
-
-    if hasattr(schema, 'properties'):
-        for prop in schema.properties.itervalues():
-            required_property_with_default_value(prop)
-    if hasattr(schema, 'items'):
-        required_property_with_default_value(schema.items)
