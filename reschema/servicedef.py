@@ -285,7 +285,7 @@ class ServiceDef(object):
             parser.parse('provider', required=True)
             parser.parse('name', required=True)
             parser.parse('version', required=True, types=[str, unicode])
-            parser.parse('title', self.name)
+            parser.parse('title', '')
             parser.parse('status', '')
 
             # 'description' is a doc property, supporting either:
@@ -294,7 +294,7 @@ class ServiceDef(object):
             #    'description' : { 'text': <string>, 'format': <format> }
             # where 'format' is optional and defaults to 'md'
 
-            parser.parse('description', 'Service Definition for ' + self.name)
+            parser.parse('description', '')
 
             parser.parse('documentationLink', '')
             parser.parse('defaultAuthorization')

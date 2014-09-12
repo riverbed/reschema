@@ -4,9 +4,13 @@ from __future__ import print_function
 
 import re
 import uritemplate
-
+import traceback
 import reschema.exceptions
 import reschema.settings
+from reschema import jsonschema
+
+INDENT_OFFSET = 4
+
 reschema.settings.LOAD_DESCRIPTIONS = True
 reschema.settings.MARKED_LOAD = True
 
@@ -36,7 +40,7 @@ class RuleDisabled(Exception):
     pass
 
 
-class RuleBase(object):
+class Rule(object):
     """
     Base class for a rule validator.  Exists mainly to isolate the validation
     callback from the code which checks for relint-disable tags in the
@@ -52,95 +56,23 @@ class RuleBase(object):
         self.rule_id = rule_id
         self._rule_func = rule_func
 
-
-class ServicedefRule(RuleBase):
-    """
-    Wrapper for a rule validating the top-level servicedef information
-    """
-
-    def __call__(self, sdef):
+    def __call__(self, schema, disabled):
         """
         Run the rule
 
-        :param sdef: servicedef to verify
-        :type sdef: reschema.servicedef.ServiceDef
+        :param schema: schema to verify
+        :type: reschema.jsonschema.Schema or derived
+               reschema.jsonschema.Link or
+               reschema.jsonschema.Relation or
+               reschema.servicedef.ServiceDef
+
+        :param disabled: list of disabled rules
         """
-
-        if self.rule_id in sdef.tags.get('relint-disable', []):
-            raise RuleDisabled
-
-        self._rule_func(sdef)
-
-
-class TypeRule(RuleBase):
-    """
-    Wrapper for a rule validating a type definition
-    """
-
-    def __call__(self, typedef):
-        """
-        Run the rule
-
-        :param typedef: typedef to verify
-        :type typedef: reschema.jsonschema.Schema or derived
-        """
-
-        # Grab the disabled rules from the typedef and the servicedef
-        disabled = (typedef.tags.get('relint-disable', []) +
-                    typedef.servicedef.tags.get('relint-disable', []))
 
         if self.rule_id in disabled:
             raise RuleDisabled
 
-        self._rule_func(typedef)
-
-
-class ResourceRule(RuleBase):
-    """
-    Wrapper for a rule validating a resource
-    """
-
-    def __call__(self, resource):
-        """
-        Run the rule
-
-        :param resource: resource to verify
-        :type resource: reschema.jsonschema.Schema or derived
-        """
-
-        # Grab the disabled rules from the typedef and the servicedef
-        disabled = (resource.tags.get('relint-disable', []) +
-                    resource.servicedef.tags.get('relint-disable', []))
-
-        if self.rule_id in disabled:
-            raise RuleDisabled
-
-        self._rule_func(resource)
-
-
-class LinkRule(RuleBase):
-    """
-    Wrapper for a rule validating a link
-    """
-
-    def __call__(self, link):
-        """
-        Run the rule
-
-        :param typedef: typedef to verify
-        :type typedef: reschema.jsonschema.Link
-        """
-
-        # Grab the disabled rules from the link, resource, and the servicedef
-        disabled = (link.tags.get('relint-disable', []) +
-                    link.schema.tags.get('relint-disable', []) +
-                    link.servicedef.tags.get('relint-disable', []))
-
-        if self.rule_id in disabled:
-            raise RuleDisabled
-
-        self._rule_func(link)
-
+        self._rule_func(schema)
 
 class Result(object):
     """ Helper to hold the result of a rule execution """
@@ -190,6 +122,7 @@ class Validator(object):
     TYPE_RULES = []
     RESOURCE_RULES = []
     LINK_RULES = []
+    SCHEMA_RULES = []
     VERBOSITY = 0
     RVBD_BASE_URL = 'http://support.riverbed.com/apis'
     STD_LINKS = ['self', 'get', 'set', 'delete', 'create']
@@ -198,7 +131,7 @@ class Validator(object):
     def servicedef(cls, rule_id):
         """ Registers a rule which operates on the servicedef """
         def wrapper(rule_func):
-            rule = ServicedefRule(rule_id, rule_func)
+            rule = Rule(rule_id, rule_func)
             cls.SERVICEDEF_RULES.append(rule)
 
             return rule
@@ -208,7 +141,7 @@ class Validator(object):
     def typedef(cls, rule_id):
         """ Registers a rule which operates on a type """
         def wrapper(rule_func):
-            rule = TypeRule(rule_id, rule_func)
+            rule = Rule(rule_id, rule_func)
             cls.TYPE_RULES.append(rule)
 
             return rule
@@ -218,7 +151,7 @@ class Validator(object):
     def resource(cls, rule_id):
         """ Registers a rule which operates on a resource """
         def wrapper(rule_func):
-            rule = ResourceRule(rule_id, rule_func)
+            rule = Rule(rule_id, rule_func)
             cls.RESOURCE_RULES.append(rule)
 
             return rule
@@ -228,8 +161,17 @@ class Validator(object):
     def link(cls, rule_id):
         """ Registers a rule which operates on a link """
         def wrapper(rule_func):
-            rule = LinkRule(rule_id, rule_func)
+            rule = Rule(rule_id, rule_func)
             cls.LINK_RULES.append(rule)
+
+            return rule
+        return wrapper
+
+    @classmethod
+    def schema(cls, rule_id):
+        def wrapper(rule_func):
+            rule = Rule(rule_id, rule_func)
+            cls.SCHEMA_RULES.append(rule)
 
             return rule
         return wrapper
@@ -237,6 +179,71 @@ class Validator(object):
     @classmethod
     def set_verbosity(cls, level):
         cls.VERBOSITY = level
+
+    def check_schema(self, schema, results, disabled_rules_above):
+        """
+        Report any failures defined within a schema, including
+        top-level failures as well as any failures in each subschema
+        """
+        if type(schema) is not jsonschema.Ref:
+            rules = get_disabled(schema)
+            disabled_rules = disabled_rules_above.union(rules)
+
+            results.extend(self._run_rules(Validator.TYPE_RULES +
+                                           Validator.SCHEMA_RULES,
+                                           schema, disabled_rules))
+
+            self.check_sub_schema(schema, results, disabled_rules)
+
+    def check_sub_schema(self, schema, results, disabled_rules):
+        """
+        Check if any subschema defined within schema is valid.
+        In particular, find any possible existing keywords and
+        check individual subschema defined underneath the keyword.
+        """
+        if hasattr(schema, 'properties'):
+            for _, prop in schema.properties.iteritems():
+                self.check_schema(prop, results, disabled_rules)
+
+        if hasattr(schema, 'items'):
+            self.check_schema(schema.items, results, disabled_rules)
+
+        if hasattr(schema, '_request') and schema._request is not None:
+            if type(schema._request) not in [jsonschema.Ref, jsonschema.Null]:
+                self.check_schema(schema._request, results, disabled_rules)
+
+        if hasattr(schema, '_response') and schema._response is not None:
+            if type(schema._response) not in [jsonschema.Ref, jsonschema.Null]:
+                self.check_schema(schema._response, results, disabled_rules)
+
+        if hasattr(schema, 'anyof'):
+            for subschema in schema.anyof:
+                self.check_schema(subschema, results, disabled_rules)
+
+        if hasattr(schema, 'oneof'):
+            for subschema in schema.oneof:
+                self.check_schema(subschema, results, disabled_rules)
+
+        if hasattr(schema, 'allof'):
+            for subschema in schema.allof:
+                self.check_schema(subschema, results, disabled_rules)
+
+        if hasattr(schema, 'not_') and schema.not_ is not None:
+            self.check_schema(schema.not_, results, disabled_rules)
+
+        if hasattr(schema, '_params'):
+            for _, param in schema._params.iteritems():
+                self.check_schema(param, results, disabled_rules)
+
+        if (isinstance(schema, jsonschema.Merge)):
+            self.check_schema(schema.refschema, results, disabled_rules)
+
+        if hasattr(schema, 'relations') and len(schema.relations) > 0:
+            for relation in schema.relations.items():
+                # relation[1] is type of jsonschema.Relation
+                self.check_schema(relation[1], results, disabled_rules)
+
+        return results
 
     def run(self, sdef):
         """
@@ -250,25 +257,42 @@ class Validator(object):
         results = []
 
         print('Checking top-level schema correctness')
-        results.extend(self._run_rules(Validator.SERVICEDEF_RULES, sdef))
+        sdef_disabled = get_disabled(sdef)
+        results.extend(self._run_rules(Validator.SERVICEDEF_RULES, sdef,
+                                       sdef_disabled))
 
         print('Checking types')
         for typedef in sdef.type_iter():
-            results.extend(self._run_rules(Validator.TYPE_RULES, typedef))
+            if type(typedef) is not jsonschema.Ref:
+                typedef_disabled = get_disabled(typedef).union(sdef_disabled)
+                results.extend(self._run_rules(Validator.TYPE_RULES +
+                                               Validator.SCHEMA_RULES,
+                                               typedef, typedef_disabled))
+                self.check_sub_schema(typedef, results, typedef_disabled)
 
         print('Checking resources')
         for resource in sdef.resource_iter():
-            results.extend(self._run_rules(Validator.RESOURCE_RULES, resource))
+            if type(resource) is not jsonschema.Ref:
+                resource_disabled = get_disabled(resource).union(sdef_disabled)
+                results.extend(self._run_rules(Validator.RESOURCE_RULES +
+                                               Validator.SCHEMA_RULES,
+                                               resource, resource_disabled))
+
+                self.check_sub_schema(resource, results, resource_disabled)
 
             if self.VERBOSITY > 1:
                 print('Checking links for \'{}\''.format(resource.name))
 
             for _, link in resource.links.items():
-                results.extend(self._run_rules(Validator.LINK_RULES, link))
-
+                if type(link) is not jsonschema.Ref:
+                    link_disabled = get_disabled(link).union(resource_disabled)
+                    results.extend(self._run_rules(Validator.LINK_RULES +
+                                                   Validator.SCHEMA_RULES,
+                                                   link, link_disabled))
+                    self.check_sub_schema(link, results, link_disabled)
         return results
 
-    def _run_rules(self, rules, obj):
+    def _run_rules(self, rules, obj, disabled_rules):
         """
         Runs a block of rules on a schema object
 
@@ -281,7 +305,7 @@ class Validator(object):
         results = []
         for rule in rules:
             try:
-                rule(obj)
+                rule(obj, disabled_rules)
                 result = Result(rule.rule_id, obj.id, Result.PASSED)
 
             except ValidationFail as exc:
@@ -299,12 +323,30 @@ class Validator(object):
         return results
 
 
-def lint(sdef):
+def get_disabled(obj):
+    """
+    Obtain the top-level disabled rules as well as on the object
+
+    :param: schema object to get disabled rules from
+    :type: reschema.jsonschema.Relation or
+           reschema.jsonschema.Object or
+           reschema.jsonschema.Link or
+           reschema.servicedef.ServiceDef
+
+    :returns: set of disabled rules of the object
+    """
+    return set(obj.tags.get('relint-disable', []))
+
+
+def lint(sdef, filename):
     """
     Performs all checks on a loaded service definition.
 
     :param sdef:
     :type sdef: reschema.servicedef.ServiceDef
+
+    :param filename:
+    :type string: the absolute name of the processing yml file
 
     :returns: total number of failures
     """
@@ -324,7 +366,59 @@ def lint(sdef):
                   .format(error.id))
         xref_failures += len(errors)
 
-    return xref_failures + failures
+    errors = check_indentation(filename)
+    indent_failures = len(errors)
+    for line_number in errors:
+        print ("FAIL: [C0007] - line {0} indentation should be 4 spaces"
+               .format(line_number))
+
+    return xref_failures + failures + indent_failures
+
+
+def first_char_pos(line):
+    """
+    return the indentation of first non-space character of the line
+    If the first char is # or none such char exists, return False
+    """
+    striped_line = str.lstrip(line)
+    if len(striped_line) == 0 or striped_line[0] == '#':
+        return -1
+    return len(line) - len(striped_line)
+
+
+def check_indentation(filename):
+    """
+    check if each indentation is 4 spaces, otherwise generate issue C0007
+    rule: when the first non-whitespace character is '#', ignore.
+          otherwise, the indentation of the first valid char is deeper
+          than the previous indentation, then the delta must be 4 spaces
+    """
+    try:
+        with open(filename, 'r') as f:
+            list = f.read().split('\n')
+            ind = 0
+
+            while ind < len(list) and first_char_pos(list[ind]) == -1:
+                ind += 1
+            pre_pos = first_char_pos(list[ind])
+            curr_pos = 0
+            errors = []
+            while ind < len(list):
+                curr_pos = first_char_pos(list[ind])
+                ind += 1
+                if curr_pos == -1:
+                    continue
+                if not (curr_pos == pre_pos or
+                        curr_pos == pre_pos + INDENT_OFFSET or
+                        (pre_pos > curr_pos and
+                         (pre_pos - curr_pos) % INDENT_OFFSET == 0)):
+                    errors.append(ind)
+                pre_pos = curr_pos
+            return errors
+    except:
+        print ("Function check_indentation failed, Exception: {0}"
+               .format(traceback.format_exc()))
+        return []
 
 
 def check_valid_identifier(name, location):
@@ -402,19 +496,17 @@ def schema_has_title(sdef):
         raise ValidationFail("the schema must have a title", sdef)
 
 
-@Validator.typedef('C0001')
-def type_has_valid_name(typedef):
-    check_valid_identifier(typedef.name, typedef.id)
+@Validator.schema('W0005')
+def schema_has_additional_properties(schema):
+    if isinstance(schema, jsonschema.Object):
+        if 'additionalProperties' not in schema.input:
+            raise ValidationFail("additionalProperties missing in '{0}'"
+                                 .format(schema.id))
 
 
-@Validator.resource('C0001')
-def resource_has_valid_name(resource):
-    check_valid_identifier(resource.name, resource.id)
-
-
-@Validator.link('C0001')
-def link_has_valid_name(link):
-    check_valid_identifier(link.name, link.id)
+@Validator.schema('C0001')
+def schema_has_valid_name(schema):
+    check_valid_identifier(schema.name, schema.id)
 
 
 @Validator.typedef('C0002')
@@ -458,23 +550,13 @@ def link_does_not_have_prefix_or_suffix(link):
             link.name)
 
 
-@Validator.typedef('C0005')
-def type_name_check_length(typedef):
-    check_name_length(typedef.name, typedef)
-
-
-@Validator.resource('C0005')
-def resource_name_check_length(resource):
-    check_name_length(resource.name, resource)
-
-
-@Validator.link('C0005')
-def link_name_check_length(link):
-    check_name_length(link.name, link)
+@Validator.schema('C0005')
+def schema_name_check_length(schema):
+    check_name_length(schema.name, schema.id)
 
 
 @Validator.servicedef('C0006')
-def schema_has_valid_description(sdef):
+def sd_has_valid_description(sdef):
     check_valid_description(sdef.description, 'ServiceDef', sdef,
                             required=True)
 
@@ -624,6 +706,28 @@ def resource_type_is_object(resource):
 def type_has_valid_description(typedef):
     check_valid_description(typedef.description, typedef.id, typedef,
                             required=True)
+
+@Validator.schema('E0002')
+def required_is_valid(schema):
+    if (hasattr(schema, 'required') and hasattr(schema, 'properties')
+            and hasattr(schema, 'additional_properties')):
+        if (schema.additional_properties is False and
+                schema.required is not None):
+            for k in schema.required:
+                if k not in schema.properties:
+                    raise ValidationFail("Required field '{0}' should be "
+                                         "included in properties".format(k))
+
+
+@Validator.schema('E0003')
+def relation_is_valid(schema):
+    if isinstance(schema, jsonschema.Relation):
+        try:
+            schema.resource
+        except jsonschema.InvalidReference:
+            raise ValidationFail("Invalid relation '{0}': '{1}' not found".
+                                 format(schema.fullname(),
+                                        schema._resource_id))
 
 
 @Validator.link('E0105')

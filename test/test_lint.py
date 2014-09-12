@@ -26,7 +26,6 @@ id: http://support.riverbed.com/apis/test/1.0
 provider: riverbed
 name: test
 version: '1.0'
-title: Test relint
 tags: {}
 '''
 
@@ -125,6 +124,20 @@ class TestRelintDisable(TestLintBase):
                           '    links:\n'
                           '      self: { path: /foo }')
 
+        # Tag disable on the sub-schema of resource
+        self.check_result('C0001', '#/resources/foo_resource/properties/name',
+                          Result.DISABLED,
+                          'resources:\n'
+                          '  foo_resource:\n'
+                          '    tags:\n'
+                          '       relint-disable: [ C0001 ]\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      name:\n'
+                          '        type: string\n'
+                          '    links:\n'
+                          '      self: { path: /foo }')
+
     def test_type_disable(self):
         """
         Verifies type-level checks can be disabled
@@ -145,6 +158,17 @@ class TestRelintDisable(TestLintBase):
                           '  foo_type:\n'
                           '    tags:\n'
                           '       relint-disable: [ C0002 ]\n')
+
+        # test disable on the sub-schema of type
+        self.check_result('C0002', '#/types/foo_type/properties/name',
+                          Result.DISABLED,
+                          'types:\n'
+                          '  foo_type:\n'
+                          '    tags:\n'
+                          '       relint-disable: [ C0002 ]\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      name: {type: string}\n')
 
     def test_link_disable(self):
         """
@@ -193,6 +217,25 @@ class TestRelintDisable(TestLintBase):
                           '        tags:\n'
                           '           relint-disable: [ C0004 ]')
 
+        # test disable on the subschema of link
+        self.check_result('C0005',
+                          '#/resources/foo/links/link1/request/properties/p1',
+                          Result.DISABLED,
+                          'resources:\n'
+                          '  foo:\n'
+                          '    type: string\n'
+                          '    links:\n'
+                          '      self: { path: /foo }\n'
+                          '      link1:\n'
+                          '        path: /foo/nope\n'
+                          '        method: GET\n'
+                          '        tags:\n'
+                          '           relint-disable: [ C0005 ]\n'
+                          '        request:\n'
+                          '          type: object\n'
+                          '          properties:\n'
+                          '            p1: { type: number }')
+
 
 class TestRelint(TestLintBase):
     def test_rule_W0001(self):
@@ -229,6 +272,19 @@ class TestRelint(TestLintBase):
                           'id: http://support.riverbed.com/apis/test/1.0\n'
                           'name: wrongname')
 
+    def test_rule_W0003(self):
+        ''' the schema field must be set to
+            http://support.riverbed.com/apis/service_def/{version}
+        '''
+        self.check_result('W0003',
+                          'http://support.riverbed.com/apis/service_def/2.2',
+                          Result.PASSED,
+                          "$schema: "
+                          "http://support.riverbed.com/apis/service_def/2.2\n"
+                          'id: '
+                          'http://support.riverbed.com/apis/service_def/2.2\n'
+                          'name: test\n')
+
     def test_rule_W0004(self):
         ''' the schema must have a title '''
 
@@ -241,6 +297,48 @@ class TestRelint(TestLintBase):
                           'http://support.riverbed.com/apis/test/1.0',
                           Result.FAILED,
                           'title: \n')
+
+        self.check_result('W0004',
+                          'http://support.riverbed.com/apis/test/1.0',
+                          Result.FAILED,
+                          'id: http://support.riverbed.com/apis/test/1.0\n'
+                          'name: test\n')
+
+
+    def test_rule_W0005(self):
+        '''additionalProperties required for Object schema'''
+        self.check_result('W0005', '#/resources/info',
+                          Result.PASSED,
+                          'resources:\n'
+                          '  info:\n'
+                          '    type: object\n'
+                          '    additionalProperties : False\n')
+
+        self.check_result('W0005', '#/resources/info',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  info:\n'
+                          '    type: object\n')
+
+    def test_rule_C0001(self):
+        """name should start with a letter and contains only
+           lowercase, numbers and _
+        """
+        self.check_result('C0001', '#/types/foo1_', Result.PASSED,
+                          'types:\n'
+                          '  foo1_: { type: string }')
+
+        self.check_result('C0001', '#/types/1foo', Result.FAILED,
+                          'types:\n'
+                          '  1foo: { type: string }')
+
+        self.check_result('C0001', '#/types/Foo', Result.FAILED,
+                          'types:\n'
+                          '  Foo: { type: string }')
+
+        self.check_result('C0001', '#/types/foo!', Result.FAILED,
+                          'types:\n'
+                          '  foo!: { type: string }')
 
     def test_rule_C0002(self):
         """ Type should not end in _type """
@@ -343,7 +441,9 @@ class TestRelint(TestLintBase):
                           '        method: GET\n')
 
     def test_rule_C0006(self):
-        ''' The service definition must have a valid description field, starting with a capital letter '''
+        ''' The service definition must have a valid description field,
+            starting with a capital letter
+        '''
 
         self.check_result('C0006',
                           'http://support.riverbed.com/apis/test/1.0',
@@ -359,6 +459,84 @@ class TestRelint(TestLintBase):
                           'http://support.riverbed.com/apis/test/1.0',
                           Result.FAILED,
                           'description: ')
+
+        self.check_result('C0006', 'http://support.riverbed.com/apis/test/1.0',
+                          Result.FAILED,
+                          'id: http://support.riverbed.com/apis/test/1.0\n'
+                          'name: test\n')
+
+
+    def test_rule_E0002(self):
+        """ Required fields should exist in properties if
+        additionalProperties is False"""
+        # import pdb;pdb.set_trace()
+        self.check_result('E0002', '#/types/foo', Result.PASSED,
+                          'types:\n'
+                          '  foo:\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      name: { type: string }\n'
+                          '    required: [ name ]\n'
+                          '    additionalProperties: false')
+
+        self.check_result('E0002', '#/types/foo', Result.FAILED,
+                          'types:\n'
+                          '  foo:\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      name: { type: string }\n'
+                          '    required: [ nonesuch ]\n'
+                          '    additionalProperties: false')
+
+        self.check_result('E0002', '#/types/foo', Result.PASSED,
+                          'types:\n'
+                          '  foo:\n'
+                          '    type: object\n'
+                          '    properties:\n'
+                          '      name: { type: string }\n'
+                          '    required: [ nonesuch ]\n'
+                          '    additionalProperties: true')
+
+    def test_rule_E0003(self):
+        '''relations should be valid. The specified resource must be found'''
+
+        self.check_result('E0003', '#/resources/info/relations/foo',
+                          Result.PASSED,
+                          'resources:\n'
+                          '  info:\n'
+                          '    relations:\n'
+                          '      foo:\n'
+                          '        resource: \'#/resources/info\'\n')
+
+        self.check_result('E0003', '#/resources/info/relations/foo',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  info:\n'
+                          '    relations:\n'
+                          '      foo:\n'
+                          '        resource: \'#/resources/foo\'\n')
+
+        # when relations is nested inside of each element of an array
+        self.check_result('E0003', '#/resources/info/items/relations/foo',
+                          Result.PASSED,
+                          'resources:\n'
+                          '  info:\n'
+                          '    type: array\n'
+                          '    items:\n'
+                          '      relations:\n'
+                          '        foo:\n'
+                          '          resource: \'#/resources/info\'\n')
+
+        self.check_result('E0003', '#/resources/info/items/relations/foo',
+                          Result.FAILED,
+                          'resources:\n'
+                          '  info:\n'
+                          '    type: array\n'
+                          '    items:\n'
+                          '      relations:\n'
+                          '        foo:\n'
+                          '          resource: \'#/resources/foo\'\n')
+
 
     def test_rule_C0100(self):
         '''  Standard links must not have a description field. '''

@@ -42,6 +42,10 @@ General schema issues / naming conventions (001)
 
   * **E0001**: Invalid ``$ref``; the target cannot be found
 
+  * **E0002**: Invalid required property when additional property is False
+  
+  * **E0003**: The relation is invalid.  The specified resource cannot be found
+
 
 Links (100)
 -----------
@@ -88,8 +92,6 @@ Links (100)
 
   * **E0103**: A ``delete`` link must use http method DELETE
 
-  * **E0104**: The relation is invalid.  The specified resource cannot be found
-
   * **E0105**: A parameter in URI template must be declared in schema properties
 
 
@@ -113,7 +115,6 @@ Resources (300)
   * **C0302**: Collection resource object should have an 'items' property
   * **C0303**: Self link should be the first in links
 
-  * **W0300**: All entries in required must exist in properties
   * **W0301**: A required property should not have a default value
 
 --------------
