@@ -523,6 +523,14 @@ def required_property_with_default_value(schema):
 
 @Validator.schema('C0001')
 def schema_has_valid_name(schema):
+    # introducing the below logic because schemas underneath any/one/allof
+    # are with names as any/one/allOf[*], where * is a non-negative int
+    # for those schema object, we do not want to generate C0001 failures
+    if hasattr(schema, 'parent') and hasattr(schema.parent, 'input'):
+        keys = schema.parent.input.keys()
+        if len(set(['anyOf', 'oneOf', 'allOf']).intersection(set(keys))) > 0:
+            return
+
     check_valid_identifier(schema.name, schema.id)
 
 
