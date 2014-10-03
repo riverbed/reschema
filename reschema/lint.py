@@ -528,7 +528,7 @@ def schema_has_valid_name(schema):
     # for those schema object, we do not want to generate C0001 failures
     if hasattr(schema, 'parent') and hasattr(schema.parent, 'input'):
         keys = schema.parent.input.keys()
-        if len(set(['anyOf', 'oneOf', 'allOf']).intersection(set(keys))) > 0:
+        if set(['anyOf', 'oneOf', 'allOf']) & set(keys):
             return
 
     check_valid_identifier(schema.name, schema.id)
