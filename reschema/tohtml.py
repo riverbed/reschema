@@ -674,7 +674,7 @@ class PropTable(HTMLTable):
 
     def makerow(self, schema, name):
         if isinstance(schema, reschema.jsonschema.Merge):
-            return self.makerow(schema.refschema, name)
+            return self.makerow(schema.refschema, schema.refschema.fullname())
 
         tds = self.row(["", "", "", ""])
 
