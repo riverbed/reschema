@@ -59,7 +59,7 @@ class ReschemaDoc(object):
         parser.add_option('--device', dest='device', default='{device}',
                           help='Device hosting this service')
 
-        parser.add_option('--apiroot', dest='apiroot', default='/api',
+        parser.add_option('--apiroot', dest='apiroot', default=None,
                           help='Root path for all resources')
 
         (options, args) = parser.parse_args(args)
@@ -102,6 +102,9 @@ class ReschemaDoc(object):
         if not os.path.exists(fulldir):
             os.makedirs(fulldir)
 
+        apiroot = options.apiroot or ("/api/%s/%s" %
+                                      (servicedef.name, servicedef.version))
+
         # HTML version
         if options.html:
             html = fullname + '.html'
@@ -117,11 +120,11 @@ class ReschemaDoc(object):
 
             r2h = ServiceDefToHtml(servicedef, htmldoc.content, htmldoc.menu,
                                    device=options.device,
-                                   apiroot=options.apiroot,
+                                   apiroot=apiroot,
                                    options=Options(printable=False,
                                                    json=(not options.nojson),
                                                    xml=(not options.noxml),
-                                                   apiroot=options.apiroot,
+                                                   apiroot=apiroot,
                                                    docroot=outdir))
             r2h.process()
             htmldoc.write(html)
@@ -137,10 +140,11 @@ class ReschemaDoc(object):
             htmldoc = reschema.html.Document(title, printable=True)
             r2h = ServiceDefToHtml(servicedef, htmldoc.content, htmldoc.menu,
                                    device=options.device,
+                                   apiroot=apiroot,
                                    options=Options(printable=True,
                                                    json=(not options.nojson),
                                                    xml=(not options.noxml),
-                                                   apifroot=options.apiroot,
+                                                   apiroot=apiroot,
                                                    docroot=outdir))
             r2h.process()
             htmldoc.write(phtml)
