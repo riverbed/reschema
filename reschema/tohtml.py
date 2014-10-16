@@ -180,13 +180,12 @@ class ResourceToHtml(object):
         self.schema_table(schema, div, baseid)
 
         if (not is_type):
-            submenu = menu.add_submenu()
             div.h3(id="links").text = "Links"
-            self.process_links(div, baseid, submenu)
+            self.process_links(div, baseid)
 
             if self.schema.relations:
                 div.h3(id="relations").text = "Relations"
-                self.process_relations(div, baseid, submenu)
+                self.process_relations(div, baseid)
 
 
     def schema_table(self, schema, container, baseid):
@@ -205,7 +204,7 @@ class ResourceToHtml(object):
         tabbar.finish()
         container.append(SchemaTable(schema, self.options))
 
-    def process_links(self, container, containerid, submenu):
+    def process_links(self, container, containerid):
         schema = self.schema
         for name, link in schema.links.iteritems():
             if name == 'self':
@@ -220,7 +219,6 @@ class ResourceToHtml(object):
 
             baseid = containerid + '-link-%s' % name
             div = container.div(id=baseid, cls="link-body")
-            submenu.add_item(name, href=div)
             div.h4().text = link.schema.fullname() + ": " + link.name
             div.p().text = link.description
 
@@ -345,7 +343,7 @@ class ResourceToHtml(object):
 
         return None
 
-    def process_relations(self, container, containerid, submenu):
+    def process_relations(self, container, containerid):
         schema = self.schema
         for name, relation in schema.relations.iteritems():
 
@@ -354,7 +352,6 @@ class ResourceToHtml(object):
 
             baseid = containerid + '-relation-%s' % name
             div = container.div(id=baseid, cls="relation-body")
-            submenu.add_item(name, href=div)
             div.h4().text = relation.schema.fullname() + ": " + relation.name
             div.p().text = relation.description
 
