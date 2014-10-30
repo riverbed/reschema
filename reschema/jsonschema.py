@@ -700,10 +700,10 @@ class String(Schema):
         parser.parse('default')
 
     def validate(self, input):
-        if len(str(input)) > 40:
-            trunc = str(input)[:40] + "..."
+        if len(unicode(input)) > 40:
+            trunc = unicode(input)[:40] + "..."
         else:
-            trunc = str(input)
+            trunc = unicode(input)
 
         if (not isinstance(input, str) and not isinstance(input, unicode)):
             raise ValidationError("%s: input must be a string, got %s: %s" %
