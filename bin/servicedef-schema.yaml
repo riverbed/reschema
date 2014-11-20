@@ -1,0 +1,438 @@
+id: 'http://support.riverbed.com/apis/service_def/2.2'
+"$schema": "http://json-schema.org/draft-04/schema#"
+description: "Schema for Riverbed Service Definitions"
+type: object
+properties:
+    "$schema":
+        description: >
+            URI of the JSON Schema decribing the format of
+            th service (i.e. this document).
+        type: string
+        format: uri
+    id:
+        format: uri
+        description: >
+            Canonical location of the service definition document.
+        type: string
+    provider:
+        description: >
+            Identifier of the organization that authored the service document.
+        type: string
+    name:
+        description: >
+            Name of the service.  May use multiple dot-separated tokens
+            to indicate namespacing.  Minimum two-letter name, for each
+            token.  The first character must be a letter, last character
+            a letter or number.  Internal underscores allowed.  All letters
+            must be lowercase.
+        type: string
+        pattern: "[a-z][a-z0-9_]*[a-z0-9](\\.[a-z][a-z0-9_]*[a-z0-9])*"
+    version:
+        description: Version string of the REST service described.
+        type: string
+        format: semanticversion
+    title:
+        description: One line description of the REST service.
+        type: string
+    description:
+        description: Detailed description of the REST service.
+        type: string
+    defaultAuthorization:
+        description: >
+            Authorization for all resources and links that do not
+            otherwise specify.
+        type: string
+        enum: [required, optional, none]
+        default: none
+    documentationLink:
+        description: URI of online documentation for this service.
+        type: string
+        format: uri
+    types:
+        description: >
+            "Reusable types available to all schema in the service definition.
+            Effectively the same as 'definitions' within a json-schema
+            but named separately to reduce confusion.  'types' are outside
+            of json-schema, 'definitions' are inside.  Schema should
+            not refer to each other's definitions sections, but should
+            instead use 'types'.  Service definitions may refer to another
+            service definition's 'types' section."
+        type: object
+        additionalProperties:
+            "$ref": "#/definitions/extendedDraft4"
+    resources:
+        "$ref" : "#/definitions/resourceSchema"
+required: ["$schema", id, name, version]
+
+definitions:
+    schemaArray:
+        type: array
+        minItems: 1
+        items: { "$ref": "#/definitions/extendedDraft4" }
+    positiveInteger:
+        type: integer
+        minimum: 0
+    positiveIntegerDefault0:
+        allOf:
+          - { "$ref": "#/definitions/positiveInteger" }
+          - { default: 0 }
+    simpleTypes:
+        description: >
+            Adds timestamp and timestamp-hp (high precision) to the set
+            of simple types.  These types are holdovers from earlier
+            Riverbed schema approaches, and are therefore not specified
+            in terms of the JSON Schema Draft 4 primitive types.
+
+            timestamp is an integer (seconds since 1970)
+
+            timestamp-hp also counts time since 1970, but with a resolution
+            potentially up to nanoseconds.  It may be stored as either
+            a JSON string or number depending on the service.  See
+            the documentation for each service for the exact format,
+            as each service may define a different precision.
+        enum:
+          - "array"
+          - "boolean"
+          - "integer"
+          - "null"
+          - "number"
+          - "object"
+          - "string"
+          - "timestamp"     # Riverbed extension to JSON schema Draft4
+          - "timestamp-hp"  # Riverbed extension to JSON schema Draft4
+    stringArray:
+        type: array
+        items: { type: string }
+        minItems: 1
+        uniqueItems: true
+    selflink:
+        description: >
+            "Special link that describes the current resource's URI.
+            To be considered a self-describing data type, the resource
+            must be able to fill all URI template parameters in this
+            link's path from the resource's data fields."
+        type: object
+        properties:
+            path: { "$ref": "#/definitions/path" }
+            params:
+                description: >
+                    URI query parameter name and type declarations.
+                    Types must be url-encodable.  Currently, there is no
+                    provision for repeating the same parameter name
+                    multiple times.  This may be addressed in a
+                    future revision.
+                type: object
+                additionalProperties:
+                    "$ref": "#/definitions/extendedDraft4"
+        required: [ path ]
+    link:
+        description: >
+            A link connects a resource schema with a specific request
+            method against a target resource, by default itself.
+            The path property, if absent, is assumed to be the
+            path and vars mapping of the 'self' link.
+        type: object
+        properties:
+            path: { "$ref": "#/definitions/path" }
+            method:
+                description: >
+                    The protocol method used to execute the link.  Required
+                    if the scheme in the path URI supports multiple methods
+                    (e.g. 'http'), ignored if it does not (e.g 'mailto').
+                    For HTTP, this would typically be GET, PUT, DELETE,
+                    POST or PATCH.
+                type: string
+            request: 
+                "$ref": "#/definitions/requestResponseSchema"
+            response:
+                "$ref": "#/definitions/requestResponseSchema"
+            description:
+                description: The description of the link.
+            tags: { "$ref": "#/definitions/tags" }
+            notes: {}
+            example: {}
+            authorization: {}
+        required: [method]
+    relation:
+        description: >
+            "A relation connects a source and target resource without
+            giving any indication of whether or how the target resource
+            should be accessed.  Instead, the target resource's links
+            are used, in order to avoid duplication of link descriptions."
+        type: object
+        properties:
+            resource:
+                description: >
+                    A relative JSON pointer to a resource in this or another
+                    service definition.
+                type: string
+                format: reljsonpointer
+            vars: { "$ref": "#/definitions/vars" }
+            tags: { "$ref": "#/definitions/tags" }
+            description:
+                description: The descripiton of the relation.
+        required: [resource]
+    path:
+        oneOf:
+          - type: string
+            format: uritemplate
+          - type: object
+            properties:
+                template:
+                    type: string
+                    format: uritemplate
+                vars: { "$ref": "#/definitions/vars" }
+            required: [template]
+    vars:
+        description: >
+            "A mapping of simple variable names to relative JSON pointers,
+            allowing for the use of values from complex data structures
+            in systems such as uritemplates that allow only a flat
+            variable namespace.  The source and destination of the mapping
+            is determined by the context of use."
+        type: object
+        default: {}
+        additionalProperties:
+            type: string
+            format: reljsonpointer
+    tags:
+        description: >
+            An area for user-specific extension fields.  The service definition
+            format will never reserve names within this object.
+        type: object
+        default: {}
+
+    extendedDraft4:
+            description: >
+                This (together with other definitions) is exactly the
+                draft4 meta-schema for JSON schema, plus a few extension
+                fields defined by Riverbed.
+            type: object
+            properties:
+                id:
+                    type: string
+                    format: uri
+                "$schema":
+                    type: string
+                    format: uri
+                title:
+                    type: string
+                description:
+                    type: string
+                default: {}
+                multipleOf:
+                    type: number
+                    minimum: 0
+                    exclusiveMinimum: true
+                maximum:
+                    type: number
+                exclusiveMaximum:
+                    type: boolean
+                    default: false
+                minimum:
+                    type: number
+                exclusiveMinimum:
+                    type: boolean
+                    default: false
+                maxLength: { "$ref": "#/definitions/positiveInteger" }
+                minLength: { "$ref": "#/definitions/positiveIntegerDefault0" }
+                pattern:
+                    type: string
+                    format: regex
+                additionalItems:
+                    anyOf:
+                      - { type: boolean }
+                      - { "$ref": "#/definitions/extendedDraft4" }
+                    default: {}
+                items:
+                    anyOf:
+                      - { "$ref": "#/definitions/extendedDraft4" }
+                      - { "$ref": "#/definitions/schemaArray" }
+                    default: {}
+                maxItems: { "$ref": "#/definitions/positiveInteger" }
+                minItems: { "$ref": "#/definitions/positiveIntegerDefault0" }
+                uniqueItems:
+                    type: boolean
+                    default: false
+                maxProperties: { "$ref": "#/definitions/positiveInteger" }
+                minProperties: { "$ref": "#/definitions/positiveIntegerDefault0" }
+                required: { "$ref": "#/definitions/stringArray" }
+                additionalProperties:
+                    anyOf:
+                      - { type: boolean }
+                      - { "$ref": "#/definitions/extendedDraft4" }
+                    default: {}
+                definitions:
+                    type: object
+                    additionalProperties: { "$ref": "#/definitions/extendedDraft4" }
+                    default: {}
+                properties:
+                    type: object
+                    additionalProperties: { "$ref": "#/definitions/extendedDraft4" }
+                    default: {}
+                patternProperties:
+                    type: object
+                    additionalProperties: { "$ref": "#/definitions/extendedDraft4" }
+                    default: {}
+                dependencies:
+                    type: object
+                    additionalProperties:
+                        anyOf:
+                         -  { "$ref": "#/definitions/extendedDraft4" }
+                         -  { "$ref": "#/definitions/stringArray" }
+                enum:
+                    type: array
+                    minItems: 1
+                    uniqueItems: true
+                type:
+                    anyOf:
+                      - { "$ref": "#/definitions/simpleTypes" }
+                      - type: array
+                        items: { "$ref": "#/definitions/simpleTypes" }
+                        minItems: 1
+                        uniqueItems: true
+                allOf: { "$ref": "#/definitions/schemaArray" }
+                anyOf: { "$ref": "#/definitions/schemaArray" }
+                oneOf: { "$ref": "#/definitions/schemaArray" }
+                not: { "$ref": "#/definitions/extendedDraft4" }
+
+                # Properties below this point are Riverbed extensions.
+                tags: { "$ref": "#/definitions/tags" }
+                readOnly:
+                    description: >
+                        Indicates that values specified for this field
+                        in a write context (such as the body of an
+                        HTTP PUT) will be ignored.
+                    type: boolean
+                    default: false
+            dependencies:
+                exclusiveMaximum: [ maximum ]
+                exclusiveMinimum: [ minimum ]
+            default: {}
+
+    requestResponseSchema:
+            description: >
+                Extended Draft4 schema but defaulting to { type: "null" },
+                which allows easy defaulting of HTTP request and response
+                bodies to empty.
+            type: object
+            properties: { "$ref": "#/definitions/extendedDraft4/properties" }
+            dependencies: { "$ref": "#/definitions/extendedDraft4/dependencies" }
+            default: { type: "null" }
+
+    resourceSchema:
+            description: >
+                Identical to the Extended Draft4 defined in these definitions,
+                but with two further properties, links and relations.
+            type: object
+            properties:
+                id:
+                    type: string
+                    format: uri
+                "$schema":
+                    type: string
+                    format: uri
+                title:
+                    type: string
+                description:
+                    type: string
+                default: {}
+                multipleOf:
+                    type: number
+                    minimum: 0
+                    exclusiveMinimum: true
+                maximum:
+                    type: number
+                exclusiveMaximum:
+                    type: boolean
+                    default: false
+                minimum:
+                    type: number
+                exclusiveMinimum:
+                    type: boolean
+                    default: false
+                maxLength: { "$ref": "#/definitions/positiveInteger" }
+                minLength: { "$ref": "#/definitions/positiveIntegerDefault0" }
+                pattern:
+                    type: string
+                    format: regex
+                additionalItems:
+                    anyOf:
+                      - { type: boolean }
+                      - { "$ref": "#/definitions/extendedDraft4" }
+                    default: {}
+                items:
+                    anyOf:
+                      - { "$ref": "#/definitions/extendedDraft4" }
+                      - { "$ref": "#/definitions/schemaArray" }
+                    default: {}
+                maxItems: { "$ref": "#/definitions/positiveInteger" }
+                minItems: { "$ref": "#/definitions/positiveIntegerDefault0" }
+                uniqueItems:
+                    type: boolean
+                    default: false
+                maxProperties: { "$ref": "#/definitions/positiveInteger" }
+                minProperties: { "$ref": "#/definitions/positiveIntegerDefault0" }
+                required: { "$ref": "#/definitions/stringArray" }
+                additionalProperties:
+                    anyOf:
+                      - { type: boolean }
+                      - { "$ref": "#/definitions/extendedDraft4" }
+                    default: {}
+                definitions:
+                    type: object
+                    additionalProperties: { "$ref": "#/definitions/extendedDraft4" }
+                    default: {}
+                properties:
+                    type: object
+                    additionalProperties: { "$ref": "#/definitions/extendedDraft4" }
+                    default: {}
+                patternProperties:
+                    type: object
+                    additionalProperties: { "$ref": "#/definitions/extendedDraft4" }
+                    default: {}
+                dependencies:
+                    type: object
+                    additionalProperties:
+                        anyOf:
+                         -  { "$ref": "#/definitions/extendedDraft4" }
+                         -  { "$ref": "#/definitions/stringArray" }
+                enum:
+                    type: array
+                    minItems: 1
+                    uniqueItems: true
+                type:
+                    anyOf:
+                      - { "$ref": "#/definitions/simpleTypes" }
+                      - type: array
+                        items: { "$ref": "#/definitions/simpleTypes" }
+                        minItems: 1
+                        uniqueItems: true
+                allOf: { "$ref": "#/definitions/schemaArray" }
+                anyOf: { "$ref": "#/definitions/schemaArray" }
+                oneOf: { "$ref": "#/definitions/schemaArray" }
+                not: { "$ref": "#/definitions/extendedDraft4" }
+
+                # Propreties below this point are Riverbed extensions.
+                tags: { "$ref": "#/definitions/tags" }
+                readOnly:
+                    description: >
+                        Indicates that values specified for this field
+                        in a write context (such as the body of an
+                        HTTP PUT) will be ignored.
+                    type: boolean
+                    default: false
+                links:
+                    type: object
+                    properties:
+                        self: "#/definitions/selflink"
+                    additionalProperties:
+                        "$ref": "#/definitions/link"
+                relations:
+                    type: object
+                    additionalProperties:
+                        "$ref": "#/definitions/relation"
+            dependencies:
+                exclusiveMaximum: [ maximum ]
+                exclusiveMinimum: [ minimum ]
+            default: {}

@@ -1,0 +1,59 @@
+#!/usr/bin/env python
+
+import sys
+import os.path 
+import json
+import jsonref 
+import jsonschema
+
+DEFAULT_SCHEMA = os.path.join(os.path.dirname(sys.argv[0]),
+                              'servicedef-schema.yaml')
+
+
+def read_yaml_or_json(filename):
+    """
+    Read either format into a python data structure.
+
+    While technically everything should be JSON, for convenience of human
+    authors we mostly work with YAML.
+    """
+    with open(filename) as fp:
+        if filename.endswith('.json'):
+            return json.load(fp)
+
+        elif filename.endswith('.yaml') or filename.endswith('.yml'):
+            # If YAML isn't used, don't require it as it is a separate install.
+            import yaml
+            return yaml.load(fp)
+
+        raise ValueError("Unknown file type for file '%s'" % filename)
+
+
+def main(servicedef_path=None, schema_path=DEFAULT_SCHEMA, service_defs=()):
+    """
+    Loops over the given service definition files and checks for validity.
+
+    If not valid, we print out each error.
+    """
+
+    schema = read_yaml_or_json(DEFAULT_SCHEMA)
+    validator = jsonschema.Draft4Validator(schema)
+
+    for service_def in service_defs:
+        service_data = read_yaml_or_json(service_def)
+        print "==============================================================="
+        print "Service Definition: %s" % service_def
+        print "==============================================================="
+        print ""
+        if validator.is_valid(service_data):
+            print "VALID"
+        else:
+            print "NOT VALID"
+            print ""
+            for error in validator.iter_errors(service_data):
+                print error
+                print ""
+        print ""
+
+if __name__ == '__main__':
+    main(service_defs=(sys.argv[1:] if len(sys.argv) > 1 else []))
