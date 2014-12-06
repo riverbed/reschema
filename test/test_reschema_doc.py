@@ -16,11 +16,11 @@ from reschema.util import str_to_id as html_str_to_id
 logger = logging.getLogger(__name__)
 
 TEST_PATH = os.path.abspath(os.path.dirname(__file__))
-SERVICE_DEF_TEST = os.path.join(TEST_PATH, 'service_test.yml')
-SERVICE_DEF_TEST_REF = os.path.join(TEST_PATH, 'service_test_ref.yml')
-SERVICE_DEF_CATALOG = os.path.join(TEST_PATH, '../examples/Catalog.yml')
+SERVICE_DEF_TEST = os.path.join(TEST_PATH, 'service_test.yaml')
+SERVICE_DEF_TEST_REF = os.path.join(TEST_PATH, 'service_test_ref.yaml')
+SERVICE_DEF_BOOKSTORE = os.path.join(TEST_PATH, '../examples/bookstore.yaml')
 SERVICE_DEF_INVALID_REF = os.path.join(TEST_PATH,
-                                       'service_test_invalid_ref.yml')
+                                       'service_test_invalid_ref.yaml')
 
 outdir = 'test_reschema_doc_output'
 if os.path.exists(outdir):
@@ -56,8 +56,8 @@ class TestReschema(unittest.TestCase):
     def test_service_ref(self):
         process_file(SERVICE_DEF_TEST_REF, SERVICE_DEF_TEST)
 
-    def test_service_catalog(self):
-        process_file(SERVICE_DEF_CATALOG)
+    def test_service_bookstore(self):
+        process_file(SERVICE_DEF_BOOKSTORE)
 
 
 class TestReschemaInvalidRef(unittest.TestCase):

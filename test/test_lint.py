@@ -16,8 +16,8 @@ from reschema.lint import Validator, Result
 logger = logging.getLogger(__name__)
 
 TEST_PATH = os.path.abspath(os.path.dirname(__file__))
-SERVICE_DEF_TEST = os.path.join(TEST_PATH, 'service_test.yml')
-SERVICE_DEF_TEST_REF = os.path.join(TEST_PATH, 'service_test_ref.yml')
+SERVICE_DEF_TEST = os.path.join(TEST_PATH, 'service_test.yaml')
+SERVICE_DEF_TEST_REF = os.path.join(TEST_PATH, 'service_test_ref.yaml')
 
 SERVICE_DEF_TEMPLATE = '''
 $schema: http://support.riverbed.com/apis/service_def/2.2

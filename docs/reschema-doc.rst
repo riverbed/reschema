@@ -6,16 +6,16 @@ documentation.
 
 HTML: ::
 
-  $ python bin/reschema-doc -f examples/Catalog.yml -o /tmp -r 'catalog' --html
+  $ python bin/reschema-doc -f examples/bookstore.yaml -o /tmp -r 'bookstore' --html
 
-This will read in the example ``Catalog.yml`` file and generate both 
-``catalog.html``.
+This will read in the example ``bookstore.yaml`` file and generate both 
+``bookstore.html``.
 
 PDF: ::
 
-    $ python bin/reschema-doc -f examples/Catalog.yml -o /tmp -r 'catalog' --pdf
+    $ python bin/reschema-doc -f examples/bookstore.yaml -o /tmp -r 'bookstore' --pdf
 
-This will generate ``catalog.pdf``.  
+This will generate ``bookstore.pdf``.  
 
 Note that this relies on a tool called ``wkhtmltopdf``.  This must be
 installed on the local machine and available via the default path or

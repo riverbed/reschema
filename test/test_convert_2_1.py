@@ -16,8 +16,8 @@ from reschema import ServiceDef
 logger = logging.getLogger(__name__)
 
 TEST_PATH = os.path.abspath(os.path.dirname(__file__))
-SERVICE_21 = os.path.join(TEST_PATH, 'service_convert_2.1.yml')
-SERVICE_22 = os.path.join(TEST_PATH, 'service_convert_2.2.yml')
+SERVICE_21 = os.path.join(TEST_PATH, 'service_convert_2.1.yaml')
+SERVICE_22 = os.path.join(TEST_PATH, 'service_convert_2.2.yaml')
 
 PACKAGE_PATH = os.path.dirname(TEST_PATH)
 

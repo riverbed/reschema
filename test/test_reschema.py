@@ -25,14 +25,14 @@ from reschema.parser import Parser
 logger = logging.getLogger(__name__)
 
 TEST_PATH = os.path.abspath(os.path.dirname(__file__))
-SERVICE_DEF_TEST = os.path.join(TEST_PATH, 'service_test.yml')
-SERVICE_DEF_TEST_REF = os.path.join(TEST_PATH, 'service_test_ref.yml')
+SERVICE_DEF_TEST = os.path.join(TEST_PATH, 'service_test.yaml')
+SERVICE_DEF_TEST_REF = os.path.join(TEST_PATH, 'service_test_ref.yaml')
 
 PACKAGE_PATH = os.path.dirname(TEST_PATH)
 
 EXAMPLES_DIR = os.path.join(PACKAGE_PATH, 'examples')
-CATALOG_YAML = os.path.join(EXAMPLES_DIR, 'Catalog.yml')
-CATALOG_JSON = os.path.join(EXAMPLES_DIR, 'Catalog.json')
+BOOKSTORE_YAML = os.path.join(EXAMPLES_DIR, 'bookstore.yaml')
+BOOKSTORE_JSON = os.path.join(EXAMPLES_DIR, 'bookstore.json')
 
 
 class TestReschema(unittest.TestCase):
@@ -48,8 +48,8 @@ class TestReschema(unittest.TestCase):
         reschema.settings.MARKED_LOAD = True
         reschema.settings.LOAD_DESCRIPTIONS = False
         r = ServiceDef()
-        r.load(CATALOG_YAML)
-        self.assertEqual(r.name, 'catalog')
+        r.load(BOOKSTORE_YAML)
+        self.assertEqual(r.name, 'bookstore')
         self.assertEqual(r.check_references(), [])
 
         info = r.resources['info']
@@ -67,8 +67,8 @@ class TestReschema(unittest.TestCase):
         reschema.settings.MARKED_LOAD = False
         reschema.settings.LOAD_DESCRIPTIONS = True
         r = ServiceDef()
-        r.load(CATALOG_YAML)
-        self.assertEqual(r.name, 'catalog')
+        r.load(BOOKSTORE_YAML)
+        self.assertEqual(r.name, 'bookstore')
         self.assertEqual(r.check_references(), [])
 
         info = r.resources['info']
@@ -85,15 +85,15 @@ class TestReschema(unittest.TestCase):
     def test_load_schema_json(self):
         reschema.settings.MARKED_LOAD = True
         r = ServiceDef()
-        r.load(CATALOG_JSON)
-        self.assertEqual(r.name, 'catalog')
+        r.load(BOOKSTORE_JSON)
+        self.assertEqual(r.name, 'bookstore')
         info = r.resources['info']
         self.assertTrue(hasattr(info.input, 'start_mark'))
 
         reschema.settings.MARKED_LOAD = False
         r = ServiceDef()
-        r.load(CATALOG_JSON)
-        self.assertEqual(r.name, 'catalog')
+        r.load(BOOKSTORE_JSON)
+        self.assertEqual(r.name, 'bookstore')
         info = r.resources['info']
         self.assertFalse(hasattr(info.input, 'start_mark'))
 
@@ -114,18 +114,18 @@ class TestReschema(unittest.TestCase):
 
     def test_parse_schema(self):
         r = ServiceDef()
-        with open(CATALOG_YAML, 'r') as f:
+        with open(BOOKSTORE_YAML, 'r') as f:
             r.parse_text(f.read(), format='yaml')
-        self.assertEqual(r.name, 'catalog')
+        self.assertEqual(r.name, 'bookstore')
 
     def test_parse_schema_json(self):
         r = ServiceDef()
-        with open(CATALOG_JSON, 'r') as f:
+        with open(BOOKSTORE_JSON, 'r') as f:
             r.parse_text(f.read())
-        self.assertEqual(r.name, 'catalog')
+        self.assertEqual(r.name, 'bookstore')
 
     def test_load_bad_schema(self):
-        with open(CATALOG_YAML, 'r') as f:
+        with open(BOOKSTORE_YAML, 'r') as f:
             schema = f.readlines()
         for i, line in enumerate(schema):
             if "type: object" in line:
@@ -134,11 +134,11 @@ class TestReschema(unittest.TestCase):
 
         r = ServiceDef()
         with self.assertRaises(MarkedYAMLError):
-            r.parse_text(''.join(schema), format='yml')
+            r.parse_text(''.join(schema), format='yaml')
 
     def test_resource_load(self):
         r = ServiceDef()
-        r.load(CATALOG_YAML)
+        r.load(BOOKSTORE_YAML)
         self.assertEquals(len(r.resources), 8)
         self.assertIn('info', r.resources)
         self.assertIn('author', r.resources)
@@ -148,14 +148,14 @@ class TestReschema(unittest.TestCase):
 
     def test_type_load(self):
         r = ServiceDef()
-        r.load(CATALOG_YAML)
+        r.load(BOOKSTORE_YAML)
         self.assertIn('address', r.types)
         self.assertTrue(r.find_type('address'))
         self.assertEquals(r.find_type('no_type'), None)
 
     def test_resource_objects(self):
         r = ServiceDef()
-        r.load(CATALOG_YAML)
+        r.load(BOOKSTORE_YAML)
         a = r.resources['author']
         self.assertFalse(a.is_ref())
         self.assertFalse(a.is_simple())
@@ -168,13 +168,13 @@ class TestReschema(unittest.TestCase):
 
     def test_find_name_basic(self):
         r = ServiceDef()
-        r.load(CATALOG_YAML)
+        r.load(BOOKSTORE_YAML)
         a = ServiceDef.find(r, '#/resources/author')
         self.assertEqual(a.fullid(True), '#/resources/author')
 
     def test_find_name_complex(self):
         r = ServiceDef()
-        r.load(CATALOG_YAML)
+        r.load(BOOKSTORE_YAML)
         c = ServiceDef.find(r, '#/resources/book/chapters')
         self.assertEqual(c.fullid(True),
                          '#/resources/book/properties/chapters')
@@ -190,11 +190,11 @@ class TestReschema(unittest.TestCase):
         self.assertEqual(c._type, 'integer')
 
 
-class TestCatalog(unittest.TestCase):
+class TestBookstore(unittest.TestCase):
 
     def setUp(self):
         self.r = ServiceDef()
-        self.r.load(CATALOG_YAML)
+        self.r.load(BOOKSTORE_YAML)
 
     def tearDown(self):
         self.r = None
@@ -342,11 +342,11 @@ class TestCatalog(unittest.TestCase):
                          author.children[-1])
 
 
-class TestCatalogLinks(unittest.TestCase):
+class TestBookstoreLinks(unittest.TestCase):
 
     def setUp(self):
         self.r = ServiceDef()
-        self.r.load(CATALOG_YAML)
+        self.r.load(BOOKSTORE_YAML)
 
     def tearDown(self):
         self.r = None

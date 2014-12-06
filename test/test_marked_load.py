@@ -18,10 +18,10 @@ of parsing problems from source data.
 
 yaml_snippet_bad = """\
 $schema: "service_def/2.0"
-name: "Catalog"
+name: "Bookstore"
 version: "1.0"
-title: "REST API for a book catalog"
-servicePath: "/api/catalog/1.0"
+title: "REST API for a bookstore"
+servicePath: "/api/bookstore/1.0"
 defaultAuthorization: "required"
 resources:
    info:
@@ -47,10 +47,10 @@ resources:
 json_snippet_bad = """\
 {
   "$schema": "service_def/2.0",
-  "name": "Catalog",
+  "name": "Bookstore",
   "version": "1.0",
-  "title": "REST API for a book catalog",
-  "servicePath": "/api/catalog/1.0",
+  "title": "REST API for a bookstore",
+  "servicePath": "/api/bookstore/1.0",
   "defaultAuthorization": "required",
   "resources": {
     "info": {

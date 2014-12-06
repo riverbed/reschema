@@ -1,10 +1,10 @@
 {
   "$schema": "http://support.riverbed.com/apis/service_def/2.2",
-  "id": "http://support.riverbed.com/apis/catalog/1.0",
+  "id": "http://support.riverbed.com/apis/bookstore/1.0",
   "provider": "riverbed",
-  "name": "catalog",
+  "name": "bookstore",
   "version": "1.0",
-  "title": "REST API for a book catalog",
+  "title": "REST API for a bookstore",
   "defaultAuthorization": "required",
   "types": {
     "address": {
