@@ -50,13 +50,13 @@ properties:
         format: uri
     types:
         description: >
-            "Reusable types available to all schema in the service definition.
+            Reusable types available to all schema in the service definition.
             Effectively the same as 'definitions' within a json-schema
             but named separately to reduce confusion.  'types' are outside
             of json-schema, 'definitions' are inside.  Schema should
             not refer to each other's definitions sections, but should
             instead use 'types'.  Service definitions may refer to another
-            service definition's 'types' section."
+            service definition's 'types' section.
         type: object
         additionalProperties:
             "$ref": "#/definitions/extendedDraft4"
@@ -107,20 +107,21 @@ definitions:
         uniqueItems: true
     selflink:
         description: >
-            "Special link that describes the current resource's URI.
+            Special link that describes the current resource's URI.
             To be considered a self-describing data type, the resource
             must be able to fill all URI template parameters in this
-            link's path from the resource's data fields."
+            link's path from the resource's data fields.
         type: object
         properties:
             path: { "$ref": "#/definitions/path" }
             params:
                 description: >
+                    DEPRECATED.  Prefer the "template" and "vars" path form.
                     URI query parameter name and type declarations.
-                    Types must be url-encodable.  Currently, there is no
-                    provision for repeating the same parameter name
-                    multiple times.  This may be addressed in a
-                    future revision.
+                    Types must be url-encodable.
+                    There is no provision for repeating the same parameter name
+                    multiple times, and the behavior of a non-url-encodable
+                    type (object or array) is not defined.
                 type: object
                 additionalProperties:
                     "$ref": "#/definitions/extendedDraft4"
@@ -155,10 +156,10 @@ definitions:
         required: [method]
     relation:
         description: >
-            "A relation connects a source and target resource without
+            A relation connects a source and target resource without
             giving any indication of whether or how the target resource
             should be accessed.  Instead, the target resource's links
-            are used, in order to avoid duplication of link descriptions."
+            are used, in order to avoid duplication of link descriptions.
         type: object
         properties:
             resource:
@@ -173,6 +174,21 @@ definitions:
                 description: The descripiton of the relation.
         required: [resource]
     path:
+        description: >
+            A URI template, optionally with mappings describing how
+            to resolve the template.  By default, template variables
+            are resolved from the resource representation from the point
+            at which the link containing this path is attached.
+
+            An entry in the "vars" field can either adjust the starting
+            point for that resolution through a relative JSON pointer,
+            or provide a schema, indicating that the value must be
+            provided from an external source.  Any schema, whether
+            implied through the resource's schema or given explicitly,
+            must describe a type that can be resolved through the
+            rules for that variable as described in the URI templates
+            standard (RFC 6570).  Otherwise the resulting behavior
+            is undefined.
         oneOf:
           - type: string
             format: uritemplate
@@ -185,16 +201,18 @@ definitions:
             required: [template]
     vars:
         description: >
-            "A mapping of simple variable names to relative JSON pointers,
+            A mapping of simple variable names to relative JSON pointers,
             allowing for the use of values from complex data structures
             in systems such as uritemplates that allow only a flat
             variable namespace.  The source and destination of the mapping
-            is determined by the context of use."
+            is determined by the context of use.
         type: object
         default: {}
         additionalProperties:
-            type: string
-            format: reljsonpointer
+            oneOf:
+              - type: string
+                format: reljsonpointer
+              - { "$ref": "#/definitions/extendedDraft4" }
     tags:
         description: >
             An area for user-specific extension fields.  The service definition
