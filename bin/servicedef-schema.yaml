@@ -431,7 +431,7 @@ definitions:
                 oneOf: { "$ref": "#/definitions/schemaArray" }
                 not: { "$ref": "#/definitions/extendedDraft4" }
 
-                # Propreties below this point are Riverbed extensions.
+                # Properties below this point are Riverbed extensions.
                 tags: { "$ref": "#/definitions/tags" }
                 readOnly:
                     description: >
