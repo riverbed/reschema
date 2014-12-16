@@ -61,7 +61,13 @@ properties:
         additionalProperties:
             "$ref": "#/definitions/extendedDraft4"
     resources:
-        "$ref" : "#/definitions/resourceSchema"
+        description: >
+            The resources exposed by the service.  Resources, in addition
+            to the sort of descriptions available in 'types', resources
+            specify links and relations among themselves.
+        type: object
+        additionalProperties:
+            "$ref" : "#/definitions/resourceSchema"
 required: ["$schema", id, name, version]
 
 definitions:
@@ -69,6 +75,10 @@ definitions:
         type: array
         minItems: 1
         items: { "$ref": "#/definitions/extendedDraft4" }
+    resourceSchemaArray:
+        type: array
+        minItems: 1
+        items: { "$ref": "#/definitions/resourceSchema" }
     positiveInteger:
         type: integer
         minimum: 0
@@ -323,6 +333,11 @@ definitions:
                         HTTP PUT) will be ignored.
                     type: boolean
                     default: false
+                "$merge":
+                    type: object
+                    properties:
+                        source: { "$ref": "#/definitions/extendedDraft4" }
+                        with: { "$ref": "#/definitions/extendedDraft4" }
             dependencies:
                 exclusiveMaximum: [ maximum ]
                 exclusiveMinimum: [ minimum ]
@@ -330,12 +345,12 @@ definitions:
 
     requestResponseSchema:
             description: >
-                Extended Draft4 schema but defaulting to { type: "null" },
+                Resource schema but defaulting to { type: "null" },
                 which allows easy defaulting of HTTP request and response
                 bodies to empty.
             type: object
-            properties: { "$ref": "#/definitions/extendedDraft4/properties" }
-            dependencies: { "$ref": "#/definitions/extendedDraft4/dependencies" }
+            properties: { "$ref": "#/definitions/resourceSchema/properties" }
+            dependencies: { "$ref": "#/definitions/resourceSchema/dependencies" }
             default: { type: "null" }
 
     resourceSchema:
@@ -377,12 +392,12 @@ definitions:
                 additionalItems:
                     anyOf:
                       - { type: boolean }
-                      - { "$ref": "#/definitions/extendedDraft4" }
+                      - { "$ref": "#/definitions/resourceSchema" }
                     default: {}
                 items:
                     anyOf:
-                      - { "$ref": "#/definitions/extendedDraft4" }
-                      - { "$ref": "#/definitions/schemaArray" }
+                      - { "$ref": "#/definitions/resourceSchema" }
+                      - { "$ref": "#/definitions/resourceSchemaArray" }
                     default: {}
                 maxItems: { "$ref": "#/definitions/positiveInteger" }
                 minItems: { "$ref": "#/definitions/positiveIntegerDefault0" }
@@ -395,25 +410,25 @@ definitions:
                 additionalProperties:
                     anyOf:
                       - { type: boolean }
-                      - { "$ref": "#/definitions/extendedDraft4" }
+                      - { "$ref": "#/definitions/resourceSchema" }
                     default: {}
                 definitions:
                     type: object
-                    additionalProperties: { "$ref": "#/definitions/extendedDraft4" }
+                    additionalProperties: { "$ref": "#/definitions/resourceSchema" }
                     default: {}
                 properties:
                     type: object
-                    additionalProperties: { "$ref": "#/definitions/extendedDraft4" }
+                    additionalProperties: { "$ref": "#/definitions/resourceSchema" }
                     default: {}
                 patternProperties:
                     type: object
-                    additionalProperties: { "$ref": "#/definitions/extendedDraft4" }
+                    additionalProperties: { "$ref": "#/definitions/resourceSchema" }
                     default: {}
                 dependencies:
                     type: object
                     additionalProperties:
                         anyOf:
-                         -  { "$ref": "#/definitions/extendedDraft4" }
+                         -  { "$ref": "#/definitions/resourceSchema" }
                          -  { "$ref": "#/definitions/stringArray" }
                 enum:
                     type: array
@@ -426,10 +441,10 @@ definitions:
                         items: { "$ref": "#/definitions/simpleTypes" }
                         minItems: 1
                         uniqueItems: true
-                allOf: { "$ref": "#/definitions/schemaArray" }
-                anyOf: { "$ref": "#/definitions/schemaArray" }
-                oneOf: { "$ref": "#/definitions/schemaArray" }
-                not: { "$ref": "#/definitions/extendedDraft4" }
+                allOf: { "$ref": "#/definitions/resourceSchemaArray" }
+                anyOf: { "$ref": "#/definitions/resourceSchemaArray" }
+                oneOf: { "$ref": "#/definitions/resourceSchemaArray" }
+                not: { "$ref": "#/definitions/resourceSchema" }
 
                 # Properties below this point are Riverbed extensions.
                 tags: { "$ref": "#/definitions/tags" }
@@ -440,10 +455,15 @@ definitions:
                         HTTP PUT) will be ignored.
                     type: boolean
                     default: false
+                "$merge":
+                    type: object
+                    properties:
+                        source: { "$ref": "#/definitions/resourceSchema" }
+                        with: { "$ref": "#/definitions/resourceSchema" }
                 links:
                     type: object
                     properties:
-                        self: "#/definitions/selflink"
+                        self: { "$ref": "#/definitions/selflink" }
                     additionalProperties:
                         "$ref": "#/definitions/link"
                 relations:
