@@ -1460,7 +1460,7 @@ class TestI18N(unittest.TestCase):
 
     def setUp(self):
         self.r = ServiceDef()
-        self.r.load(CATALOG_YAML)
+        self.r.load(BOOKSTORE_YAML)
 
     def tearDown(self):
         self.r = None
