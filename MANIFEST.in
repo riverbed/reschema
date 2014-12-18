@@ -5,3 +5,4 @@ include RELEASE-VERSION
 exclude .gitignore
 include reschema/servicedef.css
 include reschema/servicedef.js
+include versioning/*.py
