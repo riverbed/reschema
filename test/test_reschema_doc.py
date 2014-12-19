@@ -100,8 +100,7 @@ class TestReschemaInvalidRef(unittest.TestCase):
             baseid = html_str_to_id(r2h.schema.fullid(True))
             div = r2h.container.div(id=baseid)
             r2h.menu.add_item(r2h.schema.name, href=div)
-            submenu = r2h.menu.add_submenu()
-            r2h.process_links(div, baseid, submenu)
+            r2h.process_links(div, baseid)
 
 
 if __name__ == '__main__':
