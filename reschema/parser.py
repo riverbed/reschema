@@ -42,6 +42,9 @@ class Parser(object):
     obj may not be altered once set.
     """
     def __init__(self, input, name, obj=None, base_id=None):
+        # TODO: Does any caller pass base_id?  The parameter is no
+        #       longer actually used in this class.
+
         if not isinstance(input, dict):
             raise ParseError('%s: definition should be a dictionary, got: %s' %
                              (name, type(input)), input)
@@ -226,11 +229,16 @@ class Parser(object):
         return urlparse.urljoin(base_id, ref)
 
     def preprocess_input(self, base_id):
-        """Perform some input preprocessing."""
+        """Perform some preprocessing on our input."""
+        self.preprocess(base_id, self.input)
 
-        self.expand_refs(base_id, self.input)
+    @classmethod
+    def preprocess(cls, base_id, input):
+        """Perform preprocessing on the supplied input."""
+        cls.expand_refs(base_id, input)
 
-    def expand_refs(self, base_id, input):
+    @classmethod
+    def expand_refs(cls, base_id, input):
         """ Replace all relative refs in input with absolute refs"""
 
         if input:
@@ -238,13 +246,13 @@ class Parser(object):
                 if '$ref' in input and isinstance(input['$ref'], basestring):
                     # replace relative refs with fully expanded refs
                     oldref = input['$ref']
-                    newref = self.expand_ref(base_id, oldref)
+                    newref = cls.expand_ref(base_id, oldref)
                     input['$ref'] = newref
 
                 elif len(input.keys()) > 0:
                     for k, v in input.iteritems():
-                        self.expand_refs(base_id, v)
+                        cls.expand_refs(base_id, v)
 
             elif isinstance(input, list):
                 for v in input:
-                    self.expand_refs(base_id, v)
+                    cls.expand_refs(base_id, v)

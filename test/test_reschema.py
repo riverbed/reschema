@@ -16,11 +16,10 @@ import reschema
 
 from reschema.exceptions import (ValidationError, NoManager,
                                  MissingParameter, ParseError,
-                                 InvalidServiceId, InvalidReference)
+                                 InvalidReference)
 
 from reschema.jsonschema import (Object, Integer, String, Array, Schema)
 from reschema import yaml_loader, ServiceDef, ServiceDefManager
-from reschema.parser import Parser
 
 logger = logging.getLogger(__name__)
 
@@ -508,7 +507,8 @@ class TestJsonSchema(TestSchemaBase):
                             "properties:\n"
                             "    id: { type: number }\n"
                             "    name: { type: string }\n"
-                            "    billing_address: { $ref: '/api/other/1.0#/types/address' }\n")
+                            "    billing_address:"
+                            " { $ref: '/api/other/1.0#/types/address' }\n")
         schema.servicedef.manager = None
         with self.assertRaises(NoManager):
             schema.validate({'id': 2,
@@ -1208,28 +1208,6 @@ class TestSchema(TestSchemaBase):
             (uri, params, values) = rel.resolve(data={'v': 3})
 
 
-class TestExpandId(unittest.TestCase):
-
-    def setUp(self):
-        self.s = reschema.ServiceDef()
-        self.s.id = 'http://support.riverbed.com/apis/testschema/1.0'
-
-    def test_local_ref(self):
-        self.assertEqual(
-            Parser.expand_ref(self.s.id, "#/foo/bar"),
-            self.s.id + "#/foo/bar")
-
-    def test_provider_ref(self):
-        self.assertEqual(
-            Parser.expand_ref(self.s.id, "/apis/otherschema/2.0#/foo/bar"),
-            "http://support.riverbed.com/apis/otherschema/2.0#/foo/bar")
-
-    def test_full_ref(self):
-        id_ = "http://support.riverbed.com/apis/otherschema/2.0#/foo/bar"
-        self.assertEqual(Parser.expand_ref(self.s.id, id_), id_)
-
-
-
 class TestSchemaMerge(TestSchemaBase):
 
     def setUp(self):
@@ -1329,13 +1307,12 @@ class TestSchemaRef(TestSchemaBase):
     def test_merge_remote_ref_ref(self):
         r = self.s2.find('#/resources/test_merge_remote_ref_ref')
 
-        (self.check_valid
-         (r,
-          valid = [ {'p1': True, 'p2': 12},
-                    {'p1': True, 'p2': 19}],
+        self.check_valid(r,
+                         valid=[{'p1': True, 'p2': 12},
+                                {'p1': True, 'p2': 19}],
 
-          invalid = [ {'p1': 1, 'p2': 12},
-                      {'p1': True, 'p2': 'foo'}]))
+                         invalid=[{'p1': 1, 'p2': 12},
+                                  {'p1': True, 'p2': 'foo'}])
 
 
 class TestLoadHook(TestSchemaBase):
