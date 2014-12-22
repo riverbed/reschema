@@ -97,7 +97,87 @@ def _register_type(cls):
     type_map[cls._type] = cls
 
 
-class Schema(object):
+class Entity(object):
+    """Base for various classes using ids and names
+
+    :param id: URI of this entity relative to its servicedef URI
+
+    :param name: a label for this entity, typically resembling a
+        the name of a schema with its section (types, resources,
+        params, etc.) with dotted or brackted qualifiers for sub-schemas
+        in the style of python member accesses or array indices or
+        dictionary keys.  It does not need to be unique within
+        the service definition.
+
+    :param parent: allows nesting of entities, may be None
+
+    :param servicedef: the servicedef instance this entity is
+        assocaited with. If None, inherit from parent.
+
+    :param intermediary: a word to insert between the parent and
+        instance name in the dotted fullname notation.  Typically
+        used by non-Schema entities.
+
+    :param input: parsing data relevant for error reporting, if any.
+    """
+    def __init__(self, id, name=None, parent=None, servicedef=None,
+                 intermediary=None, input=None):
+        self.id = id
+        self.name = name
+        self.parent = parent
+        self.servicedef = servicedef
+
+        if servicedef is None:
+            if parent is None:
+                # This is needed for repr(), which can end up being
+                # called while printing information about the
+                # ValidationError's stack trace.
+                self._absolute_id = '<unspecified service uri>%s' % self.id
+                self._fullname = name if name else '<unnamed>'
+                raise ValidationError(
+                    "Must specify 'servicedef' if parent is None", input)
+            self.servicedef = parent.servicedef
+
+        self._absolute_id = '%s%s' % (self.servicedef.id, self.id)
+
+        if self.parent:
+            if self.name is None:
+                self._fullname = self.parent.fullname()
+            elif intermediary is not None:
+                self._fullname = '.'.join((self.parent.fullname(),
+                                           intermediary, self.name))
+            elif isinstance(self.parent, Array):
+                self._fullname = '%s[%s]' % (self.parent.fullname(), self.name)
+            elif self.parent.fullname() is None:
+                self._fullname = self.name
+            else:
+                self._fullname = '.'.join((self.parent.fullname(), self.name))
+
+        elif self.parent is None and self.name is None:
+            self._fullname = None
+        else:
+            self._fullname = self.name
+
+    def __repr__(self):
+        return "<servicedef.%s '%s'>" % (self.__class__.__name__,
+                                         self.fullid())
+
+    def fullname(self):
+        """Return the full printable name using dotted notation."""
+        # Note: Could be property, but is a method for historical reasons.
+        return self._fullname
+
+    def fullid(self, relative=False):
+        """Return the full id (canonical URI) using path notation.
+
+        :param relative: set to True to return an id relative to this
+            servicedef
+        """
+        # Note: Could be property, but is a method for historical reasons.
+        return self.id if relative else self._absolute_id
+
+
+class Schema(Entity):
     """Base class for all JSON schema types.
 
     Construction happens through parsing of input.  The general flow is:
@@ -149,20 +229,11 @@ class Schema(object):
     def __init__(self, typestr, parser, name=None,
                  parent=None, servicedef=None, id=None):
 
+        super(Schema, self).__init__(id=id, name=name, input=parser.input,
+                                     servicedef=servicedef, parent=parent)
+
         self._typestr = typestr
-        self.parent = parent
-        self.name = name
-        self.id = id
         self.children = []
-
-        if servicedef is None:
-            if parent is None:
-                raise ValidationError(
-                    "Must specify 'servicedef' if parent is None",
-                    parser.input)
-            servicedef = parent.servicedef
-
-        self.servicedef = servicedef
 
         # Save the original input object that was parsed, other
         # references may want this later.
@@ -241,10 +312,6 @@ class Schema(object):
                 self.not_ = None
 
         self.schemas[self.fullid()] = self
-
-    def __repr__(self):
-        return "<jsonschema.%s '%s'>" % (self.__class__.__name__,
-                                         self.fullid())
 
     @classmethod
     def parse(cls, input, name=None, parent=None, servicedef=None,
@@ -350,28 +417,6 @@ class Schema(object):
                 ('self' in other.links) and
                 (self.links['self'].path.template ==
                  other.links['self'].path.template))
-
-    def fullname(self):
-        """Return the full printable name using dotted notation."""
-        # TODO: Should this be cached?  Do we support changing it?
-        if self.parent:
-            if isinstance(self.parent, Array):
-                return self.parent.fullname() + '[' + self.name + ']'
-            elif self.parent.fullname() is None:
-                return self.name
-            else:
-                return self.parent.fullname() + '.' + self.name
-
-        return self.name
-
-    def fullid(self, relative=False):
-        """Return the full id (canonical URI) using path notation.
-
-        :param relative: set to True to return an id relative to this
-            servicedef
-
-        """
-        return '%s%s' % (('' if relative else self.servicedef.id), self.id)
 
     def str_simple(self):
         """Return a string representation of this element as a basic table."""
@@ -509,7 +554,8 @@ class Multi(Schema):
     _type = 'multi'
 
     def __init__(self, parser, name, parent, **kwargs):
-        Schema.__init__(self, Multi._type, parser, name, parent, **kwargs)
+        super(Multi, self).__init__(Multi._type, parser, name, parent,
+                                    **kwargs)
 
     def __getitem__(self, name):
         # TODO: The previous implementation, in addition to ignoring the
@@ -536,7 +582,8 @@ _register_type(Multi)
 class DynamicSchema(Schema):
 
     def __init__(self, type, parser, name, parent, **kwargs):
-        Schema.__init__(self, type, parser, name, parent, **kwargs)
+        super(DynamicSchema, self).__init__(type, parser, name, parent,
+                                            **kwargs)
 
     @property
     def typestr(self):
@@ -574,7 +621,7 @@ class Ref(DynamicSchema):
     _type = '$ref'
 
     def __init__(self, parser, name, parent, **kwargs):
-        Schema.__init__(self, Ref._type, parser, name, parent, **kwargs)
+        super(Ref, self).__init__(Ref._type, parser, name, parent, **kwargs)
 
         # Lazy resolution because references may be used before they
         # are defined
@@ -642,8 +689,8 @@ class Merge(DynamicSchema):
     _type = '$merge'
 
     def __init__(self, parser, name, parent, **kwargs):
-        DynamicSchema.__init__(self, Merge._type, parser, name, parent,
-                               **kwargs)
+        super(Merge, self).__init__(Merge._type, parser, name, parent,
+                                    **kwargs)
 
         # Lazy resolution because references may be used before they
         # are defined
@@ -670,14 +717,6 @@ class Merge(DynamicSchema):
 
         return self._refschema
 
-    def fullname(self):
-        """Return the full printable name using dotted notation."""
-        # TODO: Should this be cached?  Do we support changing it?
-        if self.parent:
-            return self.parent.fullname()
-        else:
-            return None
-
 _register_type(Merge)
 
 
@@ -685,7 +724,7 @@ class Null(Schema):
     _type = 'null'
 
     def __init__(self, parser, name, parent, **kwargs):
-        Schema.__init__(self, Null._type, parser, name, parent, **kwargs)
+        super(Null, self).__init__(Null._type, parser, name, parent, **kwargs)
 
     def validate(self, input):
         if (input is not None):
@@ -700,7 +739,8 @@ class Boolean(Schema):
     _type = 'boolean'
 
     def __init__(self, parser, name, parent, **kwargs):
-        Schema.__init__(self, Boolean._type, parser, name, parent, **kwargs)
+        super(Boolean, self).__init__(Boolean._type, parser, name, parent,
+                                      **kwargs)
         parser.parse('default')
         parser.parse('enum')
 
@@ -722,7 +762,8 @@ class String(Schema):
     _type = 'string'
 
     def __init__(self, parser, name, parent, **kwargs):
-        Schema.__init__(self, String._type, parser, name, parent, **kwargs)
+        super(String, self).__init__(String._type, parser, name, parent,
+                                     **kwargs)
         parser.parse('minLength', types=int)
         parser.parse('maxLength', types=int)
         parser.parse('pattern')
@@ -783,7 +824,8 @@ class NumberOrInteger(Schema):
     _type = 'number'
 
     def __init__(self, type, allowed_types, parser, name, parent, **kwargs):
-        Schema.__init__(self, type, parser, name, parent, **kwargs)
+        super(NumberOrInteger, self).__init__(type, parser,
+                                              name, parent, **kwargs)
         self.allowed_types = allowed_types
         parser.parse('minimum', types=allowed_types)
         parser.parse('maximum', types=allowed_types)
@@ -868,7 +910,8 @@ class Timestamp(Schema):
     _type = 'timestamp'
 
     def __init__(self, parser, name, parent, **kwargs):
-        Schema.__init__(self, Timestamp._type, parser, name, parent, **kwargs)
+        super(Timestamp, self).__init__(Timestamp._type, parser, name, parent,
+                                        **kwargs)
 
     def validate(self, input):
         if (not any(isinstance(input, t) for t in (int, float, long)) or
@@ -884,8 +927,8 @@ class TimestampHP(Schema):
     _type = 'timestamp-hp'
 
     def __init__(self, parser, name, parent, **kwargs):
-        Schema.__init__(self, TimestampHP._type, parser, name, parent,
-                        **kwargs)
+        super(TimestampHP, self).__init__(TimestampHP._type, parser,
+                                          name, parent, **kwargs)
 
     def validate(self, input):
         if (not any(isinstance(input, t) for t in (int, float, long)) or
@@ -901,7 +944,8 @@ class Object(Schema):
     _type = 'object'
 
     def __init__(self, parser, name, parent, **kwargs):
-        Schema.__init__(self, Object._type, parser, name, parent, **kwargs)
+        super(Object, self).__init__(Object._type, parser, name, parent,
+                                     **kwargs)
         self.properties = OrderedDict()
 
         for prop, value in parser.parse('properties', {},
@@ -1001,7 +1045,8 @@ class Array(Schema):
     _type = 'array'
 
     def __init__(self, parser, name, parent, **kwargs):
-        Schema.__init__(self, Array._type, parser, name, parent, **kwargs)
+        super(Array, self).__init__(Array._type, parser, name, parent,
+                                    **kwargs)
 
         items = parser.parse('items', required=True, save=False)
         if 'label' in items:
@@ -1073,7 +1118,7 @@ class Data(Schema):
     _type = 'data'
 
     def __init__(self, parser, name, parent, **kwargs):
-        Schema.__init__(self, Data._type, parser, name, parent, **kwargs)
+        super(Data, self).__init__(Data._type, parser, name, parent, **kwargs)
 
         parser.parse('content_type', required=True)
         parser.parse('description')
@@ -1088,14 +1133,13 @@ class Data(Schema):
 _register_type(Data)
 
 
-class Relation(object):
+class Relation(Entity):
 
     def __init__(self, input, name, schema, id):
-        self.name = name
+        super(Relation, self).__init__(id=id, name=name, parent=schema,
+                                       intermediary='relations')
         self.schema = schema
-        self.servicedef = schema.servicedef
         self.vars = None
-        self.id = id
 
         with Parser(input, self.fullname(), self) as parser:
             # Lazy resolution because references may be used before they
@@ -1108,10 +1152,6 @@ class Relation(object):
 
     def __str__(self):
         return self.name
-
-    def __repr__(self):
-        return "<jsonschema.%s '%s'>" % (self.__class__.__name__,
-                                         self.fullid())
 
     def is_ref(self):
         return False
@@ -1130,19 +1170,6 @@ class Relation(object):
                                        self._resource_id)
             self._resource = sch
         return self._resource
-
-    def fullname(self):
-        return self.schema.fullname() + '.relations.' + self.name
-
-    def fullid(self, relative=False):
-        """Return the full id (canonical URI) using path notation.
-
-        :param relative: set to True to return an id relative to this
-            servicedef
-
-        """
-        return '%s%s' % (('' if relative else self.servicedef.id),
-                         self.id)
 
     def str_simple(self):
         return '%-30s %-20s\n' % (self.fullname(), '<relation>')
@@ -1210,13 +1237,12 @@ class Relation(object):
         return (uri, params, values)
 
 
-class Link(object):
+class Link(Entity):
 
     def __init__(self, input, name, schema, id):
-        self.name = name
+        super(Link, self).__init__(id=id, name=name, parent=schema,
+                                   intermediary='links')
         self.schema = schema
-        self.servicedef = schema.servicedef
-        self.id = id
 
         with Parser(input, self.fullname(), self) as parser:
             parser.parse('description', '')
@@ -1273,10 +1299,6 @@ class Link(object):
                                                      id=('%s/params/%s' %
                                                          (self.id, key)))
 
-    def __repr__(self):
-        return "<jsonschema.%s '%s'>" % (self.__class__.__name__,
-                                         self.fullid())
-
     @classmethod
     def order_link_keys(self, keys):
         # Make sure to process 'self' first, other links may rely
@@ -1294,19 +1316,6 @@ class Link(object):
 
     def is_multi(self):
         return False
-
-    def fullname(self):
-        return self.schema.fullname() + '.links.' + self.name
-
-    def fullid(self, relative=False):
-        """Return the full id (canonical URI) using path notation.
-
-        :param relative: set to True to return an id relative to this
-            servicedef
-
-        """
-        return '%s%s' % (('' if relative else self.schema.servicedef.id),
-                         self.id)
 
     def str_simple(self):
         return '%-30s %-20s %s\n' % (self.fullname(), '<link>',
