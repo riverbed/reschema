@@ -16,18 +16,32 @@ import reschema.settings
 
 
 class Parser(object):
-    """ Input object parser. """
+    """ Input object parser.
+
+    Parsers handle checking for required properties, checking the data
+    type, managing a caller-supplied default value, and optionally
+    creating a data member on the ``obj`` argument with the same name
+    as the property, and setting it to the property value.
+
+    A given Parser instance only ever works with the top level of
+    the input dictionary.  No processing of values beyond checking
+    their types and making use of any supplied default values is performed.
+
+    Recursive traversal of the input should
+    be handled by callers creating new parsers on dictionaries
+    parsed out of the parent input.
+
+    A Parser may be used as a context manager that ensures that all
+    input dictionary keys have been consumed upon exit.
+
+    :param dict input: input to parser
+    :param name: name for logging / error
+    :param obj: object on which to set attributes (i.e. the "context")
+
+    If obj is None, it may be set later with set_context(), but
+    obj may not be altered once set.
+    """
     def __init__(self, input, name, obj=None, base_id=None):
-        """Create a parser object.
-
-        :param dict input: input to parser
-        :param name: name for logging / error
-        :param obj: object on which to set attributes
-
-        If obj is None, it may be set later with set_context(), but
-        obj may not be altered once set.
-
-        """
         if not isinstance(input, dict):
             raise ParseError('%s: definition should be a dictionary, got: %s' %
                              (name, type(input)), input)
@@ -135,8 +149,7 @@ class Parser(object):
         :return: The parsed value.
         """
 
-        if (  prop == 'description' and
-              not reschema.settings.LOAD_DESCRIPTIONS):
+        if (prop == 'description' and not reschema.settings.LOAD_DESCRIPTIONS):
             val = ''
             if prop in self.input:
                 del(self.input[prop])

@@ -98,7 +98,47 @@ def _register_type(cls):
 
 
 class Schema(object):
-    """Base class for all JSON schema types."""
+    """Base class for all JSON schema types.
+
+    Construction happens through parsing of input.  The general flow is:
+
+        * Receive a Parser instance that is already attached to the input.
+        * Parse all remaining keys at this level.
+        * For keys that have a schema value, invoke Schema.parse()
+        * For keys that have other values, hand the value off to the
+          appropriate class without passing in the Parser.  Those classes
+          will call Schema.parse() as needed on sub-fields in order
+          to continue the traversal.
+
+    Note that individual Parser instances never work with more than one
+    level of input keys at a time.  Traversal happens via passing
+    input sub-dictionaries back to `Schema.parse()`, which creates
+    the next level of Parser down.
+
+    :param typestr: the <json-schema> type
+
+    :param parser: the parser of input data
+
+    :param parent: allows nesting of schemas, may be None
+
+    :param name: a label for this schema, typically resembling
+        the name of a schema with its section (types, resources,
+        params, etc.) with dotted or bracketed qualifiers for sub-schemas
+        in the style of python member accesses or array indices or
+        dictionary keys.  It does not need to be unique within
+        the service definition.
+
+    :param servicedef: the servicedef instance this instance is
+        assocaited with. If None, inherit from parent.
+
+    :param id: URI of this schema relative to its servicedef URI
+
+    :raises ValidationError: if neither `servicedef` nor `parent`
+        is specified.
+
+    :raises ParseError: if unexpected data or formats are
+        encountered while parsing.
+    """
 
     # Counter used for assigning names/ids for anonymous types
     count = 1
@@ -108,25 +148,6 @@ class Schema(object):
 
     def __init__(self, typestr, parser, name=None,
                  parent=None, servicedef=None, id=None):
-        """Create a new Schema object of the given `typestr`.
-
-        :param typestr: the <json-schema> type
-
-        :param parser: the parser of input data
-
-        :param parent: allows nesting of schemas, may be None
-
-        :param name: a label for this schema
-
-        :param servicedef: the servicedef instance this instance is
-            assocaited with. If None, inherit from parent.
-
-        :raises ValidationError: if neither `servicedef` nor `parent`
-            is specified.
-
-        :raises ParseError: if unexpected data or formats are
-            encountered while parsing.
-        """
 
         self._typestr = typestr
         self.parent = parent
@@ -230,11 +251,26 @@ class Schema(object):
               id=None):
         """Parse a <json-schema> definition for an object.
 
+        The general flow of Schema parsing is as follows:
+
+            * Create a Parser for the current input keys.
+            * Parse enough fields to determine the Schema subclass.
+            * Hand the parser and remaining input off to the constructor.
+
+        See the constructor docstring for further parsing flow documentation.
+
         :param dict input: the definition to parse
 
         :param parent: allows nesting of schemas, may be None
 
-        :param name: a label for this schema
+        :param name: a label for this schema, typically resembling
+            the name of a schema with its section (types, resources,
+            params, etc.) with dotted or bracketed qualifiers for sub-schemas
+            in the style of python member accesses or array indices or
+            dictionary keys.  It does not need to be unique within
+            the service definition.
+
+        :param id: URI of this schema relative to its servicedef URI
 
         :param servicedef: the servicedef instance this instance is
             assocaited with. If None, inherit from parent.
@@ -329,7 +365,7 @@ class Schema(object):
         return self.name
 
     def fullid(self, relative=False):
-        """Return the full id using path notation.
+        """Return the full id (canonical URI) using path notation.
 
         :param relative: set to True to return an id relative to this
             servicedef
@@ -557,12 +593,6 @@ class Ref(DynamicSchema):
             if sch is None:
                 raise InvalidReference(("%s $ref" % self.fullname()),
                                        self._refschema_id)
-
-            # XXXCJ - Hopefully we can drop this deepcopy -- need to
-            # make sure docs and sleepwalker don't rely on it
-            # sch = copy.deepcopy(sch)
-            # sch.parent = self
-            # sch.parent.api = self.api
 
             self._refschema = sch
             for link in sch.links:
@@ -1105,7 +1135,7 @@ class Relation(object):
         return self.schema.fullname() + '.relations.' + self.name
 
     def fullid(self, relative=False):
-        """Return the full id using path notation.
+        """Return the full id (canonical URI) using path notation.
 
         :param relative: set to True to return an id relative to this
             servicedef
@@ -1269,7 +1299,7 @@ class Link(object):
         return self.schema.fullname() + '.links.' + self.name
 
     def fullid(self, relative=False):
-        """Return the full id using path notation.
+        """Return the full id (canonical URI) using path notation.
 
         :param relative: set to True to return an id relative to this
             servicedef
@@ -1412,7 +1442,7 @@ class Path(object):
                     except JsonPointerException:
                         raise MissingParameter(
                             ("Path %s failed to assign var %s from data "
-                            "using rel pointer %s") % (self, var, relp),
+                             "using rel pointer %s") % (self, var, relp),
                             self)
 
             if data and isinstance(data, dict):

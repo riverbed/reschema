@@ -29,6 +29,12 @@ __all__ = ['ServiceDef']
 logger = logging.getLogger(__name__)
 
 
+SUPPORTED_SCHEMAS = frozenset([
+    "http://support.riverbed.com/apis/service_def/2.2",
+])
+""" The set of schema versions understood by this version of reschema """
+
+
 class ServiceDefLoadHook(object):
     """ Interface for load hooks.
 
@@ -174,6 +180,15 @@ class ServiceDefManager(object):
 
 
 class ServiceDef(object):
+    """ Loads and represents the complete service definition
+
+    A ServiceDef parses the top-level service definition fields and
+    calls `reschema.schema.Schema.parse()` on sub-sections that
+    have JSON Schema-based values.
+
+    :param manager: The ServiceManager, if any, that is keeping track
+        of this particular service definition.
+    """
 
     def __init__(self, manager=None):
         self.manager = manager
@@ -268,7 +283,7 @@ class ServiceDef(object):
 
         with Parser(obj, '<servicdef>', self) as parser:
             parser.parse('$schema', required=True, save_as='schema')
-            if self.schema != "http://support.riverbed.com/apis/service_def/2.2":
+            if self.schema not in SUPPORTED_SCHEMAS:
                 raise UnsupportedSchema("Unsupported schema format: %s" %
                                         self.schema)
 
@@ -355,17 +370,21 @@ class ServiceDef(object):
         return errors
 
     def resource_iter(self):
+        """ Generator for iterating over all resources """
         for r in self.resources:
             yield self.resources[r]
 
     def type_iter(self):
+        """ Generator for iterating over all types """
         for r in self.types:
             yield self.types[r]
 
     def find_resource(self, name):
+        """ Look up and return a resource by name """
         return self.resources.get(name, None)
 
     def find_type(self, name):
+        """ Look up and return a type by name """
         return self.types.get(name, None)
 
     def find(self, reference):
