@@ -3,6 +3,7 @@
 build
 dist
 version.txt
+RELEASE-VERSION
 *.egg-info
 
 docs/_build

@@ -1,5 +1,3 @@
---extra-index-url http://pypibox.lab.nbttech.com/flyscript/development/
-PyYAML
-Markdown
-uritemplate
-jsonpointer
+--index-url https://pypibox.lab.nbttech.com/flyscript/development/
+
+-e .[dev,all]

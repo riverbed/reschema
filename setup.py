@@ -3,18 +3,23 @@ import pip
 import sys
 
 from setuptools.command.test import test as TestCommand
-from pip.req import parse_requirements
-from versioning import get_version
+from gitpy_versioning import get_version
 
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
 
-def requirements():
-    return [str(ir.req) for ir in parse_requirements('requirements.txt')]
-
 readme = open('README.rst').read()
+
+doc = [
+    'sphinx',
+]
+
+test = [
+    'pytest',
+    'mock',
+]
 
 setup(
     name='reschema',
@@ -33,7 +38,19 @@ setup(
         'bin/relint'
     ],
     include_package_data=True,
-    install_requires=requirements(),
+    install_requires=[
+        'PyYAML',
+        'Markdown',
+        'uritemplate',
+        'jsonpointer',
+    ],
+    extras_require={
+        'test': test,
+        'doc': doc,
+        'dev': test + doc,
+        'all': [],
+    },
+    tests_require=test,
+    url="https://gitlab.lab.nbttech.com/steelscript/reschema/",
     keywords='reschema',
-    tests_require=['pytest', 'mock'],
 )
