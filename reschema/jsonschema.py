@@ -771,14 +771,15 @@ class String(Schema):
         parser.parse('default')
 
     def validate(self, input):
-        if len(str(input)) > 40:
-            trunc = str(input)[:40] + "..."
-        else:
-            trunc = str(input)
+        def trunc():
+            if len(unicode(input)) > 40:
+                return unicode(input)[:40] + "..."
+            else:
+                return unicode(input)
 
-        if (not isinstance(input, str) and not isinstance(input, unicode)):
+        if not isinstance(input, (str, unicode)):
             raise ValidationError("%s: input must be a string, got %s: %s" %
-                                  (self.fullname(), type(input), trunc), self)
+                          (self.fullname(), type(input), trunc()), self)
 
         if (self.minLength is not None) and len(input) < self.minLength:
             raise ValidationError(

@@ -1432,6 +1432,24 @@ tags: {tags}
         service_def = self.create_service(tags='{hi: ~, quit: bye}')
         self.assertEquals(service_def.tags, {'hi': None, 'quit': 'bye'})
 
+
+class TestI18N(unittest.TestCase):
+
+    def setUp(self):
+        self.r = ServiceDef()
+        self.r.load(BOOKSTORE_YAML)
+
+    def tearDown(self):
+        self.r = None
+
+    def test_unicode(self):
+
+        book = self.r.resources['book']
+        book_data = {'id': 1, 'title': u'\u6d4b\u8bd5',
+                     'publisher_id': 5, 'author_ids': [1, 5]}
+        book.validate(book_data)
+
+
 if __name__ == '__main__':
     logging.basicConfig(filename='test.log', level=logging.DEBUG)
     unittest.main()
