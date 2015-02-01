@@ -1272,7 +1272,7 @@ class Link(Entity):
                                  % str(self), parser.input)
 
             self._request = parser.parse('request', save=False)
-            if self._request:
+            if self._request is not None:
                 self._request = Schema.parse(self._request,
                                              parent=self, name='request',
                                              id='%s/request' % self.id)
@@ -1282,7 +1282,7 @@ class Link(Entity):
                                              id='%s/request' % self.id)
 
             self._response = parser.parse('response', save=False)
-            if self._response:
+            if self._response is not None:
                 self._response = Schema.parse(self._response,
                                               parent=self, name='response',
                                               id='%s/response' % self.id)
