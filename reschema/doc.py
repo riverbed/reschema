@@ -210,6 +210,9 @@ class ReschemaDoc(object):
                     phtml, pdf]
             #print ' '.join(args)
             subprocess.check_call(args)
+            # Fix for 'illegal byte sequence'
+            os.environ['LC_TYPE'] = 'C'
+            os.environ['LANG'] = 'C'
             args = ['sed', '-i.bak', '-e', 's/#00//g', pdf]
             subprocess.check_call(args)
             print "Wrote %s" % pdf
