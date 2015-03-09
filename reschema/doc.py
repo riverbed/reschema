@@ -6,6 +6,7 @@ import re
 import datetime
 import distutils.spawn
 import subprocess
+import HTMLParser
 
 from optparse import OptionParser
 
@@ -62,6 +63,9 @@ class ReschemaDoc(object):
         parser.add_option('--apiroot', dest='apiroot', default=None,
                           help='Root path for all resources')
 
+        parser.add_option('--urlname', default=None,
+                          help='Name of this service in the URL (if different than name)')
+
         (options, args) = parser.parse_args(args)
 
         if not options.filename:
@@ -111,9 +115,18 @@ class ReschemaDoc(object):
             if os.path.exists(html):
                 os.remove(html)
 
+            h = HTMLParser.HTMLParser()
+
             htmldoc = reschema.html.Document(title, printable=False)
             htmldoc.header.a(href="http://www.riverbed.com", cls="headerimg")
-            htmldoc.header.span(cls="headerleft").text = title
+            hl = htmldoc.header.div(cls="headerleft")
+            breadcrumbs = hl.div(cls="breadcrumbs")
+            breadcrumbs.a(href="../../index.html").text = "apis"
+            breadcrumbs.span().text = h.unescape(" &raquo; ")
+            name = (self.options.urlname or servicedef.name)
+            breadcrumbs.a(href=("../index.html")).text = name
+            breadcrumbs.span().text = h.unescape(" &raquo; %s" % servicedef.version)
+            hl.div(cls="headertitle").text = title
             htmldoc.header.span(cls="headerright").text = (
                 "Created %s" %
                 datetime.datetime.now().strftime("%b %d, %Y at %I:%M %p"))
