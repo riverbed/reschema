@@ -9,6 +9,7 @@ import argparse
 
 import reschema
 import reschema.lint
+from reschema import ServiceDef, ServiceDefManager
 
 
 def start():
@@ -20,7 +21,12 @@ def start():
     parser.add_argument('--verbose', '-v', action='count', default=0,
                         help='print status messages, or debug with -vv')
 
+    parser.add_argument('-r', '--related', dest='related',
+                        help='JSON doc source file', action="append")
+
     args = parser.parse_args()
+
+    servicedefmgr = ServiceDefManager()
 
     reschema.lint.Validator.set_verbosity(args.verbose)
 
@@ -32,11 +38,17 @@ def start():
 
     print('Processing file: {}\n'.format(args.filename))
 
-    # Let reschema parse the file
-    sdef = reschema.servicedef.ServiceDef.create_from_file(args.filename)
+    servicedef = ServiceDef()
+    servicedef.load(args.filename)
+    servicedefmgr.add(servicedef)
+
+    for related in (args.related or []):
+        relateddef = ServiceDef()
+        relateddef.load(related)
+        servicedefmgr.add(relateddef)
 
     # lint loaded service definition
-    failures = reschema.lint.lint(sdef, args.filename)
+    failures = reschema.lint.lint(servicedef, args.filename)
 
     return failures
 
