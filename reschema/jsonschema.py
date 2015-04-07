@@ -608,6 +608,11 @@ class DynamicSchema(Schema):
         return self.refschema.__getitem__(name)
 
     def __getattr__(self, name):
+        # Guard against infinite recursion - need to check both
+        # 'reschema' and '_reschema' because the latter is used
+        # by the property 'reschmea'
+        if name == 'refschema' or name == '_refschema':
+            raise AttributeError()
         return getattr(self.refschema, name)
 
     def by_pointer(self, pointer):
@@ -674,6 +679,11 @@ class Ref(DynamicSchema):
         return self.refschema.__getitem__(name)
 
     def __getattr__(self, name):
+        # Guard against infinite recursion - need to check both
+        # 'reschema' and '_reschema' because the latter is used
+        # by the property 'reschmea'
+        if name == 'refschema' or name == '_refschema':
+            raise AttributeError()
         return getattr(self.refschema, name)
 
     def by_pointer(self, pointer):
