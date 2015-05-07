@@ -610,7 +610,7 @@ class DynamicSchema(Schema):
     def __getattr__(self, name):
         # Guard against infinite recursion - need to check both
         # 'reschema' and '_reschema' because the latter is used
-        # by the property 'reschmea'
+        # by the property 'reschema'
         if name == 'refschema' or name == '_refschema':
             raise AttributeError()
         return getattr(self.refschema, name)
@@ -681,7 +681,7 @@ class Ref(DynamicSchema):
     def __getattr__(self, name):
         # Guard against infinite recursion - need to check both
         # 'reschema' and '_reschema' because the latter is used
-        # by the property 'reschmea'
+        # by the property 'reschema'
         if name == 'refschema' or name == '_refschema':
             raise AttributeError()
         return getattr(self.refschema, name)
