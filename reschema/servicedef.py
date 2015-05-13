@@ -6,12 +6,12 @@
 # This software is distributed "AS IS" as set forth in the License.
 
 # System imports
-import os
 import urlparse
 import json
 from cStringIO import StringIO
 from collections import OrderedDict
 import logging
+import traceback
 
 from jsonpointer import JsonPointer
 
@@ -22,7 +22,8 @@ from reschema.parser import Parser
 from reschema import yaml_loader, json_loader
 from reschema.exceptions import (ParseError, UnsupportedSchema, NoManager,
                                  InvalidReference, DuplicateServiceId,
-                                 InvalidServiceId, InvalidServiceName)
+                                 InvalidServiceId, InvalidServiceName,
+                                 ReschemaLoadHookException)
 import reschema.settings
 
 __all__ = ['ServiceDef']
@@ -131,7 +132,11 @@ class ServiceDefManager(object):
             # Not found -- try loading via our hooks
             servicedef = None
             for hook in self._load_hooks:
-                servicedef = hook.find_by_id(id_)
+                try:
+                    servicedef = hook.find_by_id(id_)
+                except:
+                    tb = traceback.format_exc()
+                    raise ReschemaLoadHookException(tb)
                 if servicedef:
                     break
             if servicedef is None:
@@ -164,7 +169,11 @@ class ServiceDefManager(object):
             # Not found -- try loading via our hooks
             servicedef = None
             for hook in self._load_hooks:
-                servicedef = hook.find_by_name(name, version, provider)
+                try:
+                    servicedef = hook.find_by_name(name, version, provider)
+                except:
+                    tb = traceback.format_exc()
+                    raise ReschemaLoadHookException(tb)
                 if servicedef:
                     break
             if servicedef is None:

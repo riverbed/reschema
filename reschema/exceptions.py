@@ -119,3 +119,7 @@ class ParseError(MarkedError):
 #
 class ValidationError(ReschemaException):
     """ Schema validation error. """
+
+
+class ReschemaLoadHookException(Exception):
+    """ Exceptions as a result of attempting loading via hooks. """
