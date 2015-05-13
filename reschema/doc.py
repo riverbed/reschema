@@ -24,7 +24,7 @@ class ReschemaDocException(Exception):
 
 class ReschemaDoc(object):
     def __init__(self):
-        pass
+        self.servicedefmgr = ServiceDefManager()
 
     def parse_args(self, args):
         self.parser = parser = OptionParser(
@@ -82,16 +82,15 @@ class ReschemaDoc(object):
 
     def run(self):
         options = self.options
-        servicedefmgr = ServiceDefManager()
 
         servicedef = ServiceDef()
         servicedef.load(options.filename)
-        servicedefmgr.add(servicedef)
+        self.servicedefmgr.add(servicedef)
 
         for related in (options.related or []):
             relateddef = ServiceDef()
             relateddef.load(related)
-            servicedefmgr.add(relateddef)
+            self.servicedefmgr.add(relateddef)
 
         title = "%s v%s %s" % (servicedef.title, servicedef.version,
                                servicedef.status)
