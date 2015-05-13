@@ -43,11 +43,11 @@ class RefSchemaProxy(object):
         self.options = options
 
         try:
-            self.refschema = getattr(schema, attrname)
             self.passthrough = True
+            self.refschema = getattr(schema, attrname)
+            refid = self.refschema.fullid()
             self.name = self.refschema.name
             self.typestr = self.refschema.typestr
-            self.href = '#' + html_str_to_id(self.refschema.fullid(True))
         except NoManager:
             self.passthrough = False
             refid = getattr(schema, '_' + attrname + '_id')
@@ -55,30 +55,35 @@ class RefSchemaProxy(object):
             self.typestr = '<ref>'
             self.description = refid
 
-            # refschema_id is something like:
-            #   http://support.riverbed.com/apis/test/1.0#/types/type_number_limits
+        # refid is something like:
+        #   http://support.riverbed.com/apis/test/1.0#/types/type_number_limits
+        #
+        # Drop the netloc and api root and replace with a relative path ref
+        # based on the current schema id
+        parsed_id = urlparse.urlparse(refid)
+
+        # Fall back to just using an href of the schema id for the
+        # following cases:
+        #  - not a riverbed service
+        #  - no match to '/apis'
+        #  - looking for printable format
+        m = re.match("/apis/(.*)$", parsed_id.path)
+        if (parsed_id.netloc != 'support.riverbed.com' or
+                not m or self.options.printable):
+            self.href = refid
+        else:
+            # Build a relative link based on the difference between this
+            # schema id and the refschema id.
             #
-            # Drop the netloc and api root and replace with a relative path ref
-            # based on the current schema id
-            parsed_id = urlparse.urlparse(refid)
+            # Figure out how many levels up to recurse -- up to the first diff
+            parsed_parent_id = urlparse.urlparse(schema.servicedef.id)
+            m_parent = re.match("/apis/(.*)$", parsed_parent_id.path)
+            relpath_count = len(m_parent.group(1).split('/'))
+            relpath = '/'.join(['..' for i in range(relpath_count)])
 
-            # Fall back to just using an href of the schema id for the following cases:
-            #  - not a riverbed service
-            #  - no match to '/apis'
-            #  - looking for printable format
-            m = re.match("/apis/(.*)$", parsed_id.path)
-            if parsed_id.netloc != 'support.riverbed.com' or not m or self.options.printable:
-                self.href = refid
-            else:
-                # Look at the servidedef id of the current service and figure
-                # out how many levels up to recurse
-                parsed_parent_id = urlparse.urlparse(schema.servicedef.id)
-                m_parent = re.match("/apis/(.*)$", parsed_parent_id.path)
-                relpath_count = len(m_parent.group(1).split('/'))
-                relpath = '/'.join(['..' for i in range(relpath_count)])
-
-                frag_id = html_str_to_id(parsed_id.fragment)
-                self.href = '%s/%s/service.html#%s' % (relpath, m.group(1), frag_id)
+            frag_id = html_str_to_id(parsed_id.fragment)
+            self.href = ('%s/%s/service.html#%s' %
+                         (relpath, m.group(1), frag_id))
 
     def __getattr__(self, name):
         if name in self.__dict__:
@@ -88,6 +93,7 @@ class RefSchemaProxy(object):
             return getattr(self.refschema, name)
         else:
             return None
+
 
 class ServiceDefToHtml(object):
     servicedef = None
