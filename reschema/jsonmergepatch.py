@@ -19,13 +19,15 @@ import json
 
 from reschema.parser import Parser
 from reschema.exceptions import ParseError
+import reschema.settings
 
 
 logger = logging.getLogger(__name__)
 
 
 def isdebug():
-    return logger.isEnabledFor(logging.DEBUG)
+    return (reschema.settings.VERBOSE_DEBUG and
+            logger.isEnabledFor(logging.DEBUG))
 
 
 def _eval_shallow(servicedef, obj, need_copy=False):

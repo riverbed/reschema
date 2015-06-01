@@ -19,3 +19,8 @@ LOAD_DESCRIPTIONS = ('RESCHEMA_LOAD_DESCRIPTIONS' in os.environ)
 # Defaults to False
 #
 MARKED_LOAD = ('RESCHEMA_MARKED_LOAD' in os.environ)
+
+#
+# Set to True for verbose debugging
+#
+VERBOSE_DEBUG = ('RESCHEMA_VERBOSE_DEBUG' in os.environ)
