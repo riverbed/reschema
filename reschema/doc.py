@@ -95,7 +95,8 @@ class ReschemaDoc(object):
         title = "%s v%s %s" % (servicedef.title, servicedef.version,
                                servicedef.status)
 
-        relname = os.path.join(servicedef.name, servicedef.version, 'service')
+        name = (self.options.urlname or servicedef.name)
+        relname = os.path.join(name, servicedef.version, 'service')
 
         outdir = options.outdir
 
@@ -122,7 +123,6 @@ class ReschemaDoc(object):
             breadcrumbs = hl.div(cls="breadcrumbs")
             breadcrumbs.a(href="../../index.html").text = "apis"
             breadcrumbs.span().text = h.unescape(" &raquo; ")
-            name = (self.options.urlname or servicedef.name)
             breadcrumbs.a(href=("../index.html")).text = name
             breadcrumbs.span().text = h.unescape(" &raquo; %s" % servicedef.version)
             hl.div(cls="headertitle").text = title

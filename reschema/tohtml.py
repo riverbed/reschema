@@ -327,8 +327,6 @@ class ResourceToHtml(object):
                                      text=schema.content_type),
                               ".")
                 else:
-                    logger.debug(baseid + '-response')
-                    logger.debug("\n" + schema.str_detailed() + "\n")
                     p = div.p().text = ("On success, the server returns a "
                                         "response body with the following "
                                         "structure:")
