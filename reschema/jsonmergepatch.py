@@ -1,9 +1,9 @@
-# Copyright (c) 2014 Riverbed Technology, Inc.
+# Copyright (c) 2015 Riverbed Technology, Inc.
 #
-# This software is licensed under the terms and conditions of the
-# MIT License set forth at:
-#   https://github.com/riverbed/reschema/blob/master/LICENSE ("License").
-# This software is distributed "AS IS" as set forth in the License.
+# This software is licensed under the terms and conditions of the MIT License
+# accompanying the software ("License").  This software is distributed "AS IS"
+# as set forth in the License.
+
 """
 This module implements JSON merge-patch according to
 http://tools.ietf.org/html/draft-ietf-appsawg-json-merge-patch-02
