@@ -72,3 +72,20 @@ resources:
          with:
             links:
                self: { path: '$/test_merge_remote_ref_ref'}
+
+   test_recursive_check_base:
+      type: number
+      links:
+         self: { path: '$/test_recursive_check_base' }
+         get:
+             method: GET
+             response: { $ref: '#/resources/test_recursive_check_base' }
+   test_recursive_check_merge:
+      $merge:
+         source: { $ref: '#/resources/test_recursive_check_base' }
+         with:
+            links:
+               self: { path: '$/test_recursive_check_base' }
+               get:
+                   method: GET
+                   response: { $ref: '#/resources/test_recursive_check_base' }

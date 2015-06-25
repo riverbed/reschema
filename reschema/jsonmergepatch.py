@@ -107,6 +107,13 @@ def json_merge_patch(servicedef, source, with_):
                                (json.dumps(source, indent=2),
                                 json.dumps(with_, indent=2)))
 
+    if (  '$ref' in source and
+          '$ref' in with_ and
+          source == with_):
+        # If merging 2 $refs and they have the same target, nothing
+        # to do ... but avoid infinite recusion!
+        return source
+
     # Need to make a copy of source, as this is going to be modified
     # Only make a shallow copy here - only the shallow properties
     # are modified in this call.  Recursively deeper calls will make
