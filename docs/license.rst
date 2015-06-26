@@ -1,7 +1,7 @@
 License
 -------
 
-This Sleepwalker documentation is provided "AS
+This reschema documentation is provided "AS
 IS" and without any warranty or indemnification.  In no event shall
 Riverbed be liable for any claim, damages or other liability,
 whether in an action of contract, tort or otherwise, arising from,
