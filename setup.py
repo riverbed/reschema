@@ -4,10 +4,6 @@
 # accompanying the software ("License").  This software is distributed "AS IS"
 # as set forth in the License.
 
-import os
-import pip
-import sys
-
 from gitpy_versioning import get_version
 
 try:
