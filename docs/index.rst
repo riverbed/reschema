@@ -28,3 +28,11 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
+License
+-------
+
+This reschema documentation is provided "AS IS"
+and without any warranty or indemnification.  Any sample code or
+scripts included in the documentation are licensed under the terms and
+conditions of the MIT License.  See the :doc:`license` page for more
+information.

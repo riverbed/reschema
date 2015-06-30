@@ -20,6 +20,7 @@
 
 import sys
 import os
+sys.path.insert(0, os.path.abspath('.'))
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -50,7 +51,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'reschema'
-copyright = u'2013, Christopher J. White (cwhite@riverbed.com)'
+copyright = u'2015 Riverbed Technology, Inc.'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -104,17 +105,32 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-try:
-    import sphinx_rtd_theme
-    html_theme = 'sphinx_rtd_theme'
-    html_theme_path=[sphinx_rtd_theme.get_html_theme_path()]
-except ImportError:
-    html_theme = 'default'
+html_theme = 'default'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-#html_theme_options = {}
+html_theme_options = {
+    'relbartextcolor': '#e16832',
+    'relbarlinkcolor': '#e16832',
+    'relbarbgcolor': '#000',
+
+    'headbgcolor': '#ddd',
+    'headtextcolor': '#111',
+
+    'textcolor': '#111',
+    'linkcolor': '#c77040',
+    'visitedlinkcolor': '#c77040',
+
+    'codebgcolor': '#def',
+
+    'sidebarbgcolor': '#ccc',
+    'sidebartextcolor': '#222',
+    'sidebarlinkcolor': '#c77030',
+    'sidebarwidth': 280,
+
+    'footerbgcolor': '#222',
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
@@ -128,12 +144,12 @@ except ImportError:
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-#html_logo = None
+html_logo = '_static/rb-ss-logo.png'
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-#html_favicon = None
+html_favicon = '_static/favicon.ico'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -154,7 +170,11 @@ html_static_path = ['_static']
 #html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-#html_sidebars = {}
+html_sidebars = {
+    '*': ['localtoc.html', 'sourcelink.html',
+          'searchbox.html', 'license.html'],
+    }
+
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
