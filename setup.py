@@ -13,8 +13,12 @@ from gitpy_versioning import get_version
 
 try:
     from setuptools import setup
+    packagedata = True
 except ImportError:
+    print 'importing disutils'
     from distutils.core import setup
+    packagedata = False
+
 
 readme = open('README.rst').read()
 
@@ -34,7 +38,7 @@ setup(
                  "objects, support documentation generation"),
     long_description=readme,
     author="Riverbed Technology",
-    author_email="cwhite@riverbed.com",
+    author_email="eng-github@riverbed.com",
     packages=[
         'reschema',
     ],
@@ -43,7 +47,7 @@ setup(
         'bin/reschema-doc',
         'bin/relint'
     ],
-    include_package_data=True,
+    include_package_data=packagedata,
     install_requires=[
         'PyYAML',
         'Markdown',
@@ -57,6 +61,16 @@ setup(
         'all': [],
     },
     tests_require=test,
-    url="https://gitlab.lab.nbttech.com/steelscript/reschema/",
+    url="'http://pythonhosted.org/steelscript",
     keywords='reschema',
+    license='MIT',
+    platforms='Linux, Mac OS, Windows',
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 2.6',
+        'Programming Language :: Python :: 2.7',
+        'Topic :: System :: Parser',
+    ],
 )
