@@ -15,7 +15,6 @@ try:
     from setuptools import setup
     packagedata = True
 except ImportError:
-    print 'importing disutils'
     from distutils.core import setup
     packagedata = False
 
