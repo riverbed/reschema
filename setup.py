@@ -55,7 +55,7 @@ setup(
         'all': [],
     },
     tests_require=test,
-    url="'http://pythonhosted.org/steelscript",
+    url="http://pythonhosted.org/steelscript",
     keywords='reschema',
     license='MIT',
     platforms='Linux, Mac OS, Windows',
