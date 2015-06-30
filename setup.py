@@ -8,7 +8,6 @@ import os
 import pip
 import sys
 
-from setuptools.command.test import test as TestCommand
 from gitpy_versioning import get_version
 
 try:
