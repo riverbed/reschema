@@ -1103,12 +1103,6 @@ class TestSchema(TestSchemaBase):
                          valid=[1, 2, 3, 4, 6, 9, 10],
                          invalid=[0, 5, 7, 8, 11, 12, 13, 200])
 
-    def test_self_params(self):
-        r = self.r.resources['test_self_params']
-        self.check_valid(r,
-                         valid=[1, 2],
-                         invalid=['one', '2'])
-
     def test_link_req_resp_defaults(self):
         r = self.r.resources['test_methods']
 
@@ -1138,32 +1132,54 @@ class TestSchema(TestSchemaBase):
                          valid=[range(10), range(20)],
                          invalid=[range(0), range(9), range(21)])
 
+    def test_self_params(self):
+        r = self.r.resources['test_self_params']
+        self.check_valid(r,
+                         valid=[1, 2],
+                         invalid=['one', '2'])
+        l = r.links['self']
+
+        # Resolution of path params using kvs
+        (uri, kvs) = l.path.resolve(kvs={'x': 1, 'y': 2, 'z': 3})
+        self.assertEqual(uri, '$/test_self_params?x=1&y=2&z=3')
+
     def test_self_vars(self):
         r = self.r.resources['test_self_vars']
+        self.check_valid(r,
+                         valid=[1, 2],
+                         invalid=['one', '2'])
+        l = r.links['self']
+
+        # Resolution of path params using params
+        (uri, kvs) = l.path.resolve(kvs={'x': 1, 'y': 2, 'z': 3})
+        self.assertEqual(uri, '$/test_self_vars?x=1&y=2&z=3')
+
+    def test_self_buried_vars(self):
+        r = self.r.resources['test_self_buried_vars']
         l = r.links['self']
 
         # Classic resolution of all path variables using
         # a data representation
         (uri, kvs) = l.path.resolve(
             data={'id1': 3, 'buried': {'id2': 'foo'}})
-        self.assertEqual(uri, '$/test_self_vars/3/foo')
+        self.assertEqual(uri, '$/test_self_buried_vars/3/foo')
 
         # Override of 'id2' via kvs
         (uri, kvs) = l.path.resolve(
             data={'id1': 3, 'buried': {'id2': 'foo'}},
             kvs={'id2': 'bar'})
-        self.assertEqual(uri, '$/test_self_vars/3/bar')
+        self.assertEqual(uri, '$/test_self_buried_vars/3/bar')
 
         # Override of 'id1' via kvs
         (uri, kvs) = l.path.resolve(
             data={'id1': 3, 'buried': {'id2': 'foo'}},
             kvs={'id1': 4})
-        self.assertEqual(uri, '$/test_self_vars/4/foo')
+        self.assertEqual(uri, '$/test_self_buried_vars/4/foo')
 
         # Only use kvs
         (uri, kvs) = l.path.resolve(
             kvs={'id1': 4, 'id2': 'bar'})
-        self.assertEqual(uri, '$/test_self_vars/4/bar')
+        self.assertEqual(uri, '$/test_self_buried_vars/4/bar')
 
         # Missing parameters cases
         with self.assertRaises(MissingParameter):
@@ -1186,16 +1202,16 @@ class TestSchema(TestSchemaBase):
         rel = r.relations['rel']
         (uri, params, values) = rel.resolve(
             data={'var_id1': 3, 'var_id2': 'foo'})
-        self.assertEqual(uri, '$/test_self_vars/3/foo')
+        self.assertEqual(uri, '$/test_self_buried_vars/3/foo')
 
         (uri, params, values) = rel.resolve(
             kvs={'id1': 3, 'id2': 'foo'})
-        self.assertEqual(uri, '$/test_self_vars/3/foo')
+        self.assertEqual(uri, '$/test_self_buried_vars/3/foo')
 
         (uri, params, values) = rel.resolve(
             data={'var_id1': 3, 'var_id2': 'foo'},
             kvs={'id1': 4})
-        self.assertEqual(uri, '$/test_self_vars/4/foo')
+        self.assertEqual(uri, '$/test_self_buried_vars/4/foo')
 
         with self.assertRaises(MissingParameter):
             (uri, params, values) = rel.resolve(data=None)
@@ -1206,6 +1222,56 @@ class TestSchema(TestSchemaBase):
         with self.assertRaises(MissingParameter):
             (uri, params, values) = rel.resolve(data={'v': 3})
 
+    def test_uri_params(self):
+        r = self.r.resources['test_uri_params']
+        l = r.links['self']
+
+        # Classic resolution of all path variables using
+        # a data representation
+        (uri, kvs) = l.path.resolve(
+            data={'id': 3, 'meta': {'offset': 10, 'limit': 20}})
+        self.assertEqual(uri, '$/test_uri_params/3?offset=10&limit=20')
+
+        # Missing offset or limit should not be a problem as it is optional
+        (uri, kvs) = l.path.resolve(
+            data={'id': 3})
+        self.assertEqual(uri, '$/test_uri_params/3')
+
+        (uri, kvs) = l.path.resolve(
+            data={'id': 3, 'meta': {'offset': 10}})
+        self.assertEqual(uri, '$/test_uri_params/3?offset=10')
+
+        (uri, kvs) = l.path.resolve(
+            data={'id': 3, 'meta': {'limit': 20}})
+        self.assertEqual(uri, '$/test_uri_params/3?limit=20')
+
+        # Specify limit via kvs
+        (uri, kvs) = l.path.resolve(
+            data={'id': 3}, kvs={'limit': 5})
+        self.assertEqual(uri, '$/test_uri_params/3?limit=5')
+
+        # Add in page limit via kvs
+        (uri, kvs) = l.path.resolve(
+            data={'id': 3}, kvs={'limit': 5, 'page': 7})
+        self.assertEqual(uri, '$/test_uri_params/3?limit=5&page=7')
+
+        (uri, kvs) = l.path.resolve(
+            data={'id': 3}, kvs={'page': 7})
+        self.assertEqual(uri, '$/test_uri_params/3?page=7')
+
+        # Check validation
+        with self.assertRaises(ValidationError):
+            (uri, kvs) = l.path.resolve(
+                data={'id': 3, 'meta': {'offset': '10f', 'limit': 20}},
+                validate=True)
+
+        with self.assertRaises(ValidationError):
+            (uri, kvs) = l.path.resolve(
+                data={'id': 3}, kvs={'page': '7'}, validate=True)
+
+        with self.assertRaises(ValidationError):
+            (uri, kvs) = l.path.resolve(
+                data={'id': 3}, kvs={'page': '7'}, validate=True)
 
 class TestSchemaMerge(TestSchemaBase):
 

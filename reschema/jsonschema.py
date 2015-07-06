@@ -77,7 +77,8 @@ from jsonpointer import resolve_pointer, JsonPointer
 
 from reschema.jsonmergepatch import json_merge_patch
 from reschema.parser import Parser
-from reschema.util import check_type
+from reschema.util import check_type, uritemplate_nonquery_variables, \
+    uritemplate_add_query_params
 from reschema.reljsonpointer import resolve_rel_pointer, JsonPointerException
 from reschema.exceptions import \
     ValidationError, MissingParameter, ParseError, InvalidReference
@@ -506,7 +507,7 @@ class Schema(Entity):
 
         :param pointer: The JSON pointer.  May be either absolute or relative.
         """
-        if pointer in ('/', '0/'):
+        if pointer in ('/', '0'):
             # Special case root jsonpointer or relative pointer to self
             return self
 
@@ -1381,23 +1382,87 @@ class Path(Entity):
         self.link = link
 
         self.pathdef = pathdef
-        self.vars = None
+        self.vars = {}
+        self.var_schemas = {}
 
         if isinstance(pathdef, dict):
             self.template = pathdef['template']
             self.vars = pathdef['vars']
         else:
             self.template = pathdef
+            self.vars = {}
+
+        # For any URI template parameters that are in the
+        # template but not explicitly listed in vars, add them
+        # with a relpath of '0/{param}'
+        #
+        # Example:
+        #   path:
+        #     template: '$/books/{id}'
+        #
+        # implies
+        #   path:
+        #     template: '$/books/{id}'
+        #     vars:
+        #       id: '0/id'
+        #
+        all = set(uritemplate.variables(self.template))
+        for param in all:
+            if param == '$':
+                continue
+
+            if param not in self.vars:
+                self.vars[param] = ('0/%s' % param)
+
+        # Any vars that have a target that is a dictionanry
+        # as a schema.  This allows additional parameters
+        # that cannot be validated or described by data
+        #
+        # Example:
+        #   path:
+        #     template: '$/books/{id}{?offset}'
+        #     vars:
+        #       offset: { type: integer }
+        #
+        for var, target in self.vars.iteritems():
+            if isinstance(target, dict):
+                self.var_schemas[var] = Schema.parse(
+                    target, parent=self.link.schema, name=var,
+                    id=('%s/vars/%s' % (self.link.schema.id, var)))
+                self.vars[var] = None
+
+        # Any vars that are listed but *not* in the URI template are
+        # added to the template as optional query parmas
+        #
+        # Example:
+        #   path:
+        #     template: '$/books/{id}'
+        #     vars:
+        #       offset: { type: integer }
+        #
+        # template becomes: '$/books/{id}{?offset}'
+        #
+        missing = set(self.vars.keys()) - all
+        if missing:
+            self.template = uritemplate_add_query_params(
+                self.template, set(self.vars.keys()) - all)
+
+        # Special '$' var is replaced with the schema at the same
+        # location
+        self.vars['$'] = '0'
+        self.var_schemas['$'] = self.link.schema
 
     def __str__(self):
         return self.template
 
-    def resolve(self, data=None, pointer=None, kvs=None):
+    def resolve(self, data=None, pointer=None, kvs=None, validate=False):
         """Resolve variables in template from `data` relative to `pointer`.
 
         :param obj data: source data to use for path vars
         :param str pointer: relative JSON pointer to index into data
         :param obj kvs: override key / value pairs for template vars
+        :param bool validate: if true, validate data and kvs according
+            to the defined schemas
 
         :return: a tuple (uri, values), uri is the fully resolved
            path, and values is the complete dictionary of all resolved
@@ -1438,6 +1503,10 @@ class Path(Entity):
            {'suba': {'id': 5}, 'subb': 7}    {'id': 6}     $/foos/6
 
         """
+        # Collect the set of required variables from the template.
+        # Any uri template variables starting with ? or & are optional
+        required = set(uritemplate_nonquery_variables(self.template))
+
         if kvs is None:
             kvs = {}
         else:
@@ -1446,34 +1515,32 @@ class Path(Entity):
             kvs = copy.copy(kvs)
 
         if data:
+            # $ is a special value allowing the complete data
+            # (relatively) to be inserted into the template via {$}
             kvs['$'] = resolve_pointer(data, pointer or '')
 
-            if self.vars:
-                for var, relp in self.vars.iteritems():
-                    if var in kvs:
-                        # This var's value was provided directly
-                        # by the caller in kvs, so take the caller's
-                        # version
-                        continue
+            # Evaluate path.vars from the data
+            for var, relp in (self.vars or {}).iteritems():
+                if var in kvs or relp is None:
+                    # Skip if either this var's value was provided
+                    # directly by the caller in kvs, or if there is no
+                    # relative pointer and the data can *only* be provided
+                    # by kvs
+                    continue
 
-                    try:
-                        kvs[var] = resolve_rel_pointer(
-                            data, pointer or '', relp)
-
-                    except JsonPointerException:
+                try:
+                    kvs[var] = resolve_rel_pointer(data, pointer or '', relp)
+                except JsonPointerException:
+                    # Only fail for required params.  If the param is optional,
+                    # the data may not be present so just leave out of the kvs
+                    if var in required:
                         raise MissingParameter(
                             ("Path %s failed to assign var %s from data "
                              "using rel pointer %s") % (self, var, relp),
                             self)
 
-            if data and isinstance(data, dict):
-                for v in data.keys():
-                    if v not in kvs:
-                        kvs[v] = data[v]
-
         tmpl = self.template
         logger.debug("%s template: %s" % (self.link.fullname(), tmpl))
-        required = set(uritemplate.variables(self.template))
         have = set(kvs.keys())
         if not required.issubset(have):
             raise MissingParameter(
@@ -1482,6 +1549,20 @@ class Path(Entity):
                  [x for x in required.difference(have)]),
                 self)
 
-        uri = uritemplate.expand(self.template, kvs)
+        if validate:
+            for var in have:
+                if var not in self.var_schemas:
+                    relp = self.vars[var]
+                    self.var_schemas[var] = self.link.schema.by_pointer(relp)
+
+                self.var_schemas[var].validate(kvs[var])
+
+        # Convert values to strings, as otherwise they might get "dropped"
+        # If the value is 0, it will get dropped
+        uri_kvs = {}
+        for k,v in kvs.iteritems():
+            uri_kvs[k] = str(v)
+
+        uri = uritemplate.expand(self.template, uri_kvs)
 
         return (uri, kvs)

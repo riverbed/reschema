@@ -464,16 +464,6 @@ resources:
             -  { type: number, minimum: 7, maximum: 8 }
       links: { self: { path: "$/test_not" } }
 
-   test_self_params:
-      type: number
-      links:
-         self:
-            path: "$/test_not"
-            params:
-               x: { type: number }
-               y: { type: number }
-               z: { type: string }
-
    test_item:
       type: object
       properties:
@@ -558,7 +548,33 @@ resources:
          get: { method: GET }
          self: { path: "$/test_self_after_get" }
 
+   test_self_params:
+      # This form is deprecated.  The new equivalent syntax
+      # is below in test_self_vars
+      type: number
+      links:
+         self:
+            path: "$/test_self_params"
+            params:
+               x: { type: number }
+               y: { type: number }
+               z: { type: string }
+
    test_self_vars:
+      # New syntax for arbitrary URI parameters that self
+      # accepts.  Ideally all vars would also be in the data
+      # representation (which they are not here)
+      type: number
+      links:
+         self:
+            path:
+               template: "$/test_self_vars{?x,y,z}"
+               vars:
+                  x: { type: number }
+                  y: { type: number }
+                  z: { type: string }
+
+   test_self_buried_vars:
       type: object
       properties:
          id1: { type: integer }
@@ -568,7 +584,7 @@ resources:
       links:
          self:
             path:
-               template: "$/test_self_vars/{id1}/{id2}"
+               template: "$/test_self_buried_vars/{id1}/{id2}"
                vars: { id2: '0/buried/id2' }
 
    test_self_vars_rel:
@@ -580,7 +596,31 @@ resources:
          self: { path: "$/test_self_vars_rel" }
       relations:
          rel:
-            resource: "#/resources/test_self_vars"
+            resource: "#/resources/test_self_buried_vars"
             vars:
                id1: "0/var_id1"
                id2: "0/var_id2"
+
+   test_uri_params:
+      type: object
+      properties:
+         id: { type: integer }
+         meta:
+            type: object
+            properties:
+               offset: { type: integer }
+               limit: { type: integer }
+            additionalProperties: False
+
+      links:
+         self:
+            path:
+               template: "$/test_uri_params/{id}{?offset,limit}"
+               vars:
+                  offset: "0/meta/offset"
+                  limit: "0/meta/limit"
+                  page: { type: number }
+
+      relations:
+          myself:
+              resource: '#/resources/test_uri_params'

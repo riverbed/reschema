@@ -9,41 +9,69 @@ This module implements relative JSON pointers that take the form '<num>/<jsonpoi
 A relative JSON pointer is resolved against a data object and a base pointer.
 """
 
+import re
 import jsonpointer
 from jsonpointer import JsonPointer, JsonPointerException
 
+
+num_re = re.compile('^[0-9]+$')
+num_hash_re = re.compile('^[0-9]+#$')
+num_rel_re = re.compile('^[0-9]+/')
 
 class RelJsonPointer(JsonPointer):
     def __init__(self, basepointer, relpointer):
         if basepointer is None:
             basepointer = ''
-        JsonPointer.__init__(self, basepointer)
+        super(RelJsonPointer, self).__init__(basepointer)
 
-        try:
+        self.isHash = False
+
+        if num_re.match(relpointer):
             uplevels = int(relpointer)
             relparts = []
 
-        except:
-            try:
-                (uplevels, relpath) = relpointer.split('/', 1)
-                uplevels = int(uplevels)
-                if uplevels < 0:
-                    raise JsonPointerException()
-            except:
-                raise JsonPointerException("Invalid relative pointer '%s', "
-                                           "expected '<int>/<pointer>" % relpointer)
+        elif num_hash_re.match(relpointer):
+            uplevels = int(relpointer[:-1])
+            relparts = []
+            self.isHash = True
 
-            if uplevels > len(self.parts):
-                raise JsonPointerException("Base pointer '%s' is not deep enough for "
-                                           "relative pointer '%s' levels" %
-                                           (basepointer, relpointer))
+        elif num_rel_re.match(relpointer):
+            (uplevels, relpath) = relpointer.split('/', 1)
+            uplevels = int(uplevels)
+
             relparts = JsonPointer('/' + relpath).parts
 
+        else:
+            raise JsonPointerException(
+                "Invalid relative JSON pointer '%s', " % relpointer)
+
         if uplevels > 0:
+            if uplevels > len(self.parts):
+                raise JsonPointerException(
+                    "Base pointer '%s' is not deep enough for "
+                    "relative pointer '%s' levels" % (basepointer, relpointer))
             self.parts = self.parts[0:-uplevels]
+
+        if self.isHash and len(self.parts) == 0:
+            raise JsonPointerException(
+                "Cannot use '#' at root of relative JSON pointer '%s', "
+                % relpointer)
 
         self.parts.extend(relparts)
 
+    def resolve(self, doc, default=jsonpointer._nothing):
+        if self.isHash:
+            if len(self.parts) == 1:
+                refdata = doc
+            else:
+                p = JsonPointer('/' + '/'.join(self.parts[:-1]))
+                refdata = p.resolve(doc)
+            if isinstance(refdata, list):
+                return int(self.parts[-1])
+            else:
+                return self.parts[-1]
+        else:
+            return super(RelJsonPointer, self).resolve(doc, default)
 
 def resolve_rel_pointer(doc, pointer, relpointer, default=jsonpointer._nothing):
     """

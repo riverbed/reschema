@@ -5,7 +5,7 @@
 # as set forth in the License.
 
 import re
-
+import uritemplate
 from reschema.exceptions import ParseError
 
 
@@ -36,3 +36,43 @@ def str_to_id(s, c='_'):
     """Convert the input string to a valid HTML id by replacing all invalid
     characters with the character C."""
     return (re.sub('[^a-zA-Z0-9-:.]', c, s)).strip('_')
+
+
+def uritemplate_nonquery_variables(template):
+    """Returns the set of vars in a uri template that are not query related
+
+    Query related variables are prefixed by ? or &:
+
+       template = 'http://foo.bar/items/{id}{?x,y}{&z}{#frag}'
+
+    x, y, and z are considered query variables and will be skipped.
+
+    """
+    vars = set()
+    for varlist in uritemplate.TEMPLATE.findall(template):
+        if varlist[0] in "?&":
+            continue
+        if varlist[0] in uritemplate.OPERATOR:
+            varlist = varlist[1:]
+        varspecs = varlist.split(',')
+        for var in varspecs:
+            # handle prefix values
+            var = var.split(':')[0]
+            # handle composite values
+            if var.endswith('*'):
+                var = var[:-1]
+            vars.add(var)
+    return vars
+
+
+def uritemplate_add_query_params(template, params):
+    if not params:
+        return template
+
+    for varlist in uritemplate.TEMPLATE.findall(template):
+        if varlist[0] in "?&":
+            orig = varlist
+            updated = orig + ',' + ','.join(params)
+            return template.replace(orig, updated)
+
+    return "%s{?%s}" % (template, ','.join(params))
