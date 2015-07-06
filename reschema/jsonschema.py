@@ -70,7 +70,7 @@ import re
 import copy
 import logging
 import xml.etree.ElementTree as ET
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
 
 import uritemplate
 from jsonpointer import resolve_pointer, JsonPointer
@@ -1372,9 +1372,6 @@ class Path(Entity):
 
     """
 
-    SplitTemplate = namedtuple('SplitTemplate',
-                               ['base', 'query', 'fragment'])
-
     def __init__(self, link, pathdef):
         """Create a `Path` associated with `link`."""
 
@@ -1384,14 +1381,13 @@ class Path(Entity):
         self.link = link
 
         self.pathdef = pathdef
-        self.vars = {}
+        self.vars = None
 
         if isinstance(pathdef, dict):
             self.template = pathdef['template']
             self.vars = pathdef['vars']
         else:
             self.template = pathdef
-            self.vars = {}
 
     def __str__(self):
         return self.template
@@ -1489,90 +1485,3 @@ class Path(Entity):
         uri = uritemplate.expand(self.template, kvs)
 
         return (uri, kvs)
-
-    def split_template(self):
-        """ Return a triple of (base, query, fragment) portions
-
-        The query and fragment portions include the '?' and '#' respectively.
-        """
-        base = self.template
-        query = ''
-        fragment = ''
-
-        if '#' in base:
-            pound = base.index('#')
-            fragment = base[pound:]
-            base = base[:pound]
-        if '?' in base:
-            q = base.index('{?') if '{?' in base else base.index('?')
-            query = base[q:]
-            base = base[:q]
-
-        return self.SplitTemplate(base, query, fragment)
-
-    def _apply_params(self, params):
-        """ Merge the older params section into path vars.
-
-        In the first released service definition schema, URL query parameters
-        were handled with the "params" field on the self link.  We have
-        since settled on handling them through uritemplates just like
-        any other template parameterization.
-
-        This method maintains compatibility by accepting the params field
-        and treating its contents as if they were specified in the
-        path's "vars" field.
-
-        Currently, if a parameter is specified in both the template and
-        the params field, we do not handle it.
-
-        :param params: The portion of the input for the "params" field.
-        """
-        if not params:
-            return
-
-        base, query, fragment = self.split_template()
-        if query:
-            params = self._handle_param_conflicts(params)
-            var_string = query + '{&%s}'
-        else:
-            var_string = '{?%s}'
-        query = var_string % ','.join(params.keys())
-
-        self.template = base + query + fragment
-
-        # Add vars that map to the parsed schema for each param.
-        for key, value in params.iteritems():
-            self.vars[key] = Schema.parse(value, parent=self, name=key,
-                                          id=('%s/vars/%s' %
-                                              (self.link.id, key)))
-
-    def _handle_param_conflicts(self, params):
-        """ Figure out if old and new URL param styles conflict.
-
-        Currently we do not actually handle potential conflicts, just
-        detect that they *might* be present.
-        """
-
-        base, query, fragment = self.split_template()
-
-        template_params = uritemplate.variables(query)
-        params_set = set(params.keys())
-        common = template_params.intersection(params_set)
-
-        if common:
-            # This is potentially complicated.  For now just hope
-            # no one is doing this, and we'll come back to it.
-            # The algorithm is something like:
-            # if param in vars:
-            #   if vars[param] is a schema:
-            #       compare vars and param schema
-            #   elif vars[param is jsonpointer:
-            #       compare param schema with resource schema from jsonpointer
-            # else:
-            #   compare param schema with resource schema top-level field
-            # If both versions point to the same schema, then everything
-            # is fine.  Otherwise they conflict and we cannot validate.
-            raise NotImplementedError(
-                "Comparison of 'params' vs template 'vars' not implemented")
-
-        return {k: params[k] for k in params_set.difference(template_params)}
