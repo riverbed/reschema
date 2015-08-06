@@ -216,7 +216,7 @@ class ResourceToHtml(object):
                 # need to police invalid $refs underneath params
                 for k, v in link._params.iteritems():
                     if isinstance(v, reschema.jsonschema.Ref):
-                        RefSchemaProxy(v)
+                        RefSchemaProxy(v, self.options)
                 continue
 
             logger.debug("Processing link: %s - %s" %
