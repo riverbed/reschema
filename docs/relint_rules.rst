@@ -37,7 +37,7 @@ General schema issues / naming conventions (001)
   * **W0004**: the schema must have a title
 
   * **W0005**: ``object`` schema is missing ``additionalProperties``, assumed to be ``True``
-  
+
   * **W0006**: A required property should not have a default value
 
 -------
@@ -45,7 +45,7 @@ General schema issues / naming conventions (001)
   * **E0001**: Invalid ``$ref``; the target cannot be found
 
   * **E0002**: Invalid required property when additional property is False
-  
+
   * **E0003**: The relation is invalid.  The specified resource cannot be found
 
 
@@ -104,8 +104,11 @@ Types (200)
 
 Thought about rule on types needing to be used by multiple resources, but that doesnt always work
 (to cut down on extra type definitions)
+
   * linking between schemas (common types)
+
   * sometimes its useful when the indentation gets too long
+
 Same goes for an unused type, although we may want that one if we have a way to suppress
 
 
@@ -116,7 +119,3 @@ Resources (300)
   * **C0301**: A resource should be an object
   * **C0302**: Collection resource object should have an 'items' property
   * **C0303**: Self link should be the first in links
-
---------------
-
-

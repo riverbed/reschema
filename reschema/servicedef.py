@@ -4,6 +4,60 @@
 # accompanying the software ("License").  This software is distributed "AS IS"
 # as set forth in the License.
 
+"""
+The `ServiceDef` class represents a single service definition as a
+collection of resources and types.  An instance of this class is
+normally created by parsing a service definition file.
+
+Manual ServiceDef creation
+--------------------------
+
+An instance may be created directly froma file:
+
+.. code-block:: python
+
+   >>> bookstore_def = ServiceDef.create_from_file('bookstore.yaml')
+
+This is useful for simple stand alone services.  Once created, the
+services' resources and types may be browsed the object used for
+validation:
+
+.. code-block:: python
+
+   # Get the 'author' resource
+   >>> author_res = bookstore_def.resources['author']
+
+   # Define an author and validate that the format is correct
+   >>> author = dict(id=5, name='John Doe')
+   >>> author_res.validate(author)
+
+   # If the format is incorrect, a ValidationError is thrown
+   >>> author = dict(id='5', name='John Doe')
+   >>> author_res.validate(author)
+
+   ValidationError: ("author.id should be a number, got '<type 'str'>'", <servicedef.Integer 'http://support.riverbed.com/apis/bookstore/1.0#/resources/author/properties/id'>)
+
+Using Managers
+--------------
+
+For larger projects that span multiple services, a ServiceDefManager can
+be used to load service defintions on demand.  This is particularly important
+when one service defintion references types or resources from another
+service definition.
+
+.. code-block:: python
+
+   # Create a ServiceDefManager to manage service definitions The
+   # CustomServiceDefLoader implements the ServiceDefLoadHook andmust
+   # be defined in order to load service definitions on this system.
+   >>> svcdef_mgr = ServiceDefManager()
+   >>> svcdef_mgr.add_load_hook(CustomServiceDefLoader)
+
+   # Load a service by looking for it by name/version
+   >>> bookstore_def = svcdef_mgr.find_by_name('bookstore', '1.0')
+
+"""
+
 # System imports
 import urlparse
 import json

@@ -38,12 +38,12 @@ def str_to_id(s, c='_'):
     return (re.sub('[^a-zA-Z0-9-:.]', c, s)).strip('_')
 
 
-def uritemplate_nonquery_variables(template):
-    """Returns the set of vars in a uri template that are not query related
+def uritemplate_required_variables(template):
+    """Returns the set of vars in a uri template that are required.
 
     Query related variables are prefixed by ? or &:
 
-       template = 'http://foo.bar/items/{id}{?x,y}{&z}{#frag}'
+       template = 'http://foo.bar/items/{id}?x={x}{&y,z}{#frag}'
 
     x, y, and z are considered query variables and will be skipped.
 

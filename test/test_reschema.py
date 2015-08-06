@@ -8,6 +8,7 @@ import os
 import logging
 import unittest
 import pytest
+import urlparse
 
 from yaml.error import MarkedYAMLError
 
@@ -250,7 +251,7 @@ class TestBookstore(unittest.TestCase):
         items = chapters.items
         book_chapter = items.relations['full']
         data = {'book': book.example}
-        (uri, params, values) = book_chapter.resolve(data, '/book/chapters/1')
+        (uri, values) = book_chapter.resolve(data, '/book/chapters/1')
         self.assertEqual(uri, '$/books/100/chapters/2')
         with self.assertRaises(MissingParameter):
             book_chapter.resolve(None)
@@ -358,13 +359,13 @@ class TestBookstoreLinks(unittest.TestCase):
         author_id = book['author_ids'][0]
         logger.debug('author_id: %s' % author_id)
 
-        (uri, params, values) = (author_id
+        (uri, values) = (author_id
                                  .relations['full']
                                  .resolve(book_data, '/author_ids/0'))
 
         self.assertEqual(uri, '$/authors/1')
 
-        (uri, params, values) = (author_id
+        (uri, values) = (author_id
                                  .relations['full']
                                  .resolve(book_data, '/author_ids/1'))
 
@@ -374,12 +375,12 @@ class TestBookstoreLinks(unittest.TestCase):
         author_data = {'id': 1, 'name': 'John Q'}
         author.validate(author_data)
 
-        (uri, params, values) = (author
+        (uri, values) = (author
                                  .relations['books']
                                  .resolve(author_data))
 
-        logger.debug('author.relations.books uri: %s %s %s'
-                     % (uri, params, values))
+        logger.debug('author.relations.books uri: %s %s'
+                     % (uri, values))
 
 
 class TestSchemaBase(unittest.TestCase):
@@ -1141,7 +1142,10 @@ class TestSchema(TestSchemaBase):
 
         # Resolution of path params using kvs
         (uri, kvs) = l.path.resolve(kvs={'x': 1, 'y': 2, 'z': 3})
-        self.assertEqual(uri, '$/test_self_params?x=1&y=2&z=3')
+        test_uri = '$/test_self_params?x=1&y=2&z=3'
+        r1 = urlparse.parse_qs(urlparse.urlsplit(uri).query)
+        r2 = urlparse.parse_qs(urlparse.urlsplit(test_uri).query)
+        self.assertEqual(r1, r2)
 
     def test_self_vars(self):
         r = self.r.resources['test_self_vars']
@@ -1150,7 +1154,7 @@ class TestSchema(TestSchemaBase):
                          invalid=['one', '2'])
         l = r.links['self']
 
-        # Resolution of path params using params
+        # Resolution of path vars using vars
         (uri, kvs) = l.path.resolve(kvs={'x': 1, 'y': 2, 'z': 3})
         self.assertEqual(uri, '$/test_self_vars?x=1&y=2&z=3')
 
@@ -1183,44 +1187,44 @@ class TestSchema(TestSchemaBase):
 
         # Missing parameters cases
         with self.assertRaises(MissingParameter):
-            (uri, params, values) = l.path.resolve()
+            (uri, values) = l.path.resolve()
 
         with self.assertRaises(MissingParameter):
-            (uri, params, values) = l.path.resolve(
+            (uri, values) = l.path.resolve(
                 data={'id1': 3, 'buried': {'id3': 'foo'}})
 
         with self.assertRaises(MissingParameter):
-            (uri, params, values) = l.path.resolve(
+            (uri, values) = l.path.resolve(
                 data={'id3': 3, 'buried': {'id2': 'foo'}})
 
         with self.assertRaises(MissingParameter):
-            (uri, params, values) = l.path.resolve(
+            (uri, values) = l.path.resolve(
                 kvs={'id1': 5})
 
     def test_self_vars_rel(self):
         r = self.r.resources['test_self_vars_rel']
         rel = r.relations['rel']
-        (uri, params, values) = rel.resolve(
+        (uri, values) = rel.resolve(
             data={'var_id1': 3, 'var_id2': 'foo'})
         self.assertEqual(uri, '$/test_self_buried_vars/3/foo')
 
-        (uri, params, values) = rel.resolve(
+        (uri, values) = rel.resolve(
             kvs={'id1': 3, 'id2': 'foo'})
         self.assertEqual(uri, '$/test_self_buried_vars/3/foo')
 
-        (uri, params, values) = rel.resolve(
+        (uri, values) = rel.resolve(
             data={'var_id1': 3, 'var_id2': 'foo'},
             kvs={'id1': 4})
         self.assertEqual(uri, '$/test_self_buried_vars/4/foo')
 
         with self.assertRaises(MissingParameter):
-            (uri, params, values) = rel.resolve(data=None)
+            (uri, values) = rel.resolve(data=None)
 
         with self.assertRaises(MissingParameter):
-            (uri, params, values) = rel.resolve(data=None, kvs={'v': 3})
+            (uri, values) = rel.resolve(data=None, kvs={'v': 3})
 
         with self.assertRaises(MissingParameter):
-            (uri, params, values) = rel.resolve(data={'v': 3})
+            (uri, values) = rel.resolve(data={'v': 3})
 
     def test_uri_params(self):
         r = self.r.resources['test_uri_params']

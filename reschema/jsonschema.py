@@ -77,7 +77,7 @@ from jsonpointer import resolve_pointer, JsonPointer
 
 from reschema.jsonmergepatch import json_merge_patch
 from reschema.parser import Parser
-from reschema.util import check_type, uritemplate_nonquery_variables, \
+from reschema.util import check_type, uritemplate_required_variables, \
     uritemplate_add_query_params
 from reschema.reljsonpointer import resolve_rel_pointer, JsonPointerException
 from reschema.exceptions import \
@@ -1194,16 +1194,13 @@ class Relation(Entity):
         :param obj kvs: override key / value pairs for the target
             resource's path vars
 
-        :return: a tuple (uri, params, values), uri is the
-           fully resolved path, params is a dictionary of
-           parameters values according to the target resources
-           self.params list (if any), and values is the
+        :return: a tuple (uri, values), uri is the
+           fully resolved path and values is the
            complete dictionary of all resolved values used
            to complete the path
 
         """
         target_self = self.resource.links['self']
-        target_params = target_self._params
 
         if kvs is None:
             kvs = {}
@@ -1238,14 +1235,7 @@ class Relation(Entity):
 
         (uri, values) = target_self.path.resolve(data=None, kvs=kvs)
 
-        params = {}
-        if target_params:
-            for var, schema in target_params.iteritems():
-                if var in kvs:
-                    schema.validate(kvs[var])
-                    params[var] = kvs[var]
-
-        return (uri, params, values)
+        return (uri, values)
 
 
 class Link(Entity):
@@ -1265,7 +1255,13 @@ class Link(Entity):
 
             pathdef = parser.parse('path', save=False)
             if pathdef is not None:
-                self.path = Path(self, pathdef)
+                if name == 'self':
+                    # Backwards compatibility, treat 'params' as
+                    # 'path.vars'
+                    params = parser.parse('params', {}, save=False)
+                else:
+                    params = {}
+                self.path = Path(self, pathdef, additional_vars=params)
                 parser.mark_object(self.path, 'path')
             elif self.method is not None:
                 if 'self' not in self.schema.links:
@@ -1300,15 +1296,6 @@ class Link(Entity):
                 self._response = Schema.parse(DEFAULT_REQ_RESP,
                                               parent=self, name='response',
                                               id='%s/response' % self.id)
-
-            if name == 'self':
-                self._params = {}
-                params = parser.parse('params', {}, save=False)
-                for key, value in params.iteritems():
-                    self._params[key] = Schema.parse(value, parent=self,
-                                                     name=key,
-                                                     id=('%s/params/%s' %
-                                                         (self.id, key)))
 
     @classmethod
     def order_link_keys(self, keys):
@@ -1373,7 +1360,7 @@ class Path(Entity):
 
     """
 
-    def __init__(self, link, pathdef):
+    def __init__(self, link, pathdef, additional_vars=None):
         """Create a `Path` associated with `link`."""
 
         super(Path, self).__init__(id='%s/path' % link.id,
@@ -1391,6 +1378,10 @@ class Path(Entity):
         else:
             self.template = pathdef
             self.vars = {}
+
+        if additional_vars:
+            for k, v in additional_vars.iteritems():
+                self.vars[k] = v
 
         # For any URI template parameters that are in the
         # template but not explicitly listed in vars, add them
@@ -1505,7 +1496,7 @@ class Path(Entity):
         """
         # Collect the set of required variables from the template.
         # Any uri template variables starting with ? or & are optional
-        required = set(uritemplate_nonquery_variables(self.template))
+        required = set(uritemplate_required_variables(self.template))
 
         if kvs is None:
             kvs = {}
