@@ -8,10 +8,8 @@ from gitpy_versioning import get_version
 
 try:
     from setuptools import setup
-    packagedata = True
 except ImportError:
     from distutils.core import setup
-    packagedata = False
 
 
 readme = open('README.rst').read()
@@ -41,7 +39,7 @@ setup(
         'bin/reschema-doc',
         'bin/relint'
     ],
-    include_package_data=packagedata,
+    include_package_data=True,
     install_requires=[
         'PyYAML',
         'Markdown',
