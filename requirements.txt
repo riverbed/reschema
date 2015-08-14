@@ -1,3 +1,0 @@
---index-url https://pypibox.lab.nbttech.com/flyscript/development/
-
--e .[dev,all]
