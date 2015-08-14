@@ -4,17 +4,13 @@
 # accompanying the software ("License").  This software is distributed "AS IS"
 # as set forth in the License.
 
-import os
-import pip
-import sys
-
-from setuptools.command.test import test as TestCommand
 from gitpy_versioning import get_version
 
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
+
 
 readme = open('README.rst').read()
 
@@ -34,7 +30,7 @@ setup(
                  "objects, support documentation generation"),
     long_description=readme,
     author="Riverbed Technology",
-    author_email="cwhite@riverbed.com",
+    author_email="eng-github@riverbed.com",
     packages=[
         'reschema',
     ],
@@ -57,6 +53,16 @@ setup(
         'all': [],
     },
     tests_require=test,
-    url="https://gitlab.lab.nbttech.com/steelscript/reschema/",
+    url="http://pythonhosted.org/steelscript",
     keywords='reschema',
+    license='MIT',
+    platforms='Linux, Mac OS, Windows',
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 2.6',
+        'Programming Language :: Python :: 2.7',
+        'Topic :: System :: Parser',
+    ],
 )
