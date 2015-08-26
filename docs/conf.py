@@ -1,8 +1,8 @@
-# Copyright (c) 2013-2015 Riverbed Technology, Inc.
+# Copyright (c) 2015 Riverbed Technology, Inc.
 #
-# This software is licensed under the terms and conditions of the MIT License
-# accompanying the software ("License").  This software is distributed "AS IS"
-# as set forth in the License.
+# Reschema is licensed under the terms and conditions of the MIT
+# License accompanying the software ("License").  This software is
+# distributed "AS IS" as set forth in the License.
 
 # -*- coding: utf-8 -*-
 #
@@ -155,7 +155,7 @@ html_favicon = '_static/favicon.ico'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-#html_static_path = ['_static']
+html_static_path = ['_static']
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied

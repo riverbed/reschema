@@ -1,6 +1,6 @@
 Reschema is licensed under the following license terms:
 
-Copyright (c) 2014 Riverbed Technology, Inc.
+Copyright (c) 2015 Riverbed Technology, Inc.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -19,3 +19,15 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+
+*************************************************************************
+
+Reschema requires the download and usage of certain third party software from
+third party websites.  All such third party software is licensed by the
+applicable third party licensors under the terms and conditions (including,
+without limitation, warranty and liability disclaimers) offered by such third
+party licensors. You acknowledge that you are responsible for obtaining and
+complying with any licenses necessary to operate any such third party software.
+Riverbed Technology, Inc. disclaims all representations, warranties and
+liability relating to such third party software.
