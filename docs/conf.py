@@ -4,8 +4,6 @@
 # accompanying the software ("License").  This software is distributed "AS IS"
 # as set forth in the License.
 
-# -*- coding: utf-8 -*-
-#
 # reschema documentation build configuration file, created by
 # sphinx-quickstart on Fri Apr 11 08:09:14 2014.
 #
