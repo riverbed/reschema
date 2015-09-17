@@ -63,6 +63,6 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
-        'Topic :: System :: Parser',
+        'Topic :: Software Development :: Documentation',
     ],
 )
