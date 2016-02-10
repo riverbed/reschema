@@ -45,14 +45,14 @@ Tools
    jsonschema
 
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
 
 License
-=======
+-------
 
 This reschema documentation is provided "AS IS"
 and without any warranty or indemnification.  Any sample code or
