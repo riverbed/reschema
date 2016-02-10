@@ -4,7 +4,7 @@ SteelScript Reschema
 .. toctree::
    :maxdepth: 1
 
-   SteelScript Reschema Overview <index>
+   Reschema Overview <index>
    specification
    module
    reschema-doc
