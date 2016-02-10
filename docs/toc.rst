@@ -1,5 +1,5 @@
-SteelScript Reschema
-====================
+Reschema
+========
 
 .. toctree::
    :maxdepth: 1
