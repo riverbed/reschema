@@ -10,7 +10,7 @@ the following IETF drafts:
    * `JSON Schema draft 04 <http://tools.ietf.org/html/draft-zyp-json-schema-04>`_
    * `JSON Schema: interactive and non interactive validation <http://json-schema.org/latest/json-schema-validation.html>`_
 
-The `GL4 <../gl4>`_ ``rest-schema`` relies heavily on JSON schemea as a way of
+The `Service Definition Specification <../specification.html>`_ ``rest-schema`` relies heavily on JSON schemea as a way of
 describing data types.  Similar to C ``struct``, at a minimum a
 ``json-schema`` lays out all the elements and types of a JSON object.
 
