@@ -5,8 +5,13 @@
 # as set forth in the License.
 
 import re
-import uritemplate
 from reschema.exceptions import ParseError
+
+# copy params from previous uritemplate version
+RESERVED = ":/?#[]@!$&'()*+,;="
+OPERATOR = "+#./;?&|!@"
+MODIFIER = ":^"
+TEMPLATE = re.compile("{([^\}]+)}")
 
 
 def check_type(prop, val, valid_type, obj=None):
@@ -49,10 +54,10 @@ def uritemplate_required_variables(template):
 
     """
     vars = set()
-    for varlist in uritemplate.TEMPLATE.findall(template):
+    for varlist in TEMPLATE.findall(template):
         if varlist[0] in "?&":
             continue
-        if varlist[0] in uritemplate.OPERATOR:
+        if varlist[0] in OPERATOR:
             varlist = varlist[1:]
         varspecs = varlist.split(',')
         for var in varspecs:
@@ -69,7 +74,7 @@ def uritemplate_add_query_params(template, params):
     if not params:
         return template
 
-    for varlist in uritemplate.TEMPLATE.findall(template):
+    for varlist in TEMPLATE.findall(template):
         if varlist[0] in "?&":
             orig = varlist
             updated = orig + ',' + ','.join(params)
