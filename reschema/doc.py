@@ -12,7 +12,7 @@ import re
 import datetime
 import distutils.spawn
 import subprocess
-import HTMLParser
+import html.parser
 
 from optparse import OptionParser
 
@@ -121,7 +121,7 @@ class ReschemaDoc(object):
             if os.path.exists(html):
                 os.remove(html)
 
-            h = HTMLParser.HTMLParser()
+            h = html.parser.HTMLParser()
 
             htmldoc = reschema.html.Document(title, printable=False)
             htmldoc.header.a(href="http://www.riverbed.com", cls="headerimg")
@@ -146,7 +146,7 @@ class ReschemaDoc(object):
                                                    docroot=outdir))
             r2h.process()
             htmldoc.write(html)
-            print "Wrote %s" % html
+            print("Wrote %s" % html)
 
         # PDF
         if options.pdf:
@@ -166,7 +166,7 @@ class ReschemaDoc(object):
                                                    docroot=outdir))
             r2h.process()
             htmldoc.write(phtml)
-            print "Wrote %s" % phtml
+            print("Wrote %s" % phtml)
 
             ### PDF
             if options.wkhtmltopdf is not None:
@@ -193,7 +193,7 @@ class ReschemaDoc(object):
                 print ("WARNING: Could not determine wkhtmltopdf version, "
                        "assuming latest")
             else:
-                print "wkhtmltopdf version %d" % version
+                print("wkhtmltopdf version %d" % version)
 
             if version is None or version >= 10:
                 tocarg = "toc"
@@ -208,7 +208,7 @@ class ReschemaDoc(object):
             cover_body = cover_base.body()
             cover_body.h1().text = title
             if options.copyright:
-                cover_body.p().text = u"Copyright \xa9 " + unicode(options.copyright)
+                cover_body.p().text = "Copyright \xa9 " + str(options.copyright)
             created = datetime.datetime.now().strftime("%b %d, %Y at %I:%m %p")
             cover_body.p().text = "Created %s" % created
 
@@ -233,5 +233,5 @@ class ReschemaDoc(object):
             os.environ['LANG'] = 'C'
             args = ['sed', '-i.bak', '-e', 's/#00//g', pdf]
             subprocess.check_call(args)
-            print "Wrote %s" % pdf
+            print("Wrote %s" % pdf)
             os.remove(pdf + ".bak")

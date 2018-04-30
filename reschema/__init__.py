@@ -4,5 +4,5 @@
 # accompanying the software ("License").  This software is distributed "AS IS"
 # as set forth in the License.
 
-from servicedef import ServiceDef, ServiceDefManager
-from jsonschema import Schema
+from .servicedef import ServiceDef, ServiceDefManager
+from .jsonschema import Schema

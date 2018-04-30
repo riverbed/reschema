@@ -10,8 +10,8 @@ from yaml.error import Mark
 
 
 def obj_key_node(obj, prop):
-    idx = obj.keys().index(prop)
-    return obj.keys()[idx]
+    idx = list(obj.keys()).index(prop)
+    return list(obj.keys())[idx]
 
 
 def add_marks_to_node(obj, start_mark=None, end_mark=None):

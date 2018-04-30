@@ -12,7 +12,7 @@ import yaml
 import markdown
 from collections import OrderedDict
 import xml.dom.minidom, xml.etree.ElementTree as ET
-import urlparse
+import urllib.parse
 import jsonpointer
 
 import logging
@@ -59,7 +59,7 @@ class RefSchemaProxy(object):
         #
         # Drop the netloc and api root and replace with a relative path ref
         # based on the current schema id
-        parsed_id = urlparse.urlparse(refid)
+        parsed_id = urllib.parse.urlparse(refid)
 
         # Fall back to just using an href of the schema id for the
         # following cases:
@@ -75,7 +75,7 @@ class RefSchemaProxy(object):
             # schema id and the refschema id.
             #
             # Figure out how many levels up to recurse -- up to the first diff
-            parsed_parent_id = urlparse.urlparse(schema.servicedef.id)
+            parsed_parent_id = urllib.parse.urlparse(schema.servicedef.id)
             m_parent = re.match("/apis/(.*)$", parsed_parent_id.path)
             relpath_count = len(m_parent.group(1).split('/'))
             relpath = '/'.join(['..' for i in range(relpath_count)])
@@ -111,14 +111,14 @@ class ServiceDefToHtml(object):
         resources_div = self.container.div(id='resources')
         self.menu.add_item("Resources", href=resources_div)
         resource_menu = self.menu.add_submenu()
-        for resource in self.servicedef.resources.values():
+        for resource in list(self.servicedef.resources.values()):
             ResourceToHtml(resource, self.container, resource_menu,
                            self.servicepath, self.options).process()
 
         types_div = self.container.div(id='types')
         self.menu.add_item("Types", href=types_div)
         type_menu = self.menu.add_submenu()
-        for type_ in self.servicedef.types.values():
+        for type_ in list(self.servicedef.types.values()):
             rh = ResourceToHtml(type_, self.container, type_menu,
                                 self.servicepath, self.options)
             rh.process(is_type=True)
@@ -211,10 +211,10 @@ class ResourceToHtml(object):
 
     def process_links(self, container, containerid):
         schema = self.schema
-        for name, link in schema.links.iteritems():
+        for name, link in schema.links.items():
             if name == 'self':
                 # need to police invalid $refs underneath params
-                for k, v in link.path.var_schemas.iteritems():
+                for k, v in link.path.var_schemas.items():
                     if isinstance(v, reschema.jsonschema.Ref):
                         RefSchemaProxy(v, self.options)
                 continue
@@ -240,7 +240,7 @@ class ResourceToHtml(object):
                        type(link.request) != reschema.jsonschema.Null:
                     properties = link.request.properties
                     params = ["%s={%s}" % (param, properties[param].typestr)
-                              for param in properties.keys()]
+                              for param in list(properties.keys())]
                     if len(params) != 0:
                         path += "?" + "&".join(params)
 
@@ -348,7 +348,7 @@ class ResourceToHtml(object):
 
     def process_relations(self, container, containerid):
         schema = self.schema
-        for name, relation in schema.relations.iteritems():
+        for name, relation in schema.relations.items():
 
             logger.debug("Processing relation: %s - %s" %
                          (self.schema.fullname(), name))
@@ -370,7 +370,7 @@ class ResourceToHtml(object):
                 table = HTMLTable(cls="paramtable")
                 table.row(["Related var", "Data value for replacement"],
                           header=True)
-                for var, relp in relation.vars.iteritems():
+                for var, relp in relation.vars.items():
                     table.row([var, relp])
                 div.append(table)
 
@@ -515,7 +515,7 @@ class SchemaSummaryXML(HTMLElement):
 
                 if 'children' in spec:
                     parent.span().text = ">\n"
-                    for child_tag, child_spec in spec['children'].items():
+                    for child_tag, child_spec in list(spec['children'].items()):
                         write_xmlschema(child_tag, child_spec, indent + 2)
                     parent.span().text = "%*s</" % (indent, "")
                     parent.span(cls="xmlschema-element").text = tag
@@ -523,8 +523,8 @@ class SchemaSummaryXML(HTMLElement):
                 else:
                     parent.span().text = "/>\n"
 
-            assert (len(schema.xmlSchema.keys()) == 1)
-            tag = schema.xmlSchema.keys()[0]
+            assert (len(list(schema.xmlSchema.keys())) == 1)
+            tag = list(schema.xmlSchema.keys())[0]
             spec = schema.xmlSchema[tag]
             write_xmlschema(tag, spec, 0)
             return

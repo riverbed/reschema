@@ -74,7 +74,7 @@ def _eval_shallow(servicedef, obj, need_copy=False):
             is_copy = True
 
         elif '$ref' in obj:
-            if len(obj.keys()) != 1:
+            if len(list(obj.keys())) != 1:
                 raise ParseError(
                     "$ref object may not have any other properties", obj)
 
@@ -123,7 +123,7 @@ def json_merge_patch(servicedef, source, with_):
     # with_ is only used in a readonly fashion, so no need to copy
     with_ = _eval_shallow(servicedef, with_, need_copy=False)
 
-    for key, value in with_.iteritems():
+    for key, value in with_.items():
         if value is None:
             # Remove the key if present in the source
             if key in source:

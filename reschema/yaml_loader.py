@@ -60,7 +60,7 @@ class OrderedNodeConstructor(SafeConstructor):
             key = self.construct_object(key_node)
             try:
                 hash(key)
-            except TypeError, exc:
+            except TypeError as exc:
                 raise ConstructorError('while constructing a mapping',
                                        node.start_mark,
                                        'found unacceptable key (%s)' % exc,

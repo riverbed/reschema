@@ -247,9 +247,9 @@ class Schema(Entity):
         parser.set_context(self.fullname(), self)
 
         if not self.is_ref():
-            parser.parse('label', name, types=[str, unicode])
-            parser.parse('description', '', types=[str, unicode])
-            parser.parse('notes', '', types=[str, unicode])
+            parser.parse('label', name, types=str)
+            parser.parse('description', '', types=str)
+            parser.parse('notes', '', types=str)
             parser.parse('example')
             readOnlyDef = (parent.readOnly
                            if (parent and isinstance(parent, Schema))
@@ -263,7 +263,7 @@ class Schema(Entity):
 
             self.relations = OrderedDict()
             for key, value in parser.parse('relations', {},
-                                           types=dict, save=False).iteritems():
+                                           types=dict, save=False).items():
                 check_type(key, value, dict)
                 self.relations[key] = Relation(value, key, self,
                                                id=('%s/relations/%s' %
@@ -271,7 +271,7 @@ class Schema(Entity):
 
             self.links = OrderedDict()
             links = parser.parse('links', {}, types=dict, save=False)
-            links_keys = Link.order_link_keys(links.keys())
+            links_keys = Link.order_link_keys(list(links.keys()))
 
             for key in links_keys:
                 value = links[key]
@@ -354,7 +354,7 @@ class Schema(Entity):
 
         with Parser(input, name) as parser:
             if name is None:
-                name = parser.parse('label', types=[str, unicode], save=False)
+                name = parser.parse('label', types=str, save=False)
                 if name is None:
                     name = 'element%d' % cls.count
                     cls.count = cls.count + 1
@@ -365,7 +365,7 @@ class Schema(Entity):
                 typestr = '$merge'
             else:
                 typestr = parser.parse('type', 'multi',
-                                       types=[str, unicode], save=False)
+                                       types=str, save=False)
 
             try:
                 cls = type_map[typestr]
@@ -425,7 +425,7 @@ class Schema(Entity):
                                   self.description.split('\n')[0])
         for child in self.children:
             s += child.str_simple()
-        for relation, value in self.relations.iteritems():
+        for relation, value in self.relations.items():
             s += value.str_simple()
         return s
 
@@ -632,7 +632,7 @@ class Ref(DynamicSchema):
         # are defined
         self._refschema = None
         parser.parse('$ref', required=True, save_as='_refschema_id')
-        if len(parser.input.keys()) != 1:
+        if len(list(parser.input.keys())) != 1:
             raise ParseError("$ref object may not have any other properties",
                              parser.input)
 
@@ -782,12 +782,12 @@ class String(Schema):
 
     def validate(self, input):
         def trunc():
-            if len(unicode(input)) > 40:
-                return unicode(input)[:40] + "..."
+            if len(str(input)) > 40:
+                return str(input)[:40] + "..."
             else:
-                return unicode(input)
+                return str(input)
 
-        if not isinstance(input, (str, unicode)):
+        if not isinstance(input, str):
             raise ValidationError("%s: input must be a string, got %s: %s" %
                           (self.fullname(), type(input), trunc()), self)
 
@@ -901,7 +901,7 @@ class Number(NumberOrInteger):
     _type = 'number'
 
     def __init__(self, parser, name, parent, **kwargs):
-        super(Number, self).__init__(self._type, (int, float, long), parser,
+        super(Number, self).__init__(self._type, (int, float, int), parser,
                                      name, parent, **kwargs)
 
 _register_type(Number)
@@ -911,7 +911,7 @@ class Integer(NumberOrInteger):
     _type = 'integer'
 
     def __init__(self, parser, name, parent, **kwargs):
-        super(Integer, self).__init__(self._type, (int, long), parser,
+        super(Integer, self).__init__(self._type, (int, int), parser,
                                       name, parent, **kwargs)
 
 _register_type(Integer)
@@ -925,7 +925,7 @@ class Timestamp(Schema):
                                         **kwargs)
 
     def validate(self, input):
-        if (not any(isinstance(input, t) for t in (int, float, long)) or
+        if (not any(isinstance(input, t) for t in (int, float, int)) or
                 isinstance(input, bool)):
             raise ValidationError("'%s' expected to be a number for %s" %
                                   (input, self.fullname()), self)
@@ -942,7 +942,7 @@ class TimestampHP(Schema):
                                           name, parent, **kwargs)
 
     def validate(self, input):
-        if (not any(isinstance(input, t) for t in (int, float, long)) or
+        if (not any(isinstance(input, t) for t in (int, float, int)) or
                 isinstance(input, bool)):
             raise ValidationError("'%s' expected to be a number for %s" %
                                   (input, self.fullname()), self)
@@ -960,7 +960,7 @@ class Object(Schema):
         self.properties = OrderedDict()
 
         for prop, value in parser.parse('properties', {},
-                                        types=dict, save=False).iteritems():
+                                        types=dict, save=False).items():
             c = Schema.parse(value, prop, self,
                              id='%s/properties/%s' % (self.id, prop))
             self.properties[prop] = c
@@ -1212,7 +1212,7 @@ class Relation(Entity):
         if self.vars is not None:
             # If the resource defines 'vars', use data to
             # resolve them and put them in kvs
-            for var, relp in self.vars.iteritems():
+            for var, relp in self.vars.items():
                 if var in kvs:
                     # This var's value was provided directly
                     # by the caller in kvs, so take the caller's
@@ -1380,7 +1380,7 @@ class Path(Entity):
             self.vars = {}
 
         if additional_vars:
-            for k, v in additional_vars.iteritems():
+            for k, v in additional_vars.items():
                 self.vars[k] = v
 
         # For any URI template parameters that are in the
@@ -1415,7 +1415,7 @@ class Path(Entity):
         #     vars:
         #       offset: { type: integer }
         #
-        for var, target in self.vars.iteritems():
+        for var, target in self.vars.items():
             if isinstance(target, dict):
                 self.var_schemas[var] = Schema.parse(
                     target, parent=self.link.schema, name=var,
@@ -1511,7 +1511,7 @@ class Path(Entity):
             kvs['$'] = resolve_pointer(data, pointer or '')
 
             # Evaluate path.vars from the data
-            for var, relp in (self.vars or {}).iteritems():
+            for var, relp in (self.vars or {}).items():
                 if var in kvs or relp is None:
                     # Skip if either this var's value was provided
                     # directly by the caller in kvs, or if there is no
@@ -1551,7 +1551,7 @@ class Path(Entity):
         # Convert values to strings, as otherwise they might get "dropped"
         # If the value is 0, it will get dropped
         uri_kvs = {}
-        for k,v in kvs.iteritems():
+        for k,v in kvs.items():
             uri_kvs[k] = str(v)
 
         uri = uritemplate.expand(self.template, uri_kvs)
