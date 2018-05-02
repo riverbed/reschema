@@ -246,15 +246,6 @@ class ResourceToHtml(object):
 
             div.pre().text = httpmethod + " " + path
 
-            div.span(cls="h5").text = "Authorization"
-            if link.authorization == "required":
-                div.p().text = "This request requires authorization."
-            elif link.authorization == "optional":
-                div.p().text = \
-                  "This request may be made with or without authorization."
-            else:
-                div.p().text = "This request does not require authorization."
-
             # if link.headers:
                 # div.span(cls="h5").text = "HTTP Headers"
                 # table = div.table(cls="paramtable")
