@@ -5,7 +5,6 @@
 # as set forth in the License.
 
 
-
 import re
 import uritemplate
 import traceback
@@ -277,6 +276,8 @@ class Validator(object):
 
         print('Checking resources')
         for resource in sdef.resource_iter():
+            # DEBUG
+            print(get_disabled(resource))
             if type(resource) is not jsonschema.Ref:
                 resource_disabled = get_disabled(resource).union(sdef_disabled)
                 results.extend(self._run_rules(Validator.RESOURCE_RULES +

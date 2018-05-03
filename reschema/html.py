@@ -49,7 +49,7 @@ class Document(object):
 
     def write(self, file):
         f = open(file, "w")
-        text = ET.tostring(self.html, method="html")
+        text = ET.tostring(self.html, encoding="unicode", method="html")
         path = os.path.dirname(os.path.abspath(reschema.__file__))
 
         f2 = open(path + "/servicedef.css", "r")

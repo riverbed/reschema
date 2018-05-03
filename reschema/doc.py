@@ -12,8 +12,8 @@ import re
 import datetime
 import distutils.spawn
 import subprocess
-import html.parser
 
+from html import unescape
 from optparse import OptionParser
 
 import reschema
@@ -121,16 +121,14 @@ class ReschemaDoc(object):
             if os.path.exists(html):
                 os.remove(html)
 
-            h = html.parser.HTMLParser()
-
             htmldoc = reschema.html.Document(title, printable=False)
             htmldoc.header.a(href="http://www.riverbed.com", cls="headerimg")
             hl = htmldoc.header.div(cls="headerleft")
             breadcrumbs = hl.div(cls="breadcrumbs")
             breadcrumbs.a(href="../../index.html").text = "apis"
-            breadcrumbs.span().text = h.unescape(" &raquo; ")
+            breadcrumbs.span().text = unescape(" &raquo; ")
             breadcrumbs.a(href=("../index.html")).text = name
-            breadcrumbs.span().text = h.unescape(" &raquo; %s" % servicedef.version)
+            breadcrumbs.span().text = unescape(" &raquo; %s" % servicedef.version)
             hl.div(cls="headertitle").text = title
             htmldoc.header.span(cls="headerright").text = (
                 "Created %s" %
