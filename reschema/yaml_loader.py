@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Riverbed Technology, Inc.
+# Copyright (c) 2018 Riverbed Technology, Inc.
 #
 # This software is licensed under the terms and conditions of the MIT License
 # accompanying the software ("License").  This software is distributed "AS IS"
@@ -38,7 +38,7 @@ from reschema.loader_nodes import (dict_node, list_node, str_node)
 
 # Ordered so long as python 3.6+ is used.
 class OrderedLoader(Reader, Scanner, Parser,
-                   Composer, SafeConstructor, Resolver):
+                    Composer, SafeConstructor, Resolver):
     def __init__(self, stream):
         Reader.__init__(self, stream)
         Scanner.__init__(self)

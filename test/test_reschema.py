@@ -1131,7 +1131,8 @@ class TestSchema(TestSchemaBase):
 
         self.check_valid(r,
                          valid=[list(range(10)), list(range(20))],
-                         invalid=[list(range(0)), list(range(9)), list(range(21))])
+                         invalid=[list(range(0)), list(range(9)),
+                                  list(range(21))])
 
     def test_self_params(self):
         r = self.r.resources['test_self_params']

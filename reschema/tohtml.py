@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Riverbed Technology, Inc.
+# Copyright (c) 2018 Riverbed Technology, Inc.
 #
 # This software is licensed under the terms and conditions of the MIT License
 # accompanying the software ("License").  This software is distributed "AS IS"
@@ -515,7 +515,7 @@ class SchemaSummaryXML(HTMLElement):
 
                 if 'children' in spec:
                     parent.span().text = ">\n"
-                    for child_tag, child_spec in list(spec['children'].items()):
+                    for child_tag, child_spec in spec['children'].items():
                         write_xmlschema(child_tag, child_spec, indent + 2)
                     parent.span().text = "%*s</" % (indent, "")
                     parent.span(cls="xmlschema-element").text = tag

@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Riverbed Technology, Inc.
+# Copyright (c) 2018 Riverbed Technology, Inc.
 #
 # This software is licensed under the terms and conditions of the MIT License
 # accompanying the software ("License").  This software is distributed "AS IS"
@@ -147,7 +147,7 @@ class HTMLElement(ElementBase):
         for e in lst:
             if last is not None:
                 if (((type(last) is str) or (type(last) is str)) and
-                    ((type(e) is str) or (type(e) is str))):
+                        ((type(e) is str) or (type(e) is str))):
                     last += e
                 else:
                     newlist.append(last)

@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Riverbed Technology, Inc.
+# Copyright (c) 2018 Riverbed Technology, Inc.
 #
 # This software is licensed under the terms and conditions of the MIT License
 # accompanying the software ("License").  This software is distributed "AS IS"
@@ -33,6 +33,7 @@ def create_str_node_class(cls):
     node_class.__name__ = '%s_node' % cls.__name__
     return node_class
 
+
 def create_mutable_node_class(cls):
     class node_class(cls):
         def __init__(self, x, start_mark=None, end_mark=None):
@@ -43,6 +44,7 @@ def create_mutable_node_class(cls):
             return cls.__new__(self, x)
     node_class.__name__ = '%s_node' % cls.__name__
     return node_class
+
 
 dict_node = create_mutable_node_class(dict)
 list_node = create_mutable_node_class(list)

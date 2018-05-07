@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Riverbed Technology, Inc.
+# Copyright (c) 2018 Riverbed Technology, Inc.
 #
 # This software is licensed under the terms and conditions of the MIT License
 # accompanying the software ("License").  This software is distributed "AS IS"
@@ -276,8 +276,6 @@ class Validator(object):
 
         print('Checking resources')
         for resource in sdef.resource_iter():
-            # DEBUG
-            print(get_disabled(resource))
             if type(resource) is not jsonschema.Ref:
                 resource_disabled = get_disabled(resource).union(sdef_disabled)
                 results.extend(self._run_rules(Validator.RESOURCE_RULES +

@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Riverbed Technology, Inc.
+# Copyright (c) 2018 Riverbed Technology, Inc.
 #
 # This software is licensed under the terms and conditions of the MIT License
 # accompanying the software ("License").  This software is distributed "AS IS"
@@ -71,6 +71,7 @@ def marked_load(stream):
 def clean_load(stream):
     return json.load(stream)
 
+
 test_json_str = '''\
 {
     "a": [
@@ -84,6 +85,7 @@ test_json_str = '''\
         "g": "h"
     }
 }'''
+
 
 def test_clean_load():
 
