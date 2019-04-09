@@ -3,6 +3,7 @@
 # This software is licensed under the terms and conditions of the MIT License
 # accompanying the software ("License").  This software is distributed "AS IS"
 # as set forth in the License.
+import sys
 
 from gitpy_versioning import get_version
 
@@ -10,6 +11,26 @@ try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
+
+from setuptools.command.test import test as TestCommand
+
+
+class PyTest(TestCommand):
+    user_options = [("pytest-args=", "a", "Arguments to pass to pytest")]
+
+    def initialize_options(self):
+        TestCommand.initialize_options(self)
+        self.pytest_args = ""
+
+    def run_tests(self):
+        import shlex
+
+        # import here, cause outside the eggs aren't loaded
+        import pytest
+
+        errno = pytest.main(shlex.split(self.pytest_args))
+        sys.exit(errno)
+
 
 
 readme = open('README.rst').read()
@@ -58,6 +79,7 @@ setup(
     },
     setup_requires=setup_requires,
     tests_require=test,
+    cmdclass={"pytest": PyTest},
     url="http://pythonhosted.org/steelscript",
     keywords='reschema',
     license='MIT',
