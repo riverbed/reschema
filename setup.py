@@ -19,18 +19,18 @@ doc = [
 ]
 
 install_requires = [
-        'PyYAML',
-        'Markdown',
-        'uritemplate',
-        'jsonpointer',
-    ]
+    'PyYAML',
+    'Markdown',
+    'uritemplate',
+    'jsonpointer',
+]
 
-setup_requires = ['pytest-runner'] 
+setup_requires = ['pytest-runner']
 
 test = [
     'pytest',
     'mock',
-] + setup_requires
+]
 
 setup(
     name='reschema',
