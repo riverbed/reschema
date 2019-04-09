@@ -18,6 +18,15 @@ doc = [
     'sphinx',
 ]
 
+install_requires = [
+        'PyYAML',
+        'Markdown',
+        'uritemplate',
+        'jsonpointer',
+    ]
+
+setup_requires = ['pytest-runner'] + install_requires
+
 test = [
     'pytest',
     'mock',
@@ -40,18 +49,14 @@ setup(
         'bin/relint'
     ],
     include_package_data=True,
-    install_requires=[
-        'PyYAML',
-        'Markdown',
-        'uritemplate',
-        'jsonpointer',
-    ],
+    install_requires=install_requires,
     extras_require={
         'test': test,
         'doc': doc,
         'dev': test + doc,
         'all': [],
     },
+    setup_requires=setup_requires,
     tests_require=test,
     url="http://pythonhosted.org/steelscript",
     keywords='reschema',
