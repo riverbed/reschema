@@ -25,12 +25,12 @@ install_requires = [
         'jsonpointer',
     ]
 
-setup_requires = ['pytest-runner'] + install_requires
+setup_requires = ['pytest-runner'] 
 
 test = [
     'pytest',
     'mock',
-]
+] + setup_requires
 
 setup(
     name='reschema',
