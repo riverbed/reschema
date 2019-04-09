@@ -7,11 +7,8 @@ import sys
 
 from gitpy_versioning import get_version
 
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
 
+from setuptools import setup
 from setuptools.command.test import test as TestCommand
 
 
@@ -30,7 +27,6 @@ class PyTest(TestCommand):
 
         errno = pytest.main(shlex.split(self.pytest_args))
         sys.exit(errno)
-
 
 
 readme = open('README.rst').read()
