@@ -5,6 +5,8 @@ dist
 version.txt
 RELEASE-VERSION
 *.egg-info
+.eggs/
+ve/
 
 docs/_build
 *.html
