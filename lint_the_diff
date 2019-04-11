@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+pylint -rn --output-format=pylint2junit.JunitReporter `git diff --name-only "$@" | grep -E '\.py$'` --errors-only
