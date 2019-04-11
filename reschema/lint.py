@@ -373,8 +373,8 @@ def lint(sdef, filename):
     errors = check_indentation(filename)
     indent_failures = len(errors)
     for row, col in errors:
-        print ("{0}:{1}:{2} FAIL: [C0007] - indentation should be {3} spaces"
-               .format(filename, row, col, INDENT_OFFSET))
+        print("{0}:{1}:{2} FAIL: [C0007] - indentation should be {3} spaces".format(
+            filename, row, col, INDENT_OFFSET))
 
     return xref_failures + failures + indent_failures
 

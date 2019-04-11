@@ -225,7 +225,6 @@ class ReschemaDoc(object):
                     tocarg, '--toc-header-text', 'Contents',
                     '--footer-center', '[page]',
                     phtml, pdf]
-            #print ' '.join(args)
             subprocess.check_call(args)
             # Fix for 'illegal byte sequence'
             os.environ['LC_TYPE'] = 'C'

@@ -28,7 +28,7 @@ Consider the following:
 
     >>> bookschema = Schema.parse(bookdef, name='book')
 
-    >>> print bookschema.str_simple()
+    >>> print(bookschema.str_simple())
     book                           object               Book object
     book.author_ids                array
     book.author_ids.[items]        number
