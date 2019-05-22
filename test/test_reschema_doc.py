@@ -4,7 +4,6 @@
 # accompanying the software ("License").  This software is distributed "AS IS"
 # as set forth in the License.
 
-from __future__ import print_function
 
 import os
 import unittest
@@ -73,7 +72,7 @@ class TestReschemaInvalidRef(unittest.TestCase):
            property: { $ref: '#/types/blah' }
         """
         with self.assertRaises(reschema.exceptions.InvalidReference):
-            schema = self.sd.resources.values()[0].properties['name']
+            schema = list(self.sd.resources.values())[0].properties['name']
             RefSchemaProxy(schema, None)
 
     def test_invalid_ref_in_links(self):
@@ -88,7 +87,7 @@ class TestReschemaInvalidRef(unittest.TestCase):
                 $ref: '#/types/does_not_exist'
         """
         with self.assertRaises(reschema.exceptions.InvalidReference):
-            resource = self.sd.resources.values()[0]
+            resource = list(self.sd.resources.values())[0]
             title = "%s v%s %s" % (self.sd.title, self.sd.version,
                                    self.sd.status)
             htmldoc = reschema.html.Document(title, printable=False)

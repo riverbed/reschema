@@ -1,10 +1,9 @@
-# Copyright (c) 2015 Riverbed Technology, Inc.
+# Copyright (c) 2018 Riverbed Technology, Inc.
 #
 # This software is licensed under the terms and conditions of the MIT License
 # accompanying the software ("License").  This software is distributed "AS IS"
 # as set forth in the License.
 
-from __future__ import print_function
 
 import re
 import uritemplate
@@ -207,7 +206,7 @@ class Validator(object):
         check individual subschema defined underneath the keyword.
         """
         if hasattr(schema, 'properties'):
-            for _, prop in schema.properties.iteritems():
+            for _, prop in schema.properties.items():
                 self.check_schema(prop, results, disabled_rules)
 
         if hasattr(schema, 'items'):
@@ -237,14 +236,14 @@ class Validator(object):
             self.check_schema(schema.not_, results, disabled_rules)
 
         if hasattr(schema, '_params'):
-            for _, param in schema._params.iteritems():
+            for _, param in schema._params.items():
                 self.check_schema(param, results, disabled_rules)
 
         if (isinstance(schema, jsonschema.Merge)):
             self.check_schema(schema.refschema, results, disabled_rules)
 
         if hasattr(schema, 'relations') and len(schema.relations) > 0:
-            for relation in schema.relations.items():
+            for relation in list(schema.relations.items()):
                 # relation[1] is type of jsonschema.Relation
                 self.check_schema(relation[1], results, disabled_rules)
 
@@ -288,7 +287,7 @@ class Validator(object):
             if self.VERBOSITY > 1:
                 print('Checking links for \'{}\''.format(resource.name))
 
-            for _, link in resource.links.items():
+            for _, link in list(resource.links.items()):
                 if type(link) is not jsonschema.Ref:
                     link_disabled = get_disabled(link).union(resource_disabled)
                     results.extend(self._run_rules(Validator.LINK_RULES +
@@ -374,8 +373,8 @@ def lint(sdef, filename):
     errors = check_indentation(filename)
     indent_failures = len(errors)
     for row, col in errors:
-        print ("{0}:{1}:{2} FAIL: [C0007] - indentation should be {3} spaces"
-               .format(filename, row, col, INDENT_OFFSET))
+        print("{0}:{1}:{2} FAIL: [C0007] - indentation should be {3} spaces".format(
+            filename, row, col, INDENT_OFFSET))
 
     return xref_failures + failures + indent_failures
 
@@ -531,7 +530,7 @@ def schema_has_valid_name(schema):
     # are with names as any/one/allOf[*], where * is a non-negative int
     # for those schema object, we do not want to generate C0001 failures
     if hasattr(schema, 'parent') and hasattr(schema.parent, 'input'):
-        keys = schema.parent.input.keys()
+        keys = list(schema.parent.input.keys())
         if set(['anyOf', 'oneOf', 'allOf']) & set(keys):
             return
 
@@ -789,7 +788,7 @@ def self_link_is_first(resource):
         return
 
     self_mark = resource.links['self'].name.start_mark
-    for link in resource.links.values():
+    for link in list(resource.links.values()):
         mark = link.name.start_mark
         if link.name == "self":
             continue

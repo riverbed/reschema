@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Riverbed Technology, Inc.
+# Copyright (c) 2018 Riverbed Technology, Inc.
 #
 # This software is licensed under the terms and conditions of the MIT License
 # accompanying the software ("License").  This software is distributed "AS IS"
@@ -49,7 +49,7 @@ class Document(object):
 
     def write(self, file):
         f = open(file, "w")
-        text = ET.tostring(self.html, method="html")
+        text = ET.tostring(self.html, encoding="unicode", method="html")
         path = os.path.dirname(os.path.abspath(reschema.__file__))
 
         f2 = open(path + "/servicedef.css", "r")
@@ -125,7 +125,7 @@ class TabBar(object):
 class HTMLElement(ElementBase):
     def __init__(self, name, *args, **kwargs):
         delargs = []
-        for arg, value in kwargs.iteritems():
+        for arg, value in kwargs.items():
             if value is None:
                 delargs.append(arg)
         for arg in delargs:
@@ -146,8 +146,8 @@ class HTMLElement(ElementBase):
         # Need to first join up any strings in a row
         for e in lst:
             if last is not None:
-                if (((type(last) is str) or (type(last) is unicode)) and
-                    ((type(e) is str) or (type(e) is unicode))):
+                if (((type(last) is str) or (type(last) is str)) and
+                        ((type(e) is str) or (type(e) is str))):
                     last += e
                 else:
                     newlist.append(last)
@@ -158,7 +158,7 @@ class HTMLElement(ElementBase):
 
         last = None
         for e in newlist:
-            if (type(e) is str) or (type(e) is unicode):
+            if (type(e) is str) or (type(e) is str):
                 if last is None:
                     self.text = e
                 else:

@@ -4,7 +4,7 @@
 # accompanying the software ("License").  This software is distributed "AS IS"
 # as set forth in the License.
 
-import urlparse
+import urllib.parse
 
 from reschema.exceptions import ParseError, InvalidReference
 from reschema.util import check_type
@@ -213,7 +213,7 @@ class Parser(object):
 
         """
 
-        parsed_ref = urlparse.urlparse(ref)
+        parsed_ref = urllib.parse.urlparse(ref)
         if parsed_ref.netloc:
             # Already a fully qualified address, let urlparse rejoin
             # to normalize it
@@ -225,7 +225,7 @@ class Parser(object):
                                    ref)
 
         # urljoin will take care of the rest
-        return urlparse.urljoin(base_id, ref)
+        return urllib.parse.urljoin(base_id, ref)
 
     def preprocess_input(self, base_id):
         """Perform some preprocessing on our input."""
@@ -242,14 +242,14 @@ class Parser(object):
 
         if input:
             if isinstance(input, dict):
-                if '$ref' in input and isinstance(input['$ref'], basestring):
+                if '$ref' in input and isinstance(input['$ref'], str):
                     # replace relative refs with fully expanded refs
                     oldref = input['$ref']
                     newref = cls.expand_ref(base_id, oldref)
                     input['$ref'] = newref
 
-                elif len(input.keys()) > 0:
-                    for k, v in input.iteritems():
+                elif len(list(input.keys())) > 0:
+                    for k, v in input.items():
                         cls.expand_refs(base_id, v)
 
             elif isinstance(input, list):

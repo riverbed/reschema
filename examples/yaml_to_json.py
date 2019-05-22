@@ -28,4 +28,4 @@ def convert(stream):
 if __name__ == '__main__':
     yaml_file = sys.argv[1]
     with open(yaml_file, 'r') as f:
-        print convert(f)
+        print(convert(f))

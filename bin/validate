@@ -55,19 +55,20 @@ def main(servicedef_path=None, schema_path=DEFAULT_SCHEMA, service_defs=()):
 
     for service_def in service_defs:
         service_data = read_yaml_or_json(service_def)
-        print "==============================================================="
-        print "Service Definition: %s" % service_def
-        print "==============================================================="
-        print ""
+        print("===============================================================")
+        print("Service Definition: %s" % service_def)
+        print("===============================================================")
+        print("")
         if validator.is_valid(service_data):
-            print "VALID"
+            print("VALID")
         else:
-            print "NOT VALID"
-            print ""
+            print("NOT VALID")
+            print("")
             for error in validator.iter_errors(service_data):
-                print error
-                print ""
-        print ""
+                print(error)
+                print("")
+        print("")
+
 
 if __name__ == '__main__':
     main(service_defs=(sys.argv[1:] if len(sys.argv) > 1 else []))

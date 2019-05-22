@@ -59,9 +59,9 @@ service definition.
 """
 
 # System imports
-import urlparse
+import urllib.parse
 import json
-from cStringIO import StringIO
+from io import StringIO
 from collections import OrderedDict
 import logging
 import traceback
@@ -158,7 +158,7 @@ class ServiceDefManager(object):
         sid = servicedef.id
         if sid in self.by_id:
             if self.by_id[sid] != servicedef:
-                logger.debug("ids: %s" % (self.by_id.keys()))
+                logger.debug("ids: %s" % (list(self.by_id.keys())))
                 raise DuplicateServiceId(sid)
             return
 
@@ -350,7 +350,7 @@ class ServiceDef(object):
                                         self.schema)
 
             parser.parse('id', required=True)
-            parsed_id = urlparse.urlparse(self.id)
+            parsed_id = urllib.parse.urlparse(self.id)
             if not parsed_id.netloc:
                 raise ParseError("Service definition 'id' property must be a "
                                  "fully qualified URI: %s" % id)
@@ -361,7 +361,7 @@ class ServiceDef(object):
 
             parser.parse('provider', required=True)
             parser.parse('name', required=True)
-            parser.parse('version', required=True, types=[str, unicode])
+            parser.parse('version', required=True, types=str)
             parser.parse('title', '')
             parser.parse('status', '')
 
@@ -471,12 +471,12 @@ class ServiceDef(object):
 
         """
 
-        parsed_reference = urlparse.urlparse(reference)
+        parsed_reference = urllib.parse.urlparse(reference)
         if parsed_reference.netloc or parsed_reference.path:
             # More than just a fragment, expand the id and find the full
             # servicedef by id
             full_reference = Parser.expand_ref(self.id, reference)
-            reference_id = urlparse.urldefrag(full_reference)[0]
+            reference_id = urllib.parse.urldefrag(full_reference)[0]
 
             if reference_id == self.id:
                 servicedef = self

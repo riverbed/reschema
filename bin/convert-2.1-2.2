@@ -79,13 +79,21 @@ def test_one_liner(kv_line):
 class FIter(object):
     """Iterate lines in a file tracking line numbers."""
     def __init__(self, file):
-        self._iter = iter(file)
         self.lineno = 0
+        self.file = file
 
-    def next(self):
-        line = self._iter.next()
-        self.lineno = self.lineno + 1
-        return line.rstrip()
+    def __iter__(self):
+        self.lineno = 0
+        self.file.seek(0)
+        return self
+
+    def __next__(self):
+        line = self.file.readline()
+        if line:
+            self.lineno = self.lineno + 1
+            return line.rstrip()
+        else:
+            raise StopIteration
 
 
 class Processor(object):
@@ -100,7 +108,8 @@ class Processor(object):
         # simpler in code.
         done = False
         while True:
-            outfile = tempfile.NamedTemporaryFile(delete=False)
+            outfile = tempfile.NamedTemporaryFile(mode='w+',
+                                                  delete=False)
             done = self.process(cur_infilename, outfile)
 
             outfile.close()
@@ -148,7 +157,7 @@ class Processor(object):
         refiter = iter(self.ref_lines)
 
         try:
-            curref = refiter.next()
+            curref = next(refiter)
             done = False
         except StopIteration:
             curref = None
@@ -156,7 +165,7 @@ class Processor(object):
 
         while True:
             try:
-                line = fiter.next()
+                line = next(fiter)
             except StopIteration:
                 break
 
@@ -178,7 +187,7 @@ class Processor(object):
                         trailing_blank = True
                     if fiter.lineno == curref.end:
                         break
-                    line = fiter.next()
+                    line = next(fiter)
 
                 logger.info("lines[0/%d]: %s" % (len(lines), lines[0]))
                 if len(lines) == 1 and test_one_liner(lines[0]):
@@ -194,7 +203,7 @@ class Processor(object):
                     outfile.write("\n")
 
                 try:
-                    curref = refiter.next()
+                    curref = next(refiter)
                 except StopIteration:
                     curref = None
                 continue

@@ -22,8 +22,8 @@ if __name__ == '__main__':
     try:
         r.parse_args(sys.argv[1:])
         r.run()
-    except ReschemaDocException, e:
-        print e.msg
-        print ""
+    except ReschemaDocException as e:
+        print(e.msg)
+        print("")
         r.parser.print_help()
         sys.exit(1)

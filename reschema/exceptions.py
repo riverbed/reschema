@@ -78,6 +78,7 @@ class InvalidReference(ReschemaException):
 class MarkedError(ReschemaException):
     """ Base exception class for marked schema objects. """
     def __init__(self, message, obj=None, parent_obj=None):
+        self.message = message
         super(MarkedError, self).__init__(message)
 
         if hasattr(obj, 'start_mark'):

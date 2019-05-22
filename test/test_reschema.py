@@ -8,7 +8,7 @@ import os
 import logging
 import unittest
 import pytest
-import urlparse
+import urllib.parse
 
 from yaml.error import MarkedYAMLError
 
@@ -138,19 +138,19 @@ class TestReschema(unittest.TestCase):
     def test_resource_load(self):
         r = ServiceDef()
         r.load(BOOKSTORE_YAML)
-        self.assertEquals(len(r.resources), 8)
+        self.assertEqual(len(r.resources), 8)
         self.assertIn('info', r.resources)
         self.assertIn('author', r.resources)
         self.assertIn('authors', r.resources)
         self.assertTrue(r.find_resource('author'))
-        self.assertEquals(r.find_type('no_resource'), None)
+        self.assertEqual(r.find_type('no_resource'), None)
 
     def test_type_load(self):
         r = ServiceDef()
         r.load(BOOKSTORE_YAML)
         self.assertIn('address', r.types)
         self.assertTrue(r.find_type('address'))
-        self.assertEquals(r.find_type('no_type'), None)
+        self.assertEqual(r.find_type('no_type'), None)
 
     def test_resource_objects(self):
         r = ServiceDef()
@@ -205,7 +205,7 @@ class TestBookstore(unittest.TestCase):
 
         # successful validation will return None
         self.assertIsNone(s.validate('foo'))
-        self.assertIsNone(s.validate(u'bar'))
+        self.assertIsNone(s.validate('bar'))
 
         with self.assertRaises(ValidationError):
             s.validate(42)
@@ -276,7 +276,7 @@ class TestBookstore(unittest.TestCase):
         self.assertIsNone(book.validate(p))
         xml = book.toxml(p)
         self.assertEqual(sorted(xml.keys()),
-                         [u'id', u'publisher_id', u'title'])
+                         ['id', 'publisher_id', 'title'])
         xml_child = book.toxml(p, parent=xml)
         self.assertNotEqual(xml, xml_child)
 
@@ -400,7 +400,7 @@ class TestSchemaBase(unittest.TestCase):
         for a in valid:
             try:
                 schema.validate(a)
-            except ValidationError, e:
+            except ValidationError as e:
                 self.fail("ValidationError: value should pass: %s, %s" %
                           (a, e))
 
@@ -417,7 +417,7 @@ class TestSchemaBase(unittest.TestCase):
     def check_bad_schema(self, s, etype):
         try:
             self.parse(s)
-        except etype, e:
+        except etype as e:
             logger.debug('Got validation error: %s' % str(e))
             return
         self.fail('Schema should have thrown error, %s' % etype)
@@ -435,7 +435,7 @@ class TestJsonSchema(TestSchemaBase):
         d = yaml_loader.marked_load(s)
         try:
             Schema.parse(d)
-        except ValidationError, e:
+        except ValidationError as e:
             self.assertIsNotNone(str(e))
 
     def test_missing_servicedef(self):
@@ -607,11 +607,11 @@ class TestJsonSchema(TestSchemaBase):
                             "enum: [one, two, three]\n"
                             "pattern: '[a-z0-9]+'\n"
                             "default: 'one'\n")
-        self.assertIsInstance(schema.str_detailed(), basestring)
+        self.assertIsInstance(schema.str_detailed(), str)
 
     def test_number(self):
         self.check_valid("type: number\n",
-                         valid=[0, 1, 1.0, long(1), -1, -1.0, long(-1)],
+                         valid=[0, 1, 1.0, int(1), -1, -1.0, int(-1)],
                          invalid=['hi', True, False])
 
         self.check_valid("type: number\n"
@@ -644,11 +644,11 @@ class TestJsonSchema(TestSchemaBase):
                             "maximum: 100\n"
                             "enum: [2, 3, 4]\n"
                             "default: 3\n")
-        self.assertIsInstance(schema.str_detailed(), basestring)
+        self.assertIsInstance(schema.str_detailed(), str)
 
     def test_integer(self):
         self.check_valid("type: integer\n",
-                         valid=[0, 1, long(1), -1, long(-1)],
+                         valid=[0, 1, int(1), -1, int(-1)],
                          invalid=[1.0, float(1), -1.0, float(-1), 'hi'])
 
         self.check_valid("type: integer\n"
@@ -681,14 +681,14 @@ class TestJsonSchema(TestSchemaBase):
                             "maximum: 100\n"
                             "enum: [2, 3, 4]\n"
                             "default: 3\n")
-        self.assertIsInstance(schema.str_detailed(), basestring)
+        self.assertIsInstance(schema.str_detailed(), str)
 
     def test_timestamp(self):
         self.check_valid("type: timestamp\n",
 
                          valid=[1234567890,
                                 1234567890.123,
-                                long(1)],
+                                int(1)],
                          invalid=['foo',
                                   {'timestamp': 1234567890},
                                   True, False]
@@ -698,7 +698,7 @@ class TestJsonSchema(TestSchemaBase):
 
                          valid=[1234567890,
                                 1234567890.123000,
-                                long(1)],
+                                int(1)],
                          invalid=['foo',
                                   {'timestamp': 1234567890},
                                   True, False]
@@ -834,7 +834,7 @@ class TestJsonSchema(TestSchemaBase):
 
         for schema in schemas:
             parsed = self.parse(schema)
-            self.assertEquals(parsed.tags, {})
+            self.assertEqual(parsed.tags, {})
 
         # Links and relations
         schema = self.parse("type: integer\n"
@@ -844,14 +844,14 @@ class TestJsonSchema(TestSchemaBase):
                             "   foo:\n"
                             "      resource: /foo")
 
-        self.assertEquals(schema.links['self'].tags, {})
-        self.assertEquals(schema.relations['foo'].tags, {})
+        self.assertEqual(schema.links['self'].tags, {})
+        self.assertEqual(schema.relations['foo'].tags, {})
 
         # Typeless schema fragment
         schema = self.parse("oneOf:\n"
                             "- type: integer\n"
                             "- type: 'null'")
-        self.assertEquals(schema.tags, {})
+        self.assertEqual(schema.tags, {})
 
     def test_tags(self):
         """
@@ -915,7 +915,7 @@ class TestJsonSchema(TestSchemaBase):
 
         for schema in schemas:
             parsed = self.parse(schema)
-            self.assertEquals(parsed.tags, {'hi': None, 'quit': 'bye'})
+            self.assertEqual(parsed.tags, {'hi': None, 'quit': 'bye'})
 
         # Links and relations
         schema = self.parse("type: integer\n"
@@ -928,8 +928,8 @@ class TestJsonSchema(TestSchemaBase):
                             "      resource: /foo\n"
                             "      tags: { relationtag: ~ }")
 
-        self.assertEquals(schema.links['self'].tags, {'linktag': None})
-        self.assertEquals(schema.relations['foo'].tags, {'relationtag': None})
+        self.assertEqual(schema.links['self'].tags, {'linktag': None})
+        self.assertEqual(schema.relations['foo'].tags, {'relationtag': None})
 
         # Schema fragment that uses oneOf/etc to define itself as allowing
         # multiple types
@@ -937,7 +937,7 @@ class TestJsonSchema(TestSchemaBase):
                             "- type: integer\n"
                             "- type: 'null'\n"
                             "tags: { This is my tag: ~ }")
-        self.assertEquals(schema.tags, {'This is my tag': None})
+        self.assertEqual(schema.tags, {'This is my tag': None})
 
 
 class TestSchema(TestSchemaBase):
@@ -1118,20 +1118,21 @@ class TestSchema(TestSchemaBase):
         r = self.r.resources['test_array_min']
 
         self.check_valid(r,
-                         valid=[range(10), range(15)],
-                         invalid=[range(0), range(9)])
+                         valid=[list(range(10)), list(range(15))],
+                         invalid=[list(range(0)), list(range(9))])
 
         r = self.r.resources['test_array_max']
 
         self.check_valid(r,
-                         valid=[range(0), range(10)],
-                         invalid=[range(11)])
+                         valid=[list(range(0)), list(range(10))],
+                         invalid=[list(range(11))])
 
         r = self.r.resources['test_array_min_max']
 
         self.check_valid(r,
-                         valid=[range(10), range(20)],
-                         invalid=[range(0), range(9), range(21)])
+                         valid=[list(range(10)), list(range(20))],
+                         invalid=[list(range(0)), list(range(9)),
+                                  list(range(21))])
 
     def test_self_params(self):
         r = self.r.resources['test_self_params']
@@ -1143,8 +1144,8 @@ class TestSchema(TestSchemaBase):
         # Resolution of path params using kvs
         (uri, kvs) = l.path.resolve(kvs={'x': 1, 'y': 2, 'z': 3})
         test_uri = '$/test_self_params?x=1&y=2&z=3'
-        r1 = urlparse.parse_qs(urlparse.urlsplit(uri).query)
-        r2 = urlparse.parse_qs(urlparse.urlsplit(test_uri).query)
+        r1 = urllib.parse.parse_qs(urllib.parse.urlsplit(uri).query)
+        r2 = urllib.parse.parse_qs(urllib.parse.urlsplit(test_uri).query)
         self.assertEqual(r1, r2)
 
     def test_self_vars(self):
@@ -1496,10 +1497,10 @@ tags: {tags}
         """
 
         service_def = self.create_service()
-        self.assertEquals(service_def.tags, {})
+        self.assertEqual(service_def.tags, {})
 
         service_def = self.create_service(tags='{hi: ~, quit: bye}')
-        self.assertEquals(service_def.tags, {'hi': None, 'quit': 'bye'})
+        self.assertEqual(service_def.tags, {'hi': None, 'quit': 'bye'})
 
 
 class TestI18N(unittest.TestCase):
@@ -1514,7 +1515,7 @@ class TestI18N(unittest.TestCase):
     def test_unicode(self):
 
         book = self.r.resources['book']
-        book_data = {'id': 1, 'title': u'\u6d4b\u8bd5',
+        book_data = {'id': 1, 'title': '\u6d4b\u8bd5',
                      'publisher_id': 5, 'author_ids': [1, 5]}
         book.validate(book_data)
 
